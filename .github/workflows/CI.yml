@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:   
+    - name: Checkout Aleksoid1978/MPC-BE
+      uses: eko5624/checkout@v2
+      with:
+        repository: "Aleksoid1978/MPC-BE"
+        fetch-depth: 0
+         
+    - name: Setup Toolchain
+      run: |
+        curl -OL https://mpc-be.org/MSYS/MSYS_MinGW-w64_GCC_1120_x86-x64.7z
+        &'C:\Program Files\7-Zip\7z.exe' x *.7z -o'C:\MSYS' 
+    - name: Install Yasm
+      run: |
+        curl -OL http://www.tortall.net/projects/yasm/releases/yasm-1.3.0-win64.exe
+        mv yasm-1.3.0-win64.exe C:\Windows\yasm.exe                   
+
+    - name: Copy the files libgcc.a and libmingwex.a 
+      env:
+        MPCBE_MSYS: 'C:\MSYS'
+        MPCBE_MINGW: 'C:\MSYS\mingw'      
+      shell: cmd
+      run: |
+        ./update_gcc.bat
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1    
+
+    - name: Build the package (x64)
+      env:
+        MPCBE_MSYS: 'C:\MSYS'
+        MPCBE_MINGW: 'C:\MSYS\mingw'
+      shell: cmd
+      run: |
+        ./build.bat
+    - name: Upload 7z archives (x64)
+      uses: actions/upload-artifact@v2
+      with:
+        name: MPC-BE 
+        path: _bin\mpc-be_x86   

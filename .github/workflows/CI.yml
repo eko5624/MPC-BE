@@ -39,7 +39,10 @@ jobs:
         MPCBE_MINGW: 'C:\MSYS\mingw'
       shell: cmd
       run: |
-        ./build.bat
+        msbuild .\mpc-be.sln /m /p:Configuration=Release
+        msbuild .\mpciconlib.sln 
+        msbuild .\mpcresources.sln
+        
     - name: Upload 7z archives (x64)
       uses: actions/upload-artifact@v2
       with:

@@ -42,6 +42,7 @@ jobs:
         MPCBE_MSYS: ${{ env.MSYS }}msys64
         MPCBE_MINGW: ${{ env.MSYS }}msys64\mingw 
         MSYSTEM: MINGW32
+        MSYS2_PATH_TYPE: inherit
         MPCBE_GIT: 'C:\Program Files\Git'
         PATH: ${{env.CLEAN_PATH}}
       shell: cmd
@@ -54,6 +55,7 @@ jobs:
         MPCBE_MSYS: ${{ env.MSYS }}msys64
         MPCBE_MINGW: ${{ env.MSYS }}msys64\mingw
         MSYSTEM: MINGW32
+        MSYS2_PATH_TYPE: inherit
         MPCBE_GIT: 'C:\Program Files\Git'
         PATH: ${{env.CLEAN_PATH}}
       shell: cmd

@@ -19,7 +19,7 @@ jobs:
     - name: Set path
       shell: cmd
       run: |
-        set Path=${{ env.VC_DIR }};${{ env.MSYS }}msys64\mingw64\bin;${{ env.MSYS }}msys64\usr\bin;
+        set Path=${{ env.VC_DIR }};${{ env.MSYS }}msys64\mingw\bin;${{ env.MSYS }}msys64\usr\bin;
         set Path=%Path%C:\hostedtoolcache\windows\Python\3.9.9\x64;C:\Program Files\7-Zip;C:\Program Files\Git;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files\PowerShell\7\;
         echo CLEAN_PATH=%path% > %GITHUB_ENV% 
 
@@ -41,6 +41,7 @@ jobs:
       env:
         MPCBE_MSYS: ${{ env.MSYS }}msys64
         MPCBE_MINGW: ${{ env.MSYS }}msys64\mingw 
+        MSYSTEM: MSYS
         PATH: ${{env.CLEAN_PATH}}
       shell: cmd
       run: |
@@ -50,6 +51,7 @@ jobs:
       env:
         MPCBE_MSYS: ${{ env.MSYS }}msys64
         MPCBE_MINGW: ${{ env.MSYS }}msys64\mingw
+        MSYSTEM: MSYS
         PATH: ${{env.CLEAN_PATH}}
       shell: cmd
       run: |

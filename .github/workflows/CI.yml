@@ -40,7 +40,8 @@ jobs:
     - name: Copy the files libgcc.a and libmingwex.a 
       env:
         MPCBE_MSYS: ${{ env.MSYS }}msys64
-        MPCBE_MINGW: ${{ env.MSYS }}msys64\mingw      
+        MPCBE_MINGW: ${{ env.MSYS }}msys64\mingw 
+        PATH: ${{env.CLEAN_PATH}}
       shell: cmd
       run: |
         ./update_gcc.bat  
@@ -49,6 +50,7 @@ jobs:
       env:
         MPCBE_MSYS: ${{ env.MSYS }}msys64
         MPCBE_MINGW: ${{ env.MSYS }}msys64\mingw
+        PATH: ${{env.CLEAN_PATH}}
       shell: cmd
       run: |
         ./build.bat x64 Release VS2022 Packages

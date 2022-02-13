@@ -41,20 +41,24 @@ jobs:
       env:
         MPCBE_MSYS: ${{ env.MSYS }}msys64
         MPCBE_MINGW: ${{ env.MSYS }}msys64\mingw 
-        MSYSTEM: MSYS
+        MSYSTEM: MINGW32
+        MPCBE_GIT: 'C:\Program Files\Git'
         PATH: ${{env.CLEAN_PATH}}
       shell: cmd
       run: |
+        set PATH
         ./update_gcc.bat  
 
     - name: Build the package (x64)
       env:
         MPCBE_MSYS: ${{ env.MSYS }}msys64
         MPCBE_MINGW: ${{ env.MSYS }}msys64\mingw
-        MSYSTEM: MSYS
+        MSYSTEM: MINGW32
+        MPCBE_GIT: 'C:\Program Files\Git'
         PATH: ${{env.CLEAN_PATH}}
       shell: cmd
       run: |
+        set PATH
         ./build.bat x64 Release VS2022 Packages
         
     - name: Upload 7z archives (x64)

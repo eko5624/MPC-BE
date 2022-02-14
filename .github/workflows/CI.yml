@@ -15,7 +15,7 @@ jobs:
         curl -OL https://mpc-be.org/MSYS/MSYS_MinGW-w64_GCC_1120_x86-x64.7z
         &'C:\Program Files\7-Zip\7z.exe' x -y *.7z -o'D:\MSYS' 
         
-    - name: Set path
+    - name: Set Path
       shell: cmd
       run: |
         set Path=${{ env.VC_DIR }};${{ env.MSYS }}MSYS\bin;${{ env.MSYS }}MSYS\mingw\bin;

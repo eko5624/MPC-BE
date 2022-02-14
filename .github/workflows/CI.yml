@@ -54,22 +54,10 @@ jobs:
       shell: cmd
       run: |
         ./build.bat x64 Release Zip
-
-    - name: Get current timestamp      
-      id: timestamp
-      run: echo "::set-output name=date::$(date +%Y-%m-%d)"
    
-    - name: Zip Packages    
-      run: | 
-        $date = Get-Date -Format "yyyy-MM-dd"
-        7z a MPC-BE-${date} _bin\mpc-be_x64\*
     - name: Upload 7z archives (x64)
-      uses: eko5624/upload-release-action@v2
+      uses: actions/upload-artifact@v2
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: MPC-BE*.7z
-        tag: ${{ steps.timestamp.outputs.date }}
-        overwrite: true
-        file_glob: true
+        path: Packages/**/*x64.7z   
         
         

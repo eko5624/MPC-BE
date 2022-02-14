@@ -53,7 +53,7 @@ jobs:
         PATH: ${{env.CLEAN_PATH}}
       shell: cmd
       run: |
-        ./build.bat x64 Release Packages
+        ./build.bat x64 Release Zip
 
     - name: Get current timestamp      
       id: timestamp

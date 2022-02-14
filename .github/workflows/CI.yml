@@ -35,7 +35,7 @@ jobs:
     - name: Install Microsoft Visual C++ 2010 redistributable packages
       shell: powershell
       run: |
-        choco install vcredist-alls
+        choco install vcredist2010
    
     - name: Checkout
       uses: actions/checkout@v2

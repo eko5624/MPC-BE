@@ -28,9 +28,9 @@ jobs:
         destination: ${{env.VC_DIR}}     
  
     - name: Install Yasm
+      shell: powershell
       run: |
-        curl -OL http://www.tortall.net/projects/yasm/releases/yasm-1.3.0-win64.exe 
-        mv yasm-1.3.0-win64.exe C:\Windows
+        Invoke-WebRequest -Method Get -Uri http://www.tortall.net/projects/yasm/releases/yasm-1.3.0-win64.exe -OutFile ${{ env.MSYS }}MSYS\bin\yasm.exe -UseBasicParsing
  
     - name: Checkout
       uses: actions/checkout@v2

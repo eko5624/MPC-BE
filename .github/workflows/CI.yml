@@ -42,6 +42,8 @@ jobs:
       env:
         MPCBE_MSYS: ${{ env.MSYS }}MSYS
         MPCBE_MINGW: ${{ env.MSYS }}MSYS\mingw
+        MPCHC_MINGW32: ${{ env.MSYS }}MSYS\mingw
+        MPCHC_MINGW64: ${{ env.MSYS }}MSYS\mingw      
         MPCBE_YASM: ${{ env.MSYS }}MSYS\bin
         MPCBE_GIT: 'C:\Program Files\Git'
         PATH: ${{env.CLEAN_PATH}}
@@ -54,6 +56,8 @@ jobs:
       env:
         MPCBE_MSYS: ${{ env.MSYS }}MSYS
         MPCBE_MINGW: ${{ env.MSYS }}MSYS\mingw
+        MPCHC_MINGW32: ${{ env.MSYS }}MSYS\mingw
+        MPCHC_MINGW64: ${{ env.MSYS }}MSYS\mingw
         MPCBE_YASM: ${{ env.MSYS }}MSYS\bin
         MPCBE_GIT: 'C:\Program Files\Git'
         PATH: ${{env.CLEAN_PATH}}

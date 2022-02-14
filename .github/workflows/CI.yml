@@ -54,9 +54,13 @@ jobs:
       shell: cmd
       run: |
         ./build.bat x64 Release Packages
-        
+
+    - name: Get current timestamp      
+      id: timestamp
+      run: echo "::set-output name=date::$(date +%Y-%m-%d)"
+
     - name: Upload 7z archives (x64)
       uses: actions/upload-artifact@v2
       with:
-        name: MPC-BE 
-        path: _bin/mpc-be_x64/*.7z   
+        name: ${{ steps.timestamp.outputs.date }}  
+        path: _bin/*.x64.7z   

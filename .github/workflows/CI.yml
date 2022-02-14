@@ -10,29 +10,28 @@ jobs:
       VC_DIR: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC'
       MSYS: 'D:\'
     steps:   
-    - name: Install msys2
-      uses: msys2/setup-msys2@v2
-      with:
-        location: ${{ env.MSYS }}
-        install: base-devel autotools yasm 
-   
-    - name: Set path
-      shell: cmd
-      run: |
-        set Path=${{ env.VC_DIR }};${{ env.MSYS }}msys64\bin;${{ env.MSYS }}msys64\mingw\bin;${{ env.MSYS }}msys64\usr\bin;
-        set Path=%Path%C:\hostedtoolcache\windows\Python\3.9.9\x64;C:\Program Files\7-Zip;C:\Program Files\Git;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files\PowerShell\7\;
-        echo CLEAN_PATH=%path% > %GITHUB_ENV% 
-
     - name: Setup Toolchain
       run: |
         curl -OL https://mpc-be.org/MSYS/MSYS_MinGW-w64_GCC_1120_x86-x64.7z
-        &'C:\Program Files\7-Zip\7z.exe' x -y *.7z -o'D:\msys64'    
+        &'C:\Program Files\7-Zip\7z.exe' x -y *.7z -o'D:\MSYS' 
+        
+    - name: Set path
+      shell: cmd
+      run: |
+        set Path=${{ env.VC_DIR }};${{ env.MSYS }}MSYS\bin;${{ env.MSYS }}MSYS\mingw\bin;
+        set Path=%Path%C:\hostedtoolcache\windows\Python\3.9.9\x64;C:\Program Files\7-Zip;C:\Program Files\Git;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files\PowerShell\7\;
+        echo CLEAN_PATH=%path% > %GITHUB_ENV%    
     
     - name: Set up Nasm
       uses: ilammy/setup-nasm@v1      
       with:
         destination: ${{env.VC_DIR}}     
-    
+ 
+    - name: Install Yasm
+      shell: powershell
+      run: |
+        Invoke-WebRequest -Method Get -Uri http://www.tortall.net/projects/yasm/releases/yasm-1.3.0-win64.exe -OutFile ${{ env.MSYS }}MSYS\bin\yasm.exe -UseBasicParsing 
+ 
     - name: Checkout
       uses: actions/checkout@v2
       with:
@@ -41,8 +40,8 @@ jobs:
 
     - name: Copy the files libgcc.a and libmingwex.a 
       env:
-        MPCBE_MSYS: ${{ env.MSYS }}msys64
-        MPCBE_MINGW: ${{ env.MSYS }}msys64\mingw 
+        MPCBE_MSYS: ${{ env.MSYS }}MSYS
+        MPCBE_MINGW: ${{ env.MSYS }}MSYS\mingw 
         MSYSTEM: MINGW32
         MSYS2_PATH_TYPE: inherit
         MPCBE_GIT: 'C:\Program Files\Git'
@@ -54,8 +53,8 @@ jobs:
 
     - name: Build the package (x64)
       env:
-        MPCBE_MSYS: ${{ env.MSYS }}msys64
-        MPCBE_MINGW: ${{ env.MSYS }}msys64\mingw
+        MPCBE_MSYS: ${{ env.MSYS }}MSYS
+        MPCBE_MINGW: ${{ env.MSYS }}MSYS\mingw
         MSYSTEM: MINGW32
         MSYS2_PATH_TYPE: inherit
         MPCBE_GIT: 'C:\Program Files\Git'

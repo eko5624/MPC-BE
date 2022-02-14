@@ -31,7 +31,7 @@ jobs:
       shell: powershell
       run: |
         Invoke-WebRequest -Method Get -Uri http://www.tortall.net/projects/yasm/releases/yasm-1.3.0-win64.exe -OutFile ${{ env.MSYS }}MSYS\bin\yasm.exe -UseBasicParsing
- 
+
     - name: Checkout
       uses: actions/checkout@v2
       with:
@@ -41,8 +41,10 @@ jobs:
     - name: Copy the files libgcc.a and libmingwex.a 
       env:
         MPCBE_MSYS: ${{ env.MSYS }}MSYS
-        MPCBE_MINGW: ${{ env.MSYS }}MSYS\mingw 
+        MPCBE_MINGW32: ${{ env.MSYS }}MSYS\mingw
+        MPCBE_MINGW64: ${{ env.MSYS }}MSYS\mingw
         MSYSTEM: MINGW32
+        MPCBE_YASM: ${{ env.MSYS }}MSYS\bin
         MPCBE_GIT: 'C:\Program Files\Git'
         PATH: ${{env.CLEAN_PATH}}
       shell: cmd
@@ -53,8 +55,10 @@ jobs:
     - name: Build the package (x64)
       env:
         MPCBE_MSYS: ${{ env.MSYS }}MSYS
-        MPCBE_MINGW: ${{ env.MSYS }}MSYS\mingw
+        MPCBE_MINGW32: ${{ env.MSYS }}MSYS\mingw
+        MPCBE_MINGW64: ${{ env.MSYS }}MSYS\mingw
         MSYSTEM: MINGW32
+        MPCBE_YASM: ${{ env.MSYS }}MSYS\bin
         MPCBE_GIT: 'C:\Program Files\Git'
         PATH: ${{env.CLEAN_PATH}}
       shell: cmd

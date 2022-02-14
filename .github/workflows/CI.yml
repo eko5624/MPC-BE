@@ -32,6 +32,12 @@ jobs:
       run: |
         Invoke-WebRequest -Method Get -Uri http://www.tortall.net/projects/yasm/releases/yasm-1.3.0-win64.exe -OutFile ${{ env.MSYS }}MSYS\bin\yasm.exe -UseBasicParsing
 
+    - name: Install Windows 8.1 SDK
+      shell: powershell
+      run: |
+        Invoke-WebRequest -Method Get -Uri https://go.microsoft.com/fwlink/p/?LinkId=323507 -OutFile sdksetup.exe -UseBasicParsing
+        Start-Process -Wait sdksetup.exe -ArgumentList "/q", "/norestart", "/features", "OptionId.WindowsDesktopSoftwareDevelopmentKit" 
+
     - name: Checkout
       uses: actions/checkout@v2
       with:
@@ -41,10 +47,9 @@ jobs:
     - name: Copy the files libgcc.a and libmingwex.a 
       env:
         MPCBE_MSYS: ${{ env.MSYS }}MSYS
-        MPCBE_MINGW: ${{ env.MSYS }}MSYS\mingw
-        MPCHC_MINGW32: ${{ env.MSYS }}MSYS\mingw
-        MPCHC_MINGW64: ${{ env.MSYS }}MSYS\mingw      
+        MPCBE_MINGW: ${{ env.MSYS }}MSYS\mingw     
         MPCBE_YASM: ${{ env.MSYS }}MSYS\bin
+        MPCBE_WINSDK_VER: 8.1
         MPCBE_GIT: 'C:\Program Files\Git'
         PATH: ${{env.CLEAN_PATH}}
       shell: cmd
@@ -56,9 +61,8 @@ jobs:
       env:
         MPCBE_MSYS: ${{ env.MSYS }}MSYS
         MPCBE_MINGW: ${{ env.MSYS }}MSYS\mingw
-        MPCHC_MINGW32: ${{ env.MSYS }}MSYS\mingw
-        MPCHC_MINGW64: ${{ env.MSYS }}MSYS\mingw
         MPCBE_YASM: ${{ env.MSYS }}MSYS\bin
+        MPCBE_WINSDK_VER: 8.1
         MPCBE_GIT: 'C:\Program Files\Git'
         PATH: ${{env.CLEAN_PATH}}
       shell: cmd

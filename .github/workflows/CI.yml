@@ -41,9 +41,7 @@ jobs:
     - name: Copy the files libgcc.a and libmingwex.a 
       env:
         MPCBE_MSYS: ${{ env.MSYS }}MSYS
-        MPCBE_MINGW32: ${{ env.MSYS }}MSYS\mingw
-        MPCBE_MINGW64: ${{ env.MSYS }}MSYS\mingw
-        MSYSTEM: MINGW32
+        MPCBE_MINGW: ${{ env.MSYS }}MSYS\mingw
         MPCBE_YASM: ${{ env.MSYS }}MSYS\bin
         MPCBE_GIT: 'C:\Program Files\Git'
         PATH: ${{env.CLEAN_PATH}}
@@ -55,9 +53,7 @@ jobs:
     - name: Build the package (x64)
       env:
         MPCBE_MSYS: ${{ env.MSYS }}MSYS
-        MPCBE_MINGW32: ${{ env.MSYS }}MSYS\mingw
-        MPCBE_MINGW64: ${{ env.MSYS }}MSYS\mingw
-        MSYSTEM: MINGW32
+        MPCBE_MINGW: ${{ env.MSYS }}MSYS\mingw
         MPCBE_YASM: ${{ env.MSYS }}MSYS\bin
         MPCBE_GIT: 'C:\Program Files\Git'
         PATH: ${{env.CLEAN_PATH}}

@@ -58,6 +58,6 @@ jobs:
     - name: Upload 7z archives (x64)
       uses: actions/upload-artifact@v2
       with:
-        path: Packages/**/*x64.7z   
+        path: _bin/Packages/**/*x64.7z   
         
         

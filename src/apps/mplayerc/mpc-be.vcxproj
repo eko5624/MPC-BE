@@ -320,6 +320,7 @@
     <ClInclude Include="PPageSubtitles.h" />
     <ClInclude Include="PPageSync.h" />
     <ClInclude Include="PPageWebServer.h" />
+    <ClInclude Include="rapidjsonHelper.h" />
     <ClInclude Include="RegFilterChooserDlg.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="SaveDlg.h" />
@@ -441,7 +442,7 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(SolutionDir)src\ExtLib\Detours\Detours.vcxproj">
+    <ProjectReference Include="$(SolutionDir)src\ExtLib\Detours.vcxproj">
       <Project>{2dd13fcc-cb32-4610-b691-6cfc6a022483}</Project>
     </ProjectReference>
     <ProjectReference Include="$(SolutionDir)src\ExtLib\libbs2b\libbs2b.vcxproj">
@@ -474,7 +475,7 @@
     <ProjectReference Include="$(SolutionDir)src\filters\parser\AudioSplitter\AudioSplitter.vcxproj">
       <Project>{0A836E1E-C383-4F70-8129-4A0C22E356AA}</Project>
     </ProjectReference>
-    <ProjectReference Include="$(SolutionDir)src\ExtLib\BaseClasses\BaseClasses.vcxproj">
+    <ProjectReference Include="$(SolutionDir)src\ExtLib\BaseClasses.vcxproj">
       <Project>{e8a3f6fa-ae1c-4c8e-a0b6-9c8480324eaa}</Project>
     </ProjectReference>
     <ProjectReference Include="$(SolutionDir)src\filters\filters\Filters.vcxproj">

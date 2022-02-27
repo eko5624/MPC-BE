@@ -1,0 +1,15 @@
+[submodule "src/ExtLib/nanosvg"]
+	path = src/ExtLib/nanosvg
+	url = https://github.com/memononen/nanosvg.git
+[submodule "src/ExtLib/BaseClasses"]
+	path = src/ExtLib/BaseClasses
+	url = https://github.com/v0lt/BaseClasses.git
+[submodule "src/ExtLib/Detours"]
+	path = src/ExtLib/Detours
+	url = https://github.com/microsoft/Detours.git
+[submodule "src/ExtLib/nv-codec-headers"]
+	path = src/ExtLib/nv-codec-headers
+	url = https://github.com/FFmpeg/nv-codec-headers.git
+[submodule "src/ExtLib/rapidjson"]
+	path = src/ExtLib/rapidjson
+	url = https://github.com/Tencent/rapidjson.git

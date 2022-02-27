@@ -19,7 +19,7 @@ jobs:
       shell: cmd
       run: |
         set Path=${{ env.VC_DIR }};${{ env.MSYS }}MSYS\bin;${{ env.MSYS }}MSYS\mingw\bin;
-        set Path=%Path%C:\hostedtoolcache\windows\Python\3.9.10\x64;C:\Program Files\7-Zip;C:\Program Files\Git;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files\PowerShell\7\;
+        set Path=%Path%C:\hostedtoolcache\windows\Python\3.9.10\x64;C:\Program Files\7-Zip;C:\Program Files\Git\cmd;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files\PowerShell\7\;
         echo CLEAN_PATH=%path% > %GITHUB_ENV%        
  
     - name: Install Yasm

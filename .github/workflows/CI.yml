@@ -31,11 +31,15 @@ jobs:
       shell: powershell
       run: |
         choco install vcredist2010
-   
+ 
     - name: Checkout
       uses: actions/checkout@v2
       with:
-        fetch-depth: 0               
+        fetch-depth: 0    
+        submodules: true
+      
+    - name: Checkout modules
+      run: git submodule update --init --recursive             
 
     - name: Copy the files libgcc.a and libmingwex.a 
       env:

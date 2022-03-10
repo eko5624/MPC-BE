@@ -69,4 +69,11 @@ jobs:
         name: Portable-${{ steps.timestamp.outputs.date }}
         path: _bin/Packages/**/*x64.7z   
         
-        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:       
+        tag_name: MPC-BE-${{ steps.timestamp.outputs.date }}
+        name: ${{ steps.timestamp.outputs.date }}
+        files: _bin/Packages/**/*x64.7z  
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}       

@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -149,8 +149,6 @@ namespace GothSync
 
 		CComPtr<IDirect3DTexture9>	m_pVideoTextures[MAX_PICTURE_SLOTS];
 		CComPtr<IDirect3DSurface9>	m_pVideoSurfaces[MAX_PICTURE_SLOTS];
-		CComPtr<IDirect3DTexture9>	m_pRotateTexture;
-		CComPtr<IDirect3DSurface9>	m_pRotateSurface;
 		CComPtr<IDirect3DTexture9>	m_pOSDTexture;
 		CComPtr<IDirect3DSurface9>	m_pOSDSurface;
 		CComPtr<IDirect3DTexture9>	m_pScreenSizeTextures[2];
@@ -190,10 +188,24 @@ namespace GothSync
 
 		HRESULT DrawRectBase(IDirect3DDevice9* pD3DDev, MYD3DVERTEX<0> v[4]);
 		HRESULT DrawRect(DWORD _Color, DWORD _Alpha, const CRect &_Rect);
+
 		HRESULT TextureCopy(IDirect3DTexture9* pTexture);
-		HRESULT TextureResize(IDirect3DTexture9* pTexture, const CRect& srcRect, const CRect& destRect, D3DTEXTUREFILTERTYPE filter);
-		HRESULT TextureResizeShader(IDirect3DTexture9* pTexture, const CRect& srcRect, const CRect& destRect, int iShader);
-		HRESULT TextureResizeShader2pass(IDirect3DTexture9* pTexture, const CRect& srcRect, const CRect& destRect, int iShader1);
+		HRESULT TextureCopyRect(
+			IDirect3DTexture9* pTexture,
+			const CRect& srcRect, const CRect& dstRect,
+			const D3DTEXTUREFILTERTYPE filter,
+			const int iRotation, const bool bFlip);
+
+		HRESULT TextureResizeShader(
+			IDirect3DTexture9* pTexture,
+			const CRect& srcRect, const CRect& dstRect,
+			IDirect3DPixelShader9* pShader,
+			const int iRotation, const bool bFlip);
+
+		HRESULT ResizeShaderPass(
+			IDirect3DTexture9* pTexture, IDirect3DSurface9* pRenderTarget,
+			const CRect& srcRect, const CRect& dstRect,
+			const int iShaderX);
 
 		HRESULT AlphaBlt(RECT* pSrc, RECT* pDst, IDirect3DTexture9* pTexture);
 

@@ -12,7 +12,7 @@ jobs:
     steps:   
     - name: Setup Toolchain
       run: |
-        curl -OL https://mpc-be.org/MSYS/MSYS_MinGW-w64_GCC_1120_x86-x64_v2.7z
+        curl -OL https://mpc-be.org/MSYS/MSYS_MinGW-w64_GCC_1210_x86-x64.7z
         &'C:\Program Files\7-Zip\7z.exe' x *.7z -o'D:\MSYS' 
         
     - name: Set Path

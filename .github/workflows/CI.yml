@@ -8,7 +8,6 @@ jobs:
     runs-on: windows-2022
     env:
       VC_DIR: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC'
-      MSYS: 'D:\'
     steps:   
     - name: Setup Toolchain
       run: |

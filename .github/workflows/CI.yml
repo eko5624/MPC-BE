@@ -39,6 +39,8 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
       with:
+        repository: "Aleksoid1978/MPC-BE"
+        ref: "master"        
         fetch-depth: 0    
         submodules: true
       

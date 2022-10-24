@@ -67,13 +67,13 @@ jobs:
 
     - name: Get current timestamp      
       id: timestamp
-      run: echo "::set-output name=date::$(date +%Y-%m-%d)"  
+      run: echo "date=$(date +%Y-%m-%d)" >> $GITHUB_ENV  
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:       
-        tag_name: MPC-BE-${{ steps.timestamp.outputs.date }}
-        name: ${{ steps.timestamp.outputs.date }}
+        tag_name: MPC-BE-${{ env.date }}
+        name: ${{ env.date }}
         files: _bin/Packages/**/*x64.7z  
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}       

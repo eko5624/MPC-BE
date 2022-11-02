@@ -37,7 +37,7 @@ jobs:
         choco install vcredist2010
  
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@main
       with:
         repository: "Aleksoid1978/MPC-BE"
         ref: "master"        
@@ -70,7 +70,7 @@ jobs:
       run: echo "date=$(date +%Y-%m-%d)" >> $GITHUB_ENV  
         
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: eko5624/action-gh-release@master
       with:       
         tag_name: MPC-BE-${{ env.date }}
         name: ${{ env.date }}

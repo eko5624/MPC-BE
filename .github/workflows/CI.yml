@@ -67,7 +67,8 @@ jobs:
 
     - name: Get current timestamp
       run: echo "date=$(date +%Y-%m-%d)" >> $GITHUB_ENV  
-        
+      shell: bash
+  
     - name: Create Release
       uses: softprops/action-gh-release@master
       with:       

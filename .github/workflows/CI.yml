@@ -65,14 +65,13 @@ jobs:
       run: |
         ./build.bat Build x64 MPC-BE Release Zip
 
-    - name: Get current timestamp      
-      id: timestamp
+    - name: Get current timestamp
       run: echo "date=$(date +%Y-%m-%d)" >> $GITHUB_ENV  
         
     - name: Create Release
-      uses: eko5624/action-gh-release@master
+      uses: softprops/action-gh-release@master
       with:       
-        tag_name: MPC-BE-${{ env.date }}
+        tag_name: ${{ env.date }}
         name: ${{ env.date }}
         files: _bin/Packages/**/*x64.7z  
       env:

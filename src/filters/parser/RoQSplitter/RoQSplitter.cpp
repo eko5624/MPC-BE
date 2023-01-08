@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2022 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -40,8 +40,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] =
 
 const AMOVIESETUP_PIN sudpPins[] =
 {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
 };
 
 const AMOVIESETUP_MEDIATYPE sudPinTypesIn2[] =
@@ -56,8 +56,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesOut2[] =
 
 const AMOVIESETUP_PIN sudpPins2[] =
 {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn2), sudPinTypesIn2},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut2), sudPinTypesOut2}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn2), sudPinTypesIn2},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut2), sudPinTypesOut2}
 };
 
 const AMOVIESETUP_MEDIATYPE sudPinTypesIn3[] =
@@ -72,8 +72,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesOut3[] =
 
 const AMOVIESETUP_PIN sudpPins3[] =
 {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn3), sudPinTypesIn3},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut3), sudPinTypesOut3}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn3), sudPinTypesIn3},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut3), sudPinTypesOut3}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] =
@@ -213,7 +213,7 @@ HRESULT CRoQSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 				mts.push_back(mt);
 
-				CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Video", this, this, &hr));
+				std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Video", this, this, &hr));
 				AddOutputPin(0, pPinOut);
 			}
 
@@ -248,7 +248,7 @@ HRESULT CRoQSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 				mt.lSampleSize = 1;
 				mts.push_back(mt);
 
-				CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Audio", this, this, &hr));
+				std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Audio", this, this, &hr));
 				AddOutputPin(1, pPinOut);
 			}
 
@@ -264,7 +264,7 @@ HRESULT CRoQSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 	m_rtNewStop = m_rtStop = m_rtDuration = 10000000i64*iHasVideo/30;
 
-	return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+	return m_pOutputs.size() > 0 ? S_OK : E_FAIL;
 }
 
 bool CRoQSplitterFilter::DemuxInit()
@@ -306,7 +306,7 @@ bool CRoQSplitterFilter::DemuxLoop()
 	{
 		pos += sizeof(rc);
 
-		CAutoPtr<CPacket> p(DNew CPacket());
+		std::unique_ptr<CPacket> p(DNew CPacket());
 
 		if(rc.id == RoQ_QUAD_CODEBOOK || rc.id == RoQ_QUAD_VQ || rc.id == RoQ_SOUND_MONO || rc.id == RoQ_SOUND_STEREO)
 		{
@@ -337,7 +337,7 @@ bool CRoQSplitterFilter::DemuxLoop()
 
 		if(rc.id == RoQ_QUAD_CODEBOOK || rc.id == RoQ_QUAD_VQ || rc.id == RoQ_SOUND_MONO || rc.id == RoQ_SOUND_STEREO)
 		{
-			hr = DeliverPacket(p);
+			hr = DeliverPacket(std::move(p));
 		}
 
 		pos += rc.size;
@@ -354,7 +354,7 @@ CRoQSourceFilter::CRoQSourceFilter(LPUNKNOWN pUnk, HRESULT* phr)
 	: CRoQSplitterFilter(pUnk, phr)
 {
 	m_clsid = __uuidof(this);
-	m_pInput.Free();
+	m_pInput.reset();
 }
 
 STDMETHODIMP CRoQSourceFilter::QueryFilterInfo(FILTER_INFO* pInfo)

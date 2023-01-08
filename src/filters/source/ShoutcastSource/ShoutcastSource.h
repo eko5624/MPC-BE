@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2022 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <atlbase.h>
 #include <afxinet.h>
 #include <qnetwork.h>
 #include "MPCSocket.h"
@@ -133,18 +132,18 @@ class CShoutcastStream : public CSourceStream
 		}
 	};
 
-	class ShoutCastqueue
-		: public CAutoPtrList<CShoutCastPacket>
+	class ShoutCastQueue
+		: public std::list<std::unique_ptr<CShoutCastPacket>>
 		, public CCritSec
 	{
 	public:
 		REFERENCE_TIME GetDuration() {
 			CAutoLock cAutoLock(this);
-			return GetCount() ? (GetTail()->rtStop - GetHead()->rtStart) : 0;
+			return size() ? (back()->rtStop - front()->rtStart) : 0;
 		}
 	};
 
-	ShoutCastqueue m_queue;
+	ShoutCastQueue m_queue;
 
 	class CShoutcastSocket : public CMPCSocket
 	{

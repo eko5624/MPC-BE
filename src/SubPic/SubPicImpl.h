@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2016 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -26,16 +26,18 @@
 class CSubPicImpl : public CUnknown, public ISubPic
 {
 protected:
-	REFERENCE_TIME	m_rtStart, m_rtStop;
-	REFERENCE_TIME	m_rtSegmentStart, m_rtSegmentStop;
+	REFERENCE_TIME	m_rtStart = 0;
+	REFERENCE_TIME	m_rtStop  = 0;
+	REFERENCE_TIME	m_rtSegmentStart = 0;
+	REFERENCE_TIME	m_rtSegmentStop  = 0;
 	CRect			m_rcDirty;
 	CSize			m_maxsize;
 	CSize			m_size;
 	CRect			m_vidrect;
 	CSize			m_virtualTextureSize;
 	CPoint			m_virtualTextureTopLeft;
-	SUBTITLE_TYPE	m_eSubtitleType;
-	bool			m_bInvAlpha;
+	SUBTITLE_TYPE	m_eSubtitleType = SUBTITLE_TYPE::ST_TEXT;
+	bool			m_bInvAlpha = false;
 
 	/*
 
@@ -83,7 +85,7 @@ public:
 	STDMETHODIMP GetDesc(SubPicDesc& spd) PURE;
 	STDMETHODIMP CopyTo(ISubPic* pSubPic);
 
-	STDMETHODIMP ClearDirtyRect(DWORD color) PURE;
+	STDMETHODIMP ClearDirtyRect() PURE;
 	STDMETHODIMP GetDirtyRect(RECT* pDirtyRect);
 	STDMETHODIMP SetDirtyRect(RECT* pDirtyRect);
 
@@ -94,10 +96,14 @@ public:
 	STDMETHODIMP Lock(SubPicDesc& spd) PURE;
 	STDMETHODIMP Unlock(RECT* pDirtyRect) PURE;
 
-	STDMETHODIMP AlphaBlt(RECT* pSrc, RECT* pDst, SubPicDesc* pTarget = NULL) PURE;
+	STDMETHODIMP AlphaBlt(RECT* pSrc, RECT* pDst, SubPicDesc* pTarget = nullptr) PURE;
 
 	STDMETHODIMP SetVirtualTextureSize(const SIZE pSize, const POINT pTopLeft);
-	STDMETHODIMP GetSourceAndDest(RECT rcWindow, RECT rcVideo, BOOL bPositionRelative, CPoint ShiftPos, RECT* pRcSource, RECT* pRcDest, int xOffsetInPixels, const BOOL bUseSpecialCase) const;
+	STDMETHODIMP GetSourceAndDest(
+		RECT rcWindow, RECT rcVideo,
+		RECT* pRcSource, RECT* pRcDest,
+		BOOL bPositionRelative, CPoint ShiftPos,
+		int xOffsetInPixels, const BOOL bUseSpecialCase) const;
 
 	STDMETHODIMP_(REFERENCE_TIME) GetSegmentStart();
 	STDMETHODIMP_(REFERENCE_TIME) GetSegmentStop();
@@ -107,7 +113,6 @@ public:
 	STDMETHODIMP SetType(SUBTITLE_TYPE subtitleType);
 	STDMETHODIMP GetType(SUBTITLE_TYPE* pSubtitleType);
 
-	STDMETHODIMP_(bool) GetInverseAlpha() const;
 	STDMETHODIMP_(void) SetInverseAlpha(bool bInverted);
 };
 
@@ -120,9 +125,11 @@ private:
 
 	CSize m_cursize;
 	CRect m_curvidrect;
-	bool m_fDynamicWriteOnly;
-
+	bool  m_fDynamicWriteOnly;
 	virtual bool Alloc(bool fStatic, ISubPic** ppSubPic) PURE;
+
+protected:
+	bool  m_bInvAlpha = false;
 
 public:
 	CSubPicAllocatorImpl(SIZE cursize, bool fDynamicWriteOnly);
@@ -140,4 +147,5 @@ public:
 	STDMETHODIMP ChangeDevice(IUnknown* pDev);
 	STDMETHODIMP SetMaxTextureSize(SIZE MaxTextureSize) { return E_NOTIMPL; };
 	STDMETHODIMP Reset();
+	STDMETHODIMP_(void) SetInverseAlpha(bool bInverted);
 };

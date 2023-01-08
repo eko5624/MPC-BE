@@ -112,6 +112,8 @@ void File_Scc::Read_Buffer_AfterParsing()
 //---------------------------------------------------------------------------
 void File_Scc::Streams_Finish()
 {
+    if (TimeCode_FirstFrame.GetFramesMax() && Frame_Count_NotParsedIncluded!=(int64u)-1)
+        Fill(Stream_Text, 0, Text_TimeCode_LastFrame, (TimeCode_FirstFrame+(Frame_Count_NotParsedIncluded-1)).ToString());
     if (Parser && Parser->Status[IsAccepted])
     {
         Finish(Parser);
@@ -120,6 +122,11 @@ void File_Scc::Streams_Finish()
             Stream_Prepare(Stream_Text);
             Merge(*Parser, Stream_Text, StreamPos_Last, Pos2);
             Fill(Stream_Text, StreamPos_Last, Text_ID, Parser->Retrieve(Stream_Text, Pos2, Text_ID), true);
+            if (Pos2)
+            {
+                Fill(Stream_Text, StreamPos_Last, Text_TimeCode_FirstFrame, Retrieve_Const(Stream_Text, 0, Text_TimeCode_FirstFrame));
+                Fill(Stream_Text, StreamPos_Last, Text_TimeCode_LastFrame, Retrieve_Const(Stream_Text, 0, Text_TimeCode_LastFrame));
+            }
         }
     }
 }
@@ -214,19 +221,19 @@ void File_Scc::FileHeader_Parse()
             TimeCode Temp((const char*)Buffer+Begin, Space-Begin);
             if (Temp.HasValue())
             {
-                if (HighestFrame<Temp.Frames)
-                    HighestFrame=Temp.Frames;
-                if (HighestFrame_Adapted<Temp.Frames)
-                    HighestFrame_Adapted=Temp.Frames;
+                if (HighestFrame<Temp.GetFrames())
+                    HighestFrame=Temp.GetFrames();
+                if (HighestFrame_Adapted<Temp.GetFrames())
+                    HighestFrame_Adapted=Temp.GetFrames();
                 if (TimeCodes.empty())
                 {
-                    Fill(Stream_Text, 0, Text_TimeCode_FirstFrame, string((const char*)Buffer+Begin, 11));
+                    Fill(Stream_Text, 0, Text_TimeCode_FirstFrame, string((const char*)Buffer+Begin, 11), true, true);
                     TimeCode_FirstFrame=Temp;
-                    Fill(Stream_Text, 0, Text_TimeCode_Source, "Container");
+                    Fill(Stream_Text, 0, Text_TimeCode_Source, "Container", Unlimited, true, true);
                     for (size_t i=0; i<FrameRates.size(); i++)
                     {
-                        Temp.FramesPerSecond=FrameRates[i];
-                        Temp.DropFrame=Buffer[Begin+8]==';';
+                        Temp.SetFramesMax(FrameRates[i]-1);
+                        Temp.SetDropFrame(Buffer[Begin+8]==';');
                         TimeCodes.push_back(Temp);
                     }
                 }
@@ -234,12 +241,11 @@ void File_Scc::FileHeader_Parse()
                 {
                     for (size_t i=0; i<TimeCodes.size(); i++)
                     {
-                        if ((Temp.Hours<<24)+(Temp.Minutes<<16)+(Temp.Seconds<<8)+Temp.Frames
-                          < (TimeCodes[i].Hours<<24)+(TimeCodes[i].Minutes<<16)+(TimeCodes[i].Seconds<<8)+TimeCodes[i].Frames)
+                        if (Temp<TimeCodes[i])
                             {
-                                int8u NewHighestFrame=TimeCodes[i].FramesPerSecond-1;
+                                int8u NewHighestFrame=TimeCodes[i].GetFramesMax();
                                 TimeCodes[i]--; // Time code of the last frame
-                                while (TimeCodes[i].Frames!=TimeCodes[i].FramesPerSecond-1)
+                                while (TimeCodes[i].GetFrames()!=TimeCodes[i].GetFramesMax())
                                 {
                                     NewHighestFrame++;
                                     TimeCodes[i]--;
@@ -296,8 +302,8 @@ void File_Scc::FileHeader_Parse()
     else
         FrameRate=0;
     Fill(Stream_Text, 0, Text_FrameRate, FrameRate_F);
-    TimeCode_FirstFrame.FramesPerSecond=FrameRate;
-    TimeCode_FirstFrame.FramesPerSecond_Is1001=FrameRate_Is1001;
+    TimeCode_FirstFrame.SetFramesMax(FrameRate-1);
+    TimeCode_FirstFrame.Set1001(FrameRate_Is1001);
     Fill(Stream_Text, 0, Text_Delay, TimeCode_FirstFrame.ToMilliseconds());
 }
 
@@ -343,9 +349,9 @@ void File_Scc::Data_Parse()
     string TimeStamp;
     Get_String(11, TimeStamp,                                   "TimeStamp");
     TimeCode Temp(TimeStamp);
-    Temp.FramesPerSecond=FrameRate;
-    Temp.FramesPerSecond_Is1001=FrameRate_Is1001;
-    Parser->Frame_Count_NotParsedIncluded=Temp.ToFrames()-TimeCode_FirstFrame.ToFrames();
+    Temp.SetFramesMax(FrameRate-1);
+    Temp.Set1001(FrameRate_Is1001);
+    Frame_Count_NotParsedIncluded=Temp.ToFrames()-TimeCode_FirstFrame.ToFrames();
     Parser->FrameInfo.DTS=Temp.ToMilliseconds()*1000000;
     Parser->FrameInfo.DUR=FrameDurationNanoSeconds;
     while (Element_Offset+5<=Element_Size)
@@ -357,6 +363,7 @@ void File_Scc::Data_Parse()
                      | Char2Hex(Buffer[Buffer_Offset+(size_t)Element_Offset+4]);
         Open_Buffer_Continue(Parser, Buffer_Temp, 2);
         Element_Offset+=5;
+        Frame_Count_NotParsedIncluded=Parser->Frame_Count_NotParsedIncluded;
     }
 }
 

@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -444,13 +444,24 @@ bool CBaseSplitterFileEx::Read(latm_aachdr& h, int len, CMediaType* pmt)
 		return false;
 	}
 
+	auto pos = GetPos();
 	std::vector<BYTE> buf(std::min(len, 32));
 	ByteRead(buf.data(), buf.size());
+	Seek(pos);
 
 	std::vector<BYTE> extra;
-	if (!ParseAACLatmHeader(buf.data(), buf.size(), h.samplerate, h.channels, extra)) {
+	audioframe_t audioframe = {};
+	auto frameSize = ParseAACLatmHeader(buf.data(), buf.size(), &audioframe, pmt ? &extra : nullptr);
+	if (!frameSize) {
 		return false;
 	}
+
+	h.channels = audioframe.channels;
+	h.samplerate = audioframe.samplerate;
+	h.FrameSize = frameSize;
+
+	h.FrameSamples = 1024; // ok?
+	h.rtDuration = 10000000i64 * h.FrameSamples / h.samplerate;
 
 	if (pmt) {
 		WAVEFORMATEX* wfe    = (WAVEFORMATEX*)DNew BYTE[sizeof(WAVEFORMATEX) + extra.size()];
@@ -1955,6 +1966,49 @@ bool CBaseSplitterFileEx::Read(aes3_ts_hdr& h, int len, CMediaType* pmt/* = null
 		wfe->wBitsPerSample = wBitsPerSample;
 		wfe->nBlockAlign = wfe->nChannels * wfe->wBitsPerSample >> 3;
 		wfe->nAvgBytesPerSec = wfe->nBlockAlign * wfe->nSamplesPerSec;
+	}
+
+	return true;
+}
+
+bool CBaseSplitterFileEx::Read(avs3_ts_hdr& h, int len, CMediaType* pmt/* = nullptr*/)
+{
+	std::vector<BYTE> pData;
+	pData.resize(len);
+	if (S_OK != ByteRead(pData.data(), len)) {
+		return false;
+	}
+
+	AVS3Parser::AVS3SequenceHeader seq_header;
+	if (!AVS3Parser::ParseSequenceHeader(pData.data(), len, seq_header)) {
+		return false;
+	}
+
+	h.bitdepth = seq_header.bitdepth;
+
+	if (pmt) {
+		CSize aspect = CSize(seq_header.width, seq_header.height);
+		ReduceDim(aspect);
+
+		pmt->majortype = MEDIATYPE_Video;
+		pmt->subtype = MEDIASUBTYPE_AVS3;
+		pmt->formattype = FORMAT_VIDEOINFO2;
+
+		VIDEOINFOHEADER2* vih2 = (VIDEOINFOHEADER2*)pmt->AllocFormatBuffer(sizeof(VIDEOINFOHEADER2));
+		memset(vih2, 0, pmt->FormatLength());
+
+		vih2->AvgTimePerFrame = seq_header.AvgTimePerFrame;
+		vih2->dwPictAspectRatioX = aspect.cx;
+		vih2->dwPictAspectRatioY = aspect.cy;
+		vih2->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+		vih2->bmiHeader.biWidth = seq_header.width;
+		vih2->bmiHeader.biHeight = seq_header.height;
+		vih2->bmiHeader.biCompression = pmt->subtype.Data1;
+		vih2->bmiHeader.biPlanes = 1;
+		vih2->bmiHeader.biBitCount = 24;
+		vih2->bmiHeader.biCompression = FCC('AVS3');
+		vih2->bmiHeader.biSizeImage = DIBSIZE(vih2->bmiHeader);
+		vih2->rcSource = vih2->rcTarget = { 0, 0, vih2->bmiHeader.biWidth, vih2->bmiHeader.biHeight };
 	}
 
 	return true;

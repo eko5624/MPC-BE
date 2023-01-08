@@ -31,6 +31,7 @@
 #include "DSUtil/std_helper.h"
 #include "filters/switcher/AudioSwitcher/IAudioSwitcherFilter.h"
 #include "AppSettings.h"
+#include "DSUtil/HTTPAsync.h"
 
 const LPCWSTR channel_mode_sets[] = {
 	//         ID          Name
@@ -130,7 +131,7 @@ CAppSettings::CAppSettings()
 	VideoFiltersKeys[VDEC_MJPEG]			= L"vdec_mjpeg";
 	VideoFiltersKeys[VDEC_MPEG1]			= L"vdec_mpeg1";
 	VideoFiltersKeys[VDEC_MPEG2]			= L"vdec_mpeg2";
-	VideoFiltersKeys[VDEC_DVD_LIBMPEG2]		= L"vdec_dvd_libmpeg2";
+	VideoFiltersKeys[VDEC_DVD]				= L"vdec_dvd";
 	VideoFiltersKeys[VDEC_MSMPEG4]			= L"vdec_msmpeg4";
 	VideoFiltersKeys[VDEC_PNG]				= L"vdec_png";
 	VideoFiltersKeys[VDEC_QT]				= L"vdec_qt";
@@ -147,6 +148,7 @@ CAppSettings::CAppSettings()
 	VideoFiltersKeys[VDEC_HAP]				= L"vdec_hap";
 	VideoFiltersKeys[VDEC_AV1]				= L"vdec_av1";
 	VideoFiltersKeys[VDEC_SHQ]				= L"vdec_shq";
+	VideoFiltersKeys[VDEC_AVS3]				= L"vdec_avs3";
 	VideoFiltersKeys[VDEC_UNCOMPRESSED]		= L"vdec_uncompressed";
 
 	// Internal audio decoders
@@ -350,6 +352,9 @@ void CAppSettings::CreateCommands()
 	ADDCMD((ID_SUB_POS_LEFT,			IDS_SUB_POS_LEFT,			VK_LEFT,   FCONTROL|FSHIFT));
 	ADDCMD((ID_SUB_POS_RIGHT,			IDS_SUB_POS_RIGHT,			VK_RIGHT,  FCONTROL|FSHIFT));
 	ADDCMD((ID_SUB_POS_RESTORE,			IDS_SUB_POS_RESTORE,		VK_DELETE, FCONTROL|FSHIFT));
+	// subtitle size
+	ADDCMD((ID_SUB_SIZE_DEC,			IDS_SUB_SIZE_DEC));
+	ADDCMD((ID_SUB_SIZE_INC,			IDS_SUB_SIZE_INC));
 	//
 	ADDCMD((ID_SUB_COPYTOCLIPBOARD,		IDS_SUB_COPYTOCLIPBOARD));
 	ADDCMD((ID_FILE_ISDB_DOWNLOAD,		IDS_DOWNLOAD_SUBS,			'D'));
@@ -407,7 +412,7 @@ bool CAppSettings::ExclusiveFSAllowed() const
 	if (m_VRSettings.iVideoRenderer == VIDRNDT_EVR_CP && (m_VRSettings.bExclusiveFullscreen || (nCLSwitches & CLSW_D3DFULLSCREEN))) {
 		return true;
 	}
-	if (m_VRSettings.iVideoRenderer == VIDRNDT_MPCVR && m_VRSettings.bExclusiveFullscreen && m_VRSettings.bMPCVRFullscreenControl) {
+	if (m_VRSettings.iVideoRenderer == VIDRNDT_MPCVR && m_VRSettings.bExclusiveFullscreen && m_VRSettings.ExtraSets.bMPCVRFullscreenControl) {
 		return true;
 	}
 
@@ -627,7 +632,7 @@ void CAppSettings::ResetSettings()
 	bAudioFilters = false;
 	strAudioFilter1.Empty();
 
-	m_filters.RemoveAll();
+	m_ExternalFilters.clear();
 
 	// Keys
 	strWinLircAddr = L"127.0.0.1:8765";
@@ -657,6 +662,7 @@ void CAppSettings::ResetSettings()
 	nThemeGreen = 255;
 	nThemeBlue  = 255;
 	bDarkMenu = true;
+	bDarkTitle = true;
 	nOSDTransparent = 100;
 	nOSDBorder = 1;
 
@@ -704,13 +710,12 @@ void CAppSettings::ResetSettings()
 	strWebDefIndex = L"index.html;index.php";
 	strWebServerCGI.Empty();
 
-	CString MyPictures;
-	WCHAR szPath[MAX_PATH] = { 0 };
-	if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_MYPICTURES, nullptr, 0, szPath))) {
-		MyPictures = CString(szPath) + L"\\";
-	}
+	PWSTR pathPictures = nullptr;
+	SHGetKnownFolderPath(FOLDERID_Pictures, 0, nullptr, &pathPictures);
 
-	strSnapShotPath = MyPictures;
+	strSnapShotPath = CString(pathPictures) + L"\\";
+	CoTaskMemFree(pathPictures);
+
 	strSnapShotExt = L".jpg";
 	bSnapShotSubtitles = false;
 
@@ -729,11 +734,6 @@ void CAppSettings::ResetSettings()
 	iStereo3DMode = STEREO3D_AUTO;
 	bStereo3DSwapLR = false;
 
-	iBrightness = 0;
-	iContrast = 0;
-	iHue = 0;
-	iSaturation = 0;
-
 	ShaderList.clear();
 	ShaderListScreenSpace.clear();
 	Shaders11PostScale.clear();
@@ -751,6 +751,7 @@ void CAppSettings::ResetSettings()
 	bWinMediaControls = false;
 	fSmartSeek = false;
 	iSmartSeekSize = 15;
+	iSmartSeekVR = 0;
 	fChapterMarker = false;
 	fFlybar = true;
 	iPlsFontPercent = 100;
@@ -800,6 +801,8 @@ void CAppSettings::ResetSettings()
 	strAceStreamAddress = L"http://127.0.0.1:6878/ace/getstream?id=%s";
 	strTorrServerAddress = L"http://127.0.0.1:8090/stream/fname?link=%s&index=1&m3u";
 
+	strUserAgent = http::userAgent;
+
 	nLastFileInfoPage = 0;
 
 	bUpdaterAutoCheck = false;
@@ -842,7 +845,7 @@ void CAppSettings::LoadSettings(bool bForce/* = false*/)
 	}
 	CMPlayerCApp::SetLanguage(iLanguage, false);
 
-	FiltersPrioritySettings.LoadSettings();
+	FiltersPriority.LoadSettings();
 
 	profile.ReadInt(IDS_R_SETTINGS, IDS_RS_HIDECAPTIONMENU, iCaptionMenuMode, MODE_SHOWCAPTIONMENU, MODE_BORDERLESS);
 	profile.ReadBool(IDS_R_SETTINGS, IDS_RS_HIDENAVIGATION, fHideNavigation);
@@ -927,7 +930,7 @@ void CAppSettings::LoadSettings(bool bForce/* = false*/)
 	SIZE wndSize;
 	if (profile.ReadString(IDS_R_SETTINGS, IDS_RS_SPECIFIEDWINDOWSIZE, str)
 			&& swscanf_s(str, L"%d;%d", &wndSize.cx, &wndSize.cy) == 2) {
-		if (wndSize.cx >= 480 && wndSize.cx <= 3840 && wndSize.cy >= 240 && wndSize.cy <= 2160) {
+		if (wndSize.cx >= 300 && wndSize.cx <= 3840 && wndSize.cy >= 200 && wndSize.cy <= 2160) {
 			szSpecifiedWndSize = wndSize;
 		}
 	}
@@ -997,12 +1000,6 @@ void CAppSettings::LoadSettings(bool bForce/* = false*/)
 	profile.ReadInt(IDS_R_SETTINGS, IDS_RS_BUFFERDURATION, iBufferDuration, APP_BUFDURATION_MIN, APP_BUFDURATION_MAX);
 	profile.ReadInt(IDS_R_SETTINGS, IDS_RS_NETWORKTIMEOUT, iNetworkTimeout, APP_NETTIMEOUT_MIN, APP_NETTIMEOUT_MAX);
 
-	// Video
-	profile.ReadInt(IDS_R_VIDEO, IDS_RS_COLOR_BRIGHTNESS, iBrightness, -100, 100);
-	profile.ReadInt(IDS_R_VIDEO, IDS_RS_COLOR_CONTRAST, iContrast, -100, 100);
-	profile.ReadInt(IDS_R_VIDEO, IDS_RS_COLOR_HUE, iHue, -180, 180);
-	profile.ReadInt(IDS_R_VIDEO, IDS_RS_COLOR_SATURATION, iSaturation, -100, 100);
-
 	// Audio
 	profile.ReadInt(IDS_R_AUDIO, IDS_RS_VOLUME, nVolume, 0, 100);
 	profile.ReadInt(IDS_R_AUDIO, IDS_RS_BALANCE, nBalance, -100, 100);
@@ -1041,11 +1038,11 @@ void CAppSettings::LoadSettings(bool bForce/* = false*/)
 	}
 
 	{
-		m_filters.RemoveAll();
+		m_ExternalFilters.clear();
 		for (unsigned int i = 0; ; i++) {
 			CString key;
 			key.Format(L"%s\\%03u", IDS_R_EXTERNAL_FILTERS, i);
-			CAutoPtr<FilterOverride> f(DNew FilterOverride);
+			std::unique_ptr<FilterOverride> f(DNew FilterOverride);
 
 			bool enabled = false;
 			profile.ReadBool(key, L"Enabled", enabled);
@@ -1111,7 +1108,7 @@ void CAppSettings::LoadSettings(bool bForce/* = false*/)
 			f->dwMerit = MERIT_DO_NOT_USE + 1;
 			profile.ReadUInt(key, L"Merit", *(unsigned*)&f->dwMerit);
 
-			m_filters.AddTail(f);
+			m_ExternalFilters.emplace_back(std::move(f));
 		}
 	}
 
@@ -1259,6 +1256,7 @@ void CAppSettings::LoadSettings(bool bForce/* = false*/)
 	profile.ReadHex32(IDS_R_THEME, IDS_RS_TOOLBARCOLORFACE, *(unsigned*)&clrFaceABGR);
 	profile.ReadHex32(IDS_R_THEME, IDS_RS_TOOLBARCOLOROUTLINE, *(unsigned*)&clrOutlineABGR);
 	profile.ReadBool(IDS_R_THEME, IDS_RS_DARKMENU, bDarkMenu);
+	profile.ReadBool(IDS_R_THEME, IDS_RS_DARKTITLE, bDarkTitle);
 
 	// FullScreen
 	profile.ReadBool(IDS_R_SETTINGS, IDS_RS_LAUNCHFULLSCREEN, fLaunchfullscreen);
@@ -1353,12 +1351,6 @@ void CAppSettings::LoadSettings(bool bForce/* = false*/)
 	profile.ReadBool(IDS_R_DVD, IDS_RS_DVD_STARTMAINTITLE, bStartMainTitle);
 	bNormalStartDVD = true;
 
-	CString MyPictures;
-	WCHAR szPath[MAX_PATH] = { 0 };
-	if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_MYPICTURES, nullptr, 0, szPath))) {
-		MyPictures = CString(szPath) + L"\\";
-	}
-
 	profile.ReadString(IDS_R_SETTINGS, IDS_RS_SNAPSHOTPATH, strSnapShotPath);
 	profile.ReadString(IDS_R_SETTINGS, IDS_RS_SNAPSHOTEXT, strSnapShotExt);
 	profile.ReadBool(IDS_R_SETTINGS, IDS_RS_SNAPSHOT_SUBTITLES, bSnapShotSubtitles);
@@ -1374,11 +1366,6 @@ void CAppSettings::LoadSettings(bool bForce/* = false*/)
 	profile.ReadString(IDS_R_SETTINGS, IDS_RS_ISDB, strISDb);
 
 	profile.ReadInt(IDS_R_SETTINGS, IDS_RS_STEREO3D_MODE, iStereo3DMode, STEREO3D_AUTO, STEREO3D_OVERUNDER);
-	if (iStereo3DMode == ID_STEREO3D_ROW_INTERLEAVED) {
-		GetRenderersSettings().iStereo3DTransform = STEREO3D_HalfOverUnder_to_Interlace;
-	} else {
-		GetRenderersSettings().iStereo3DTransform = STEREO3D_AsIs;
-	}
 	profile.ReadBool(IDS_R_SETTINGS, IDS_RS_STEREO3D_SWAPLEFTRIGHT, bStereo3DSwapLR);
 
 	{ // load shader list
@@ -1425,6 +1412,7 @@ void CAppSettings::LoadSettings(bool bForce/* = false*/)
 	profile.ReadBool(IDS_R_SETTINGS, IDS_RS_WINMEDIACONTROLS, bWinMediaControls);
 	profile.ReadBool(IDS_R_SETTINGS, IDS_RS_SMARTSEEK, fSmartSeek);
 	profile.ReadInt(IDS_R_SETTINGS, IDS_RS_SMARTSEEK_SIZE, iSmartSeekSize, 5, 30);
+	profile.ReadInt(IDS_R_SETTINGS, IDS_RS_SMARTSEEK_VIDEORENDERER, iSmartSeekVR, 0, 1);
 	profile.ReadBool(IDS_R_SETTINGS, IDS_RS_CHAPTER_MARKER, fChapterMarker);
 	profile.ReadBool(IDS_R_SETTINGS, IDS_RS_USE_FLYBAR, fFlybar);
 	profile.ReadInt(IDS_R_SETTINGS, IDS_RS_PLAYLISTFONTPERCENT, iPlsFontPercent, 100, 200);
@@ -1495,6 +1483,9 @@ void CAppSettings::LoadSettings(bool bForce/* = false*/)
 	profile.ReadString(IDS_R_ONLINESERVICES, IDS_RS_ACESTREAM_ADDRESS, strAceStreamAddress);
 	profile.ReadString(IDS_R_ONLINESERVICES, IDS_RS_TORRSERVER_ADDRESS, strTorrServerAddress);
 
+	profile.ReadString(IDS_R_SETTINGS, IDS_RS_USER_AGENT, strUserAgent);
+	http::userAgent = strUserAgent;
+
 	profile.ReadUInt(IDS_R_SETTINGS, IDS_RS_LASTFILEINFOPAGE, *(unsigned*)&nLastFileInfoPage);
 
 	profile.ReadBool(IDS_R_UPDATER, IDS_RS_UPDATER_AUTO_CHECK, bUpdaterAutoCheck);
@@ -1562,7 +1553,7 @@ void CAppSettings::SaveSettings()
 
 	CString str;
 
-	FiltersPrioritySettings.SaveSettings();
+	FiltersPriority.SaveSettings();
 
 	profile.WriteInt(IDS_R_SETTINGS, IDS_RS_HIDECAPTIONMENU, iCaptionMenuMode);
 	profile.WriteBool(IDS_R_SETTINGS, IDS_RS_HIDENAVIGATION, fHideNavigation);
@@ -1674,12 +1665,6 @@ void CAppSettings::SaveSettings()
 	profile.WriteString(IDS_R_SETTINGS, IDS_RS_SUBTITLEPATHS, strSubtitlePaths);
 	profile.WriteBool(IDS_R_SETTINGS, IDS_RS_USEDEFAULTSUBTITLESSTYLE, fUseDefaultSubtitlesStyle);
 
-	// Video
-	profile.WriteInt(IDS_R_VIDEO, IDS_RS_COLOR_BRIGHTNESS, iBrightness);
-	profile.WriteInt(IDS_R_VIDEO, IDS_RS_COLOR_CONTRAST, iContrast);
-	profile.WriteInt(IDS_R_VIDEO, IDS_RS_COLOR_HUE, iHue);
-	profile.WriteInt(IDS_R_VIDEO, IDS_RS_COLOR_SATURATION, iSaturation);
-
 	// Audio
 	profile.WriteInt(IDS_R_AUDIO, IDS_RS_VOLUME, nVolume);
 	profile.WriteInt(IDS_R_AUDIO, IDS_RS_BALANCE, nBalance);
@@ -1762,6 +1747,7 @@ void CAppSettings::SaveSettings()
 	profile.WriteBool(IDS_R_SETTINGS, IDS_RS_WINMEDIACONTROLS, bWinMediaControls);
 	profile.WriteBool(IDS_R_SETTINGS, IDS_RS_SMARTSEEK, fSmartSeek);
 	profile.WriteInt(IDS_R_SETTINGS, IDS_RS_SMARTSEEK_SIZE, iSmartSeekSize);
+	profile.WriteInt(IDS_R_SETTINGS, IDS_RS_SMARTSEEK_VIDEORENDERER, iSmartSeekVR);
 	profile.WriteBool(IDS_R_SETTINGS, IDS_RS_CHAPTER_MARKER, fChapterMarker);
 	profile.WriteBool(IDS_R_SETTINGS, IDS_RS_USE_FLYBAR, fFlybar);
 	profile.WriteInt(IDS_R_SETTINGS, IDS_RS_PLAYLISTFONTPERCENT, iPlsFontPercent);
@@ -1874,6 +1860,7 @@ void CAppSettings::SaveSettings()
 	profile.WriteHex32(IDS_R_THEME, IDS_RS_TOOLBARCOLORFACE, clrFaceABGR);
 	profile.WriteHex32(IDS_R_THEME, IDS_RS_TOOLBARCOLOROUTLINE, clrOutlineABGR);
 	profile.WriteBool(IDS_R_THEME, IDS_RS_DARKMENU, bDarkMenu);
+	profile.WriteBool(IDS_R_THEME, IDS_RS_DARKTITLE, bDarkTitle);
 
 	// FullScreen
 	profile.WriteBool(IDS_R_SETTINGS, IDS_RS_LAUNCHFULLSCREEN, fLaunchfullscreen);
@@ -1979,6 +1966,9 @@ void CAppSettings::SaveSettings()
 	profile.WriteString(IDS_R_ONLINESERVICES, IDS_RS_ACESTREAM_ADDRESS, strAceStreamAddress);
 	profile.WriteString(IDS_R_ONLINESERVICES, IDS_RS_TORRSERVER_ADDRESS, strTorrServerAddress);
 
+	profile.WriteString(IDS_R_SETTINGS, IDS_RS_USER_AGENT, strUserAgent);
+	http::userAgent = strUserAgent;
+
 	profile.WriteBool(IDS_R_SETTINGS, IDS_RS_REMAINING_TIME, fRemainingTime);
 
 	profile.WriteUInt(IDS_R_SETTINGS, IDS_RS_LASTFILEINFOPAGE, nLastFileInfoPage);
@@ -2052,10 +2042,7 @@ void CAppSettings::SaveExternalFilters()
 	}
 
 	unsigned int k = 0;
-	POSITION pos = m_filters.GetHeadPosition();
-	while (pos) {
-		FilterOverride* f = m_filters.GetNext(pos);
-
+	for (const auto& f : m_ExternalFilters) {
 		if (f->fTemporary) {
 			continue;
 		}
@@ -2179,17 +2166,29 @@ void CAppSettings::ExtractDVDStartPos(CString& strParam)
 	}
 }
 
-CString CAppSettings::ParseFileName(const CString& param)
+CStringW CAppSettings::ParseFileName(const CStringW& param)
 {
-	CString fullPathName;
-
-	// Try to transform relative pathname into full pathname
 	if (param.Find(L':') < 0) {
+		// try to convert relative path to full path
+		CStringW fullPathName;
 		fullPathName.ReleaseBuffer(GetFullPathNameW(param, MAX_PATH, fullPathName.GetBuffer(MAX_PATH), nullptr));
 
 		CFileStatus fs;
 		if (!fullPathName.IsEmpty() && CFileGetStatus(fullPathName, fs)) {
 			return fullPathName;
+		}
+	}
+	else if (param.GetLength() > MAX_PATH && !::PathIsURLW(param) && !::PathIsUNCW(param)) {
+		// trying to shorten a long local path
+		CStringW longpath = StartsWith(param, L"\\\\?\\") ? param : L"\\\\?\\" + param;
+		auto length = GetShortPathNameW(longpath, nullptr, 0);
+		if (length > 0) {
+			CStringW shortPathName;
+			length = GetShortPathNameW(longpath, shortPathName.GetBuffer(length), length);
+			if (length > 0) {
+				shortPathName.ReleaseBuffer(length);
+				return shortPathName;
+			}
 		}
 	}
 

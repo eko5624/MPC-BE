@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -20,8 +20,6 @@
  */
 
 #pragma once
-
-#include <atlbase.h>
 
 #include "Misc.h"
 #include "PlayerChildView.h"
@@ -187,7 +185,6 @@ public:
 	BOOL InitInstance();
 	int ExitInstance();
 
-	enum {TM_EXIT=WM_APP, TM_INDEX, TM_BREAK};
 	DECLARE_MESSAGE_MAP()
 	afx_msg void OnExit(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnIndex(WPARAM wParam, LPARAM lParam);
@@ -243,6 +240,7 @@ class CMainFrame : public CFrameWnd, public CDropTarget, public CDPI
 	CComQIPtr<IDvdControl2>         m_pDVDC_preview;
 	CComQIPtr<IDvdInfo2>            m_pDVDI_preview; // VtX: usually not necessary but may sometimes be necessary.
 	CComPtr<IMFVideoDisplayControl> m_pMFVDC_preview;
+	CComPtr<IAllocatorPresenter>    m_pCAP_preview;
 	//
 
 	CComPtr<ICaptureGraphBuilder2>  m_pCGB;
@@ -267,7 +265,7 @@ class CMainFrame : public CFrameWnd, public CDropTarget, public CDPI
 
 	CComPtr<IMadVRTextOsd>			m_pMVTO;
 
-	CComPtr<ISubPicAllocatorPresenter3>	m_pCAP;
+	CComPtr<IAllocatorPresenter>	m_pCAP;
 	CLSID m_clsidCAP = GUID_NULL;
 
 	CComPtr<IMadVRSubclassReplacement> m_pMVRSR;
@@ -322,6 +320,10 @@ class CMainFrame : public CFrameWnd, public CDropTarget, public CDPI
 	COLORREF m_colMenuBk;
 	HBRUSH m_hMainMenuBrush = nullptr;
 	HBRUSH m_hPopupMenuBrush = nullptr;
+
+	COLORREF m_colTitleBk = {};
+	COLORREF m_colTitleBkSystem = 0x00FFFFFF;
+	void GetSystemTitleColor();
 
 	CMenu m_popupMainMenu;
 	CMenu m_popupMenu;
@@ -406,7 +408,7 @@ class CMainFrame : public CFrameWnd, public CDropTarget, public CDPI
 
 	CComPtr<ISubClock> m_pSubClock;
 
-	int m_bFrameSteppingActive;
+	bool m_bFrameSteppingActive;
 	int m_nStepForwardCount;
 	REFERENCE_TIME m_rtStepForwardStart;
 	int m_nVolumeBeforeFrameStepping;
@@ -439,7 +441,6 @@ class CMainFrame : public CFrameWnd, public CDropTarget, public CDPI
 	bool IsRendererCompatibleWithSaveImage();
 	void SaveImage(LPCWSTR fn, bool displayed);
 	void SaveThumbnails(LPCWSTR fn);
-
 	//
 
 	std::unique_ptr<CWebServer> m_pWebServer;
@@ -466,6 +467,8 @@ public:
 
 	void SetColorMenu();
 	void SetColorMenu(CMenu& menu);
+
+	void SetColorTitle(const bool bSystemOnly = false);
 
 	void StartWebServer(int nPort);
 	void StopWebServer();
@@ -534,7 +537,6 @@ public:
 private:
 	void SetDispMode(const dispmode& dm, const CString& DisplayName, const BOOL bForceRegistryMode = FALSE);
 
-	bool			m_bUseSmartSeek;
 	MPC_LOADSTATE	m_eMediaLoadState;
 	bool			m_bClosingState;
 	bool			m_bAudioOnly;
@@ -542,7 +544,7 @@ private:
 	BOOL			m_bNextIsOpened = FALSE;
 
 	CString					m_LastOpenFile;
-	CAutoPtr<OpenMediaData>	m_lastOMD;
+	std::unique_ptr<OpenMediaData> m_lastOMD;
 
 	CString m_LastOpenBDPath, m_BDLabel;
 	HMONITOR m_LastWindow_HM;
@@ -586,7 +588,7 @@ private:
 	bool m_bOpening = false;
 
 	// Operations
-	bool OpenMediaPrivate(CAutoPtr<OpenMediaData> pOMD);
+	bool OpenMediaPrivate(std::unique_ptr<OpenMediaData>& pOMD);
 	void CloseMediaPrivate();
 	void DoTunerScan(TunerScanData* pTSD);
 
@@ -734,14 +736,14 @@ private:
 public:
 	BOOL OpenCurPlaylistItem(REFERENCE_TIME rtStart = INVALID_TIME, BOOL bAddRecent = TRUE);
 	BOOL OpenFile(const CString fname, REFERENCE_TIME rtStart = INVALID_TIME, BOOL bAddRecent = TRUE);
-	void OpenMedia(CAutoPtr<OpenMediaData> pOMD);
+	void OpenMedia(std::unique_ptr<OpenMediaData> pOMD);
 	void PlayFavoriteFile(SessionInfo fav);
 	void PlayFavoriteDVD(SessionInfo fav);
 	bool ResizeDevice();
 	bool ResetDevice();
 	bool DisplayChange();
 	void CloseMedia(BOOL bNextIsOpened = FALSE);
-	void StartTunerScan(CAutoPtr<TunerScanData> pTSD);
+	void StartTunerScan(std::unique_ptr<TunerScanData>& pTSD);
 	void StopTunerScan();
 
 	void AddCurDevToPlaylist();
@@ -772,6 +774,9 @@ public:
 	void MatroskaLoadKeyFrames();
 
 	bool GetBufferingProgress(int* Progress = nullptr);
+
+	void ApplySubpicSettings();
+	void ApplyExraRendererSettings();
 
 	// subtitle streams order function
 	bool LoadSubtitle(CSubtitleItem subItem, ISubStream **actualStream = nullptr);
@@ -1202,6 +1207,7 @@ public:
 
 	// Subtitle position
 	afx_msg void OnSubtitlePos(UINT nID);
+	afx_msg void OnSubtitleSize(UINT nID);
 
 	afx_msg void OnSubCopyClipboard();
 
@@ -1213,7 +1219,7 @@ public:
 
 	CString UpdatePlayerStatus();
 
-	void OnFilePostOpenMedia(CAutoPtr<OpenMediaData> pOMD);
+	void OnFilePostOpenMedia(std::unique_ptr<OpenMediaData>& pOMD);
 	void OnFilePostCloseMedia();
 
 	// Main Window
@@ -1226,6 +1232,7 @@ public:
 	CPlayerPlaylistBar	m_wndPlaylistBar;
 	CFlyBar				m_wndFlyBar;
 	CPreView			m_wndPreView; // SmartSeek
+	bool				m_bWndPreViewOn = false;
 
 	bool m_bIsMadVRExclusiveMode = false;
 	bool m_bIsMPCVRExclusiveMode = false;
@@ -1238,9 +1245,11 @@ public:
 	bool OSDBarSetPos();
 	void DestroyOSDBar();
 
+	void ReleasePreviewGraph();
 	HRESULT PreviewWindowHide();
 	HRESULT PreviewWindowShow(REFERENCE_TIME rtCur2);
 	bool CanPreviewUse();
+	bool TogglePreview();
 
 	CFullscreenWnd* m_pFullscreenWnd;
 
@@ -1352,6 +1361,7 @@ private:
 public:
 	afx_msg UINT OnPowerBroadcast(UINT nPowerEvent, LPARAM nEventData);
 	afx_msg void OnSessionChange(UINT nSessionState, UINT nId);
+	afx_msg void OnSettingChange(UINT, LPCTSTR);
 
 	void EnableShaders1(bool enable);
 	void EnableShaders2(bool enable);
@@ -1398,7 +1408,7 @@ public:
 
 	GUID		GetTimeFormat();
 
-	CColorControl	m_ColorCintrol;
+	CColorControl	m_ColorControl;
 
 	void		StopAutoHideCursor();
 	void		StartAutoHideCursor();
@@ -1432,7 +1442,7 @@ private:
 
 	bool		m_bAltDownClean = false;
 
-	CComPropertySheet* m_ps = nullptr;
+	CComPropertySheet* m_pFilterPropSheet = nullptr;
 
 	static inline CMainFrame* m_pThis = nullptr;
 	static inline HHOOK m_MenuHook = nullptr;
@@ -1443,4 +1453,6 @@ private:
 	bool IsNavigateSkipEnabled();
 
 	CMediaControls m_CMediaControls;
+
+	bool m_bIsLiveOnline = false;
 };

@@ -1,5 +1,5 @@
 /*
- * (C) 2014-2021 see Authors.txt
+ * (C) 2014-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -36,12 +36,6 @@ extern "C" {
 // CFFAudioEncoder
 
 CAC3Encoder::CAC3Encoder()
-	: m_pAVCodec(nullptr)
-	, m_pAVCtx(nullptr)
-	, m_pFrame(nullptr)
-	, m_pSamples(nullptr)
-	, m_buffersize(0)
-	, m_framesize(0)
 {
 #ifdef DEBUG_OR_LOG
 	av_log_set_callback(ff_log);
@@ -64,11 +58,10 @@ bool CAC3Encoder::Init(int sample_rate, DWORD channel_layout)
 
 	m_pAVCtx = avcodec_alloc_context3(m_pAVCodec);
 
-	m_pAVCtx->bit_rate       = 640000;
-	m_pAVCtx->sample_fmt     = AV_SAMPLE_FMT_FLTP;
-	m_pAVCtx->sample_rate    = SelectSamplerate(sample_rate);
-	m_pAVCtx->channel_layout = channel_layout;
-	m_pAVCtx->channels       = av_popcount(channel_layout);
+	m_pAVCtx->bit_rate    = 640000;
+	m_pAVCtx->sample_fmt  = AV_SAMPLE_FMT_FLTP;
+	m_pAVCtx->sample_rate = SelectSamplerate(sample_rate);
+	av_channel_layout_from_mask(&m_pAVCtx->ch_layout, channel_layout);
 
 	avcodec_lock;
 	ret = avcodec_open2(m_pAVCtx, m_pAVCodec, nullptr);
@@ -79,18 +72,22 @@ bool CAC3Encoder::Init(int sample_rate, DWORD channel_layout)
 	}
 
 	m_pFrame = av_frame_alloc();
-	if (!m_pFrame) {
-		DLog(L"CAC3Encoder::Init() : avcodec_alloc_frame() failed");
+	m_pPacket = av_packet_alloc();
+
+	if (!m_pFrame || !m_pPacket) {
+		DLog(L"CAC3Encoder::Init() : avcodec_alloc_frame() or av_packet_alloc() failed");
+		StreamFinish();
 		return false;
 	}
-	m_pFrame->nb_samples     = m_pAVCtx->frame_size;
-	m_pFrame->format         = m_pAVCtx->sample_fmt;
-	m_pFrame->channel_layout = m_pAVCtx->channel_layout;
+
+	m_pFrame->nb_samples = m_pAVCtx->frame_size;
+	m_pFrame->format     = m_pAVCtx->sample_fmt;
+	av_channel_layout_copy(&m_pFrame->ch_layout, &m_pAVCtx->ch_layout);
 
 	// the codec gives us the frame size, in samples,
 	// we calculate the size of the samples buffer in bytes
-	m_framesize  = m_pAVCtx->frame_size * m_pAVCtx->channels * sizeof(float);
-	m_buffersize = av_samples_get_buffer_size(nullptr, m_pAVCtx->channels, m_pAVCtx->frame_size, m_pAVCtx->sample_fmt, 0);
+	m_framesize  = m_pAVCtx->frame_size * m_pAVCtx->ch_layout.nb_channels * sizeof(float);
+	m_buffersize = av_samples_get_buffer_size(nullptr, m_pAVCtx->ch_layout.nb_channels, m_pAVCtx->frame_size, m_pAVCtx->sample_fmt, 0);
 
 	m_pSamples = (float*)av_malloc(m_buffersize);
 	if (!m_pSamples) {
@@ -103,7 +100,7 @@ bool CAC3Encoder::Init(int sample_rate, DWORD channel_layout)
 		DLog(L"CAC3Encoder::Init() : av_frame_get_buffer() failed");
 		return false;
 	}
-	ret = avcodec_fill_audio_frame(m_pFrame, m_pAVCtx->channels, m_pAVCtx->sample_fmt, (const uint8_t*)m_pSamples, m_buffersize, 0);
+	ret = avcodec_fill_audio_frame(m_pFrame, m_pAVCtx->ch_layout.nb_channels, m_pAVCtx->sample_fmt, (const uint8_t*)m_pSamples, m_buffersize, 0);
 	if (ret < 0) {
 		DLog(L"CAC3Encoder::Init() : avcodec_fill_audio_frame() failed");
 		return false;
@@ -135,14 +132,14 @@ static inline int encode(AVCodecContext *avctx, AVFrame *frame, int *got_packet,
 
 HRESULT CAC3Encoder::Encode(std::vector<float>& BuffIn, std::vector<BYTE>& BuffOut)
 {
-	int buffsamples = BuffIn.size() / m_pAVCtx->channels;
+	int buffsamples = BuffIn.size() / m_pAVCtx->ch_layout.nb_channels;
 	if (buffsamples < m_pAVCtx->frame_size) {
 		return E_ABORT;
 	}
 
 	float* pEnc  = m_pSamples;
 	float* pIn   = BuffIn.data();
-	int channels = m_pAVCtx->channels;
+	int channels = m_pAVCtx->ch_layout.nb_channels;
 	int samples  = m_pAVCtx->frame_size;
 
 	for (int ch = 0; ch < channels; ++ch) {
@@ -151,30 +148,26 @@ HRESULT CAC3Encoder::Encode(std::vector<float>& BuffIn, std::vector<BYTE>& BuffO
 		}
 	}
 
-	if (AVPacket* avpkt = av_packet_alloc()) {
-		int got_packet = 0;
-		int ret = encode(m_pAVCtx, m_pFrame, &got_packet, avpkt);
-		if (ret < 0) {
-			av_packet_free(&avpkt);
-			return E_FAIL;
-		}
-		if (got_packet) {
-			BuffOut.resize(avpkt->size);
-			memcpy(BuffOut.data(), avpkt->data, avpkt->size);
-		}
-		av_packet_free(&avpkt);
-
-		size_t old_size = BuffIn.size() * sizeof(float);
-		size_t new_size = old_size - m_framesize;
-		size_t new_count = new_size / sizeof(float);
-
-		memmove(pIn, (BYTE*)pIn + m_framesize, new_size);
-		BuffIn.resize(new_count);
-
-		return S_OK;
-	} else {
+	int got_packet = 0;
+	int ret = encode(m_pAVCtx, m_pFrame, &got_packet, m_pPacket);
+	if (ret < 0) {
+		av_packet_unref(m_pPacket);
 		return E_FAIL;
 	}
+	if (got_packet) {
+		BuffOut.resize(m_pPacket->size);
+		memcpy(BuffOut.data(), m_pPacket->data, m_pPacket->size);
+	}
+	av_packet_unref(m_pPacket);
+
+	size_t old_size = BuffIn.size() * sizeof(float);
+	size_t new_size = old_size - m_framesize;
+	size_t new_count = new_size / sizeof(float);
+
+	memmove(pIn, (BYTE*)pIn + m_framesize, new_size);
+	BuffIn.resize(new_count);
+
+	return S_OK;
 }
 
 void CAC3Encoder::FlushBuffers()
@@ -189,6 +182,7 @@ void CAC3Encoder::StreamFinish()
 	avcodec_free_context(&m_pAVCtx);
 
 	av_frame_free(&m_pFrame);
+	av_packet_free(&m_pPacket);
 
 	av_freep(&m_pSamples);
 	m_buffersize = 0;
@@ -197,12 +191,9 @@ void CAC3Encoder::StreamFinish()
 DWORD CAC3Encoder::SelectLayout(DWORD layout)
 {
 	// check supported layouts
-	if (m_pAVCodec && m_pAVCodec->channel_layouts) {
-		for (size_t i = 0; m_pAVCodec->channel_layouts[i] != 0; i++) {
-			if (layout == (DWORD)m_pAVCodec->channel_layouts[i]) {
-				return layout;
-			}
-		}
+	if (m_pAVCtx &&
+			m_pAVCtx->ch_layout.order == AV_CHANNEL_ORDER_NATIVE && m_pAVCtx->ch_layout.u.mask == static_cast<uint64_t>(layout)) {
+		return layout;
 	}
 
 	// select the suitable format

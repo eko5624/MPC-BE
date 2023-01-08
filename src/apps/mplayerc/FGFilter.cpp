@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -23,7 +23,6 @@
 #include <mpconfig.h>
 #include "FGFilter.h"
 #include "MainFrm.h"
-#include <filters/renderer/VideoRenderers/SyncAllocatorPresenter.h>
 #include <clsids.h>
 #include <moreuuids.h>
 
@@ -422,9 +421,10 @@ HRESULT CFGFilterFile::Create(IBaseFilter** ppBF, CInterfaceList<IUnknown, &IID_
 // CFGFilterVideoRenderer
 //
 
-CFGFilterVideoRenderer::CFGFilterVideoRenderer(HWND hWnd, const CLSID& clsid, CStringW name, UINT64 merit)
+CFGFilterVideoRenderer::CFGFilterVideoRenderer(HWND hWnd, const CLSID& clsid, CStringW name, UINT64 merit, bool bIsPreview)
 	: CFGFilter(clsid, name, merit)
 	, m_hWnd(hWnd)
+	, m_bIsPreview(bIsPreview)
 {
 	AddType(MEDIATYPE_Video, MEDIASUBTYPE_NULL);
 }
@@ -434,19 +434,13 @@ HRESULT CFGFilterVideoRenderer::Create(IBaseFilter** ppBF, CInterfaceList<IUnkno
 	DLog(L"CFGFilterVideoRenderer::Create() on thread: %d", GetCurrentThreadId());
 	CheckPointer(ppBF, E_POINTER);
 
-	HRESULT hr = S_OK;
-	CComPtr<ISubPicAllocatorPresenter3> pCAP;
-
 	auto pMainFrame = (CMainFrame *)(AfxGetApp()->m_pMainWnd);
 	const bool bFullscreen = pMainFrame && pMainFrame->IsD3DFullScreenMode();
+	CComPtr<IAllocatorPresenter> pCAP;
 
-	if (m_clsid == CLSID_EVRAllocatorPresenter) {
-		hr = CreateEVR(m_clsid, m_hWnd, bFullscreen, &pCAP);
-	} else if (m_clsid == CLSID_SyncAllocatorPresenter) {
-		hr = CreateSyncRenderer(m_clsid, m_hWnd, bFullscreen, &pCAP);
-	} else if (m_clsid == CLSID_DXRAllocatorPresenter || m_clsid == CLSID_madVRAllocatorPresenter || m_clsid == CLSID_MPCVRAllocatorPresenter) {
-		hr = CreateAP9(m_clsid, m_hWnd, bFullscreen, &pCAP);
-	} else {
+	HRESULT hr = CreateAllocatorPresenter(m_clsid, m_hWnd, bFullscreen, &pCAP);
+	
+	if (hr == E_NOTIMPL) {
 		CComPtr<IBaseFilter> pBF;
 		hr = pBF.CoCreateInstance(m_clsid);
 		if (FAILED(hr)) {
@@ -454,23 +448,26 @@ HRESULT CFGFilterVideoRenderer::Create(IBaseFilter** ppBF, CInterfaceList<IUnkno
 		}
 
 		if (m_clsid == CLSID_EnhancedVideoRenderer) {
-			if (m_name != "EVR - Preview Window") {
-				if (CComQIPtr<IEVRFilterConfig> pConfig = pBF) {
+			if (!m_bIsPreview) {
+				if (CComQIPtr<IEVRFilterConfig> pConfig = pBF.p) {
 					// 3 video streams are required to play DVD-Video with some decoders
 					VERIFY(SUCCEEDED(pConfig->SetNumberOfStreams(3)));
 				}
 			}
 
-			if (CComQIPtr<IMFGetService> pMFGS = pBF) {
+			if (CComQIPtr<IMFGetService> pMFGS = pBF.p) {
 				CComPtr<IMFVideoDisplayControl> pMFVDC;
 				if (SUCCEEDED(pMFGS->GetService(MR_VIDEO_RENDER_SERVICE, IID_PPV_ARGS(&pMFVDC)))) {
 					VERIFY(SUCCEEDED(pMFVDC->SetVideoWindow(m_hWnd)));
+					if (m_bIsPreview) {
+						pMFVDC->SetRenderingPrefs(MFVideoRenderPrefs_DoNotRepaintOnStop);
+					}
 				}
 			}
 		}
 
 		BeginEnumPins(pBF, pEP, pPin) {
-			if (CComQIPtr<IMixerPinConfig, &IID_IMixerPinConfig> pMPC = pPin) {
+			if (CComQIPtr<IMixerPinConfig, &IID_IMixerPinConfig> pMPC = pPin.p) {
 				pUnks.AddTail(pMPC);
 				break;
 			}
@@ -479,14 +476,33 @@ HRESULT CFGFilterVideoRenderer::Create(IBaseFilter** ppBF, CInterfaceList<IUnkno
 
 		*ppBF = pBF.Detach();
 	}
+	else if (pCAP) {
+		if (m_bIsPreview) {
+			pCAP->DisableSubPicInitialization();
+			pCAP->EnablePreviewModeInitialization();
+			ExtraRendererSettings ExtraSets;
+			ExtraSets.nEVRBuffers = 2;
+			pCAP->SetExtraSettings(&ExtraSets);
+		}
+		else {
+			pCAP->SetSubpicSettings(&GetRenderersSettings().SubpicSets);
+			pCAP->SetExtraSettings(&GetRenderersSettings().ExtraSets);
+		}
 
-	if (pCAP) {
 		CComPtr<IUnknown> pRenderer;
 		if (SUCCEEDED(hr = pCAP->CreateRenderer(&pRenderer))) {
 			*ppBF = CComQIPtr<IBaseFilter>(pRenderer).Detach();
 			pUnks.AddTail(pCAP);
 
-			if (m_clsid == CLSID_madVRAllocatorPresenter) {
+			if (m_clsid == CLSID_EVRAllocatorPresenter || m_clsid == CLSID_SyncAllocatorPresenter) {
+				if (!m_bIsPreview) {
+					if (CComQIPtr<IEVRFilterConfig> pConfig = *ppBF) {
+						// 3 video streams are required to play DVD-Video with some decoders
+						VERIFY(SUCCEEDED(pConfig->SetNumberOfStreams(3)));
+					}
+				}
+			}
+			else if (m_clsid == CLSID_madVRAllocatorPresenter) {
 				if (CComQIPtr<IMadVRSubclassReplacement> pMVRSR = *ppBF) {
 					VERIFY(SUCCEEDED(pMVRSR->DisableSubclassing()));
 				}
@@ -495,12 +511,10 @@ HRESULT CFGFilterVideoRenderer::Create(IBaseFilter** ppBF, CInterfaceList<IUnkno
 					VERIFY(SUCCEEDED(pVW->put_Owner((OAHWND)m_hWnd)));
 				}
 			}
-
-			if (m_clsid == CLSID_MPCVRAllocatorPresenter) {
+			else if (m_clsid == CLSID_MPCVRAllocatorPresenter) {
 				if (CComQIPtr<ID3DFullscreenControl> pD3DFS = *ppBF) {
 					pD3DFS->SetD3DFullscreen(bFullscreen);
 				}
-
 				// MPC VR supports calling IVideoWindow::put_Owner before the pins are connected
 				if (CComQIPtr<IVideoWindow> pVW = *ppBF) {
 					VERIFY(SUCCEEDED(pVW->put_Owner((OAHWND)m_hWnd)));

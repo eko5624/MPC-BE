@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2017 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <atlstr.h>
 #include <D3Dcompiler.h>
 #include <d3d9.h>
 
@@ -29,8 +28,8 @@
 
 class CPixelShaderCompiler
 {
-	pD3DCompile m_fnD3DCompile;
-	pD3DDisassemble m_fnD3DDisassemble;
+	pD3DCompile m_fnD3DCompile = nullptr;
+	pD3DDisassemble m_fnD3DDisassemble = nullptr;
 
 	CComPtr<IDirect3DDevice9> m_pD3DDev;
 
@@ -64,3 +63,5 @@ public:
 //
 
 HRESULT CreateShaderFromResource(IDirect3DDevice9* pD3DDev, IDirect3DPixelShader9** ppPixelShader, UINT resid);
+
+extern bool LoadResource(UINT resid, CStringA& str, LPCWSTR restype);

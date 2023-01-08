@@ -1,7 +1,7 @@
 ﻿BEGIN DIALOGEX IDD_ABOUTBOX LINES 26
 3		"Περί"
 7		"MPC-BE"
-8		"Copyright © 2002-2022 βλέπε Authors.txt"
+8		"Copyright © 2002-2023 βλέπε Authors.txt"
 10		"Έκδοση :"
 11		"MPC-BE Compiler :"
 12		"FFmpeg Compiler :"
@@ -290,7 +290,7 @@ BEGIN DIALOGEX IDD_PPAGEFULLSCREEN LINES 34
 32		"Επαναφορά ανάλυσης στην έξοδο του προγράμματος"
 END
 
-BEGIN DIALOGEX IDD_PPAGEINTERFACE LINES 51
+BEGIN DIALOGEX IDD_PPAGEINTERFACE LINES 53
 6		"Χρήση του ""σκοτεινού"" θέματος (προεπιλογή)"
 7		"Φωτεινότητα :"
 9		"Ρύθμιση του χρώματος από την ένδειξη του ήχου:"
@@ -303,23 +303,24 @@ BEGIN DIALOGEX IDD_PPAGEINTERFACE LINES 51
 16		"G:"
 17		"B:"
 21		"Ενεργοποίηση σκοτεινού μενού"
-23		"Χρήση συμβουλής χρόνου:"
-25		"Χρήση της προεπισκόπησης στην αναζήτηση"
-26		"Μέγεθος σε σχέση με το πλάτος της οθόνης:"
-29		"Εμφάνιση σημάνσεων κεφαλαίων στη γραμμή αναζήτησης"
-30		"Χρήση εναέριας μπάρας"
-31		"Μέγεθος γραμματοσειράς λίστας αναπαραγωγής:"
-34		"OSD"
-35		"Γραμματοσ.:"
-38		"F"
-39		"Φόντο:"
-40		"G1"
-41		"G2"
-42		"Διαφάνεια:"
-44		"Περίγραμμα:"
-47		"Σκιά"
-48		"Anti-aliasing"
-49		"Χρήση χαρακτηριστικών γραμμής εργασίας των Windows 7"
+22		"Enable dark title (Windows 11)"
+24		"Χρήση συμβουλής χρόνου:"
+26		"Χρήση της προεπισκόπησης στην αναζήτηση"
+27		"Μέγεθος σε σχέση με το πλάτος της οθόνης:"
+31		"Εμφάνιση σημάνσεων κεφαλαίων στη γραμμή αναζήτησης"
+32		"Χρήση εναέριας μπάρας"
+33		"Μέγεθος γραμματοσειράς λίστας αναπαραγωγής:"
+36		"OSD"
+37		"Γραμματοσ.:"
+40		"F"
+41		"Φόντο:"
+42		"G1"
+43		"G2"
+44		"Διαφάνεια:"
+46		"Περίγραμμα:"
+49		"Σκιά"
+50		"Anti-aliasing"
+51		"Χρήση χαρακτηριστικών γραμμής εργασίας των Windows 7"
 END
 
 BEGIN DIALOGEX IDD_PPAGEINTERNALFILTERS LINES 22
@@ -330,7 +331,7 @@ BEGIN DIALOGEX IDD_PPAGEINTERNALFILTERS LINES 22
 13		"CDDA Reader\nρύθμιση"
 14		"VTS(IFO) Reader\nρύθμιση"
 15		"Video decoder\nρύθμιση"
-16		"MPEG-2/DVD\ndecoder\nρύθμιση"
+16		"DVD-Video\ndecoder\nρύθμιση"
 17		"Audio decoder\nρύθμιση"
 18		"Μέγεθος μνήμης:"
 21		"δευτ."
@@ -587,7 +588,7 @@ BEGIN DIALOGEX IDD_PPAGEWINDOWSIZE LINES 28
 27		"Προσκόλληση στις άκρες της επιφάνειας εργασίας"
 END
 
-BEGIN DIALOGEX IDD_PPAGEYOUTUBE LINES 24
+BEGIN DIALOGEX IDD_PPAGEYOUTUBE LINES 27
 5		"YouTube"
 6		"Χρήση ενσωματωμένης μορφής στην ιστοσελίδα"
 7		"Προτιμώμενη μορφή:"
@@ -600,6 +601,7 @@ BEGIN DIALOGEX IDD_PPAGEYOUTUBE LINES 24
 19		"Επιλογή μέγιστων fps ή bitrate"
 20		"Διεύθυνση AceStream:"
 22		"Διεύθυνση MatriX (TorrServer):"
+25		"User agent:"
 END
 
 BEGIN DIALOGEX IDD_SAVEIMAGEDIALOGTEMPL LINES 9
@@ -1965,6 +1967,9 @@ STRING IDS_SUB_POS_RESTORE		"Επαναφορά της θέσης των υπό�
 STRING IDS_SUB_POS_RIGHT		"Μετατόπιση θέσης υποτίτλων προς τα δεξιά"
 STRING IDS_SUB_POS_UP		"Μετατόπιση θέσης υποτίτλων προς τα πάνω"
 STRING IDS_SUB_SAVE_EXTERNAL_STYLE_FILE		"Αποθήκευση προσαρμοσμένου στυλ"
+STRING IDS_SUB_SIZE		"Subtitle text size: %d"
+STRING IDS_SUB_SIZE_DEC		"Decrease subtitle text size"
+STRING IDS_SUB_SIZE_INC		"Increase subtitle text size"
 STRING IDS_SUB_USE_INTERNAL		"εσωτερική απόδοση υποτίτλων"
 STRING IDS_SURROUND_LEVEL		"Επίπεδο surround (%+.1f dB)"
 STRING IDS_TEXTBAR_FILENANE		"Όνομα αρχείου (αλλιώς τίτλος ή διεύθυνση URL)"
@@ -1999,12 +2004,10 @@ STRING IDS_TOP_FRONT_LEFT		"Εμπρός πάνω αριστερά"
 STRING IDS_TOP_FRONT_RIGHT		"Εμπρός πάνω δεξιά"
 STRING IDS_TOUCH_WINDOW_FROM_INSIDE		"Άγγιγμα παραθύρου εσωτερικά"
 STRING IDS_TOUCH_WINDOW_FROM_OUTSIDE		"Άγγιγμα παραθύρου εξωτερικά"
+STRING IDS_TRA_DVD_VIDEO		"Βασίζεται στο libmpeg2"
 STRING IDS_TRA_FFMPEG		"Βασίζεται στο FFmpeg. http://ffmpeg.org/"
 STRING IDS_TRA_INTEL_MSDK		"Βασίζεται στο Intel Media SDK, απαιτεί εξωτερική βιβλιοθήκη(libmfxsw32.dll/libmfxsw64.dll)"
-STRING IDS_TRA_MPEG2		"Βασίζεται στο libmpeg2"
 STRING IDS_TRA_PS2AUD		"Αποκωδικοποιεί ροές ήχου αρχείων PSS"
-STRING IDS_TRA_RA		"Απαιτεί αποκωδικοποιητές dll για RealAudio. Το DNET δουλεύει επίσης με φίλτρο AC3"
-STRING IDS_TRA_RV		"Απαιτεί αποκωδικοποιητές dll για RealVideo. Το RV10 δουλεύει επίσης με ffdshow"
 STRING IDS_UNDETERMINED		"Απροσδιόριστο"
 STRING IDS_UNKNOWN_SWITCH		"Άγνωστη παράμετρος βρέθηκε στη συμβολοσειρά της γραμμής εντολών: \n\n"
 STRING IDS_UPDATE_CLOSE		"&Κλείσιμο"

@@ -23,6 +23,8 @@
 //---------------------------------------------------------------------------
 #include "MediaInfo/Audio/File_Aac.h"
 #include "MediaInfo/MediaInfo_Config_MediaInfo.h"
+#include <string>
+using namespace std;
 //---------------------------------------------------------------------------
 
 namespace MediaInfoLib
@@ -33,6 +35,8 @@ namespace MediaInfoLib
 //***************************************************************************
 
 extern const size_t Aac_sampling_frequency_Size;
+extern const profilelevel_struct Mpeg4_Descriptors_AudioProfileLevelIndication_Mapping[];
+extern const char* Mpeg4_Descriptors_AudioProfileLevelIndication_Profile[];
 
 //***************************************************************************
 // Constructor/Destructor
@@ -64,6 +68,11 @@ File_Aac::File_Aac()
     Frame_Count_Valid=0;
     FrameIsAlwaysComplete=false;
     Mode=Mode_Unknown;
+    
+    //Conformance
+    #if MEDIAINFO_CONFORMANCE
+        SamplingRate=0;
+    #endif
 
     audioObjectType=(int8u)-1;
     extensionAudioObjectType=(int8u)-1;
@@ -78,6 +87,9 @@ File_Aac::File_Aac()
     #if MEDIAINFO_ADVANCED
         aac_frame_length_Total=0;
     #endif //MEDIAINFO_ADVANCED
+    #if MEDIAINFO_MACROBLOCKS
+        ParseCompletely=0;
+    #endif //MEDIAINFO_MACROBLOCKS
 
     //Temp - Main
     muxConfigPresent=true;
@@ -87,6 +99,8 @@ File_Aac::File_Aac()
     sbr=NULL;
     ps=NULL;
     raw_data_block_Pos=0;
+    ChannelPos_Temp=0;
+    ChannelCount_Temp=0;
 
     //Temp
     CanFill=true;
@@ -206,6 +220,28 @@ void File_Aac::Streams_Finish()
             Fill(Stream_Audio, 0, Audio_BitRate_Mode, "CBR");
         }
     }
+
+    if (Mode==Mode_ADTS && !ChannelCount_Temp && ChannelPos_Temp && Retrieve_Const(Stream_Audio, 0, Audio_Channel_s_).empty())
+        Fill(Stream_Audio, 0, Audio_Channel_s_, ChannelPos_Temp);
+
+    #if MEDIAINFO_CONFORMANCE
+        if (audioObjectType==42 && !ConformanceFlags) {
+            ConformanceFlags.set(Usac);
+            if (Format_Profile==AudioProfile_Max) {
+                ConformanceFlags.set(xHEAAC); // TODO: is xHEAAC profiled detectable in LATM? or just ignore xHEAAC in case of LATM
+            }
+        }
+        if (Retrieve_Const(Stream_Audio, 0, "ConformanceErrors").empty() && Retrieve_Const(Stream_Audio, 0, "ConformanceWarnings").empty() && Retrieve_Const(Stream_Audio, 0, "ConformanceInfos").empty()) //TODO: check why called twice in some cases
+        {
+        if (Format_Profile && Mpeg4_Descriptors_AudioProfileLevelIndication_Profile[Format_Profile]
+            && ((audioObjectType==42 && !ConformanceFlags[BaselineUsac] && !ConformanceFlags[xHEAAC])
+             || (audioObjectType!=42 && (ConformanceFlags[BaselineUsac] || ConformanceFlags[xHEAAC])))) {
+            auto ProfileString=string(Mpeg4_Descriptors_AudioProfileLevelIndication_Profile[Format_Profile]);
+            Fill_Conformance("Crosscheck InitialObjectDescriptor+AudioSpecificConfig audioProfileLevelIndication+audioObjectType", ('\"' + ProfileString + "\" vs " + to_string(audioObjectType) + " are not coherent").c_str(), bitset8().set(Usac).set(BaselineUsac).set(xHEAAC));
+        }
+        Streams_Finish_Conformance();
+        }
+    #endif
 }
 
 //***************************************************************************
@@ -270,7 +306,7 @@ void File_Aac::FileHeader_Parse_ADIF()
 {
     adif_header();
     BS_Begin();
-    raw_data_block();
+    payload();
     BS_End();
 
     FILLING_BEGIN();
@@ -289,12 +325,17 @@ void File_Aac::Read_Buffer_Continue()
         return;
 
     if (Frame_Count==0)
+    {
         PTS_Begin=FrameInfo.PTS;
+        #if MEDIAINFO_MACROBLOCKS
+            ParseCompletely=Config->File_Macroblocks_Parse_Get();
+        #endif //MEDIAINFO_MACROBLOCKS
+    }
 
     switch(Mode)
     {
         case Mode_AudioSpecificConfig : Read_Buffer_Continue_AudioSpecificConfig(); break;
-        case Mode_raw_data_block      : Read_Buffer_Continue_raw_data_block(); break;
+        case Mode_payload             : Read_Buffer_Continue_payload(); break;
         case Mode_ADIF                :
         case Mode_ADTS                : File__Tags_Helper::Read_Buffer_Continue(); break;
         default                       : ;
@@ -311,20 +352,14 @@ void File_Aac::Read_Buffer_Continue_AudioSpecificConfig()
     BS_End();
 
     Infos_AudioSpecificConfig=Infos;
-    Mode=Mode_raw_data_block; //Mode_AudioSpecificConfig only once
+    Mode=Mode_payload; //Mode_AudioSpecificConfig only once
 }
 
 //---------------------------------------------------------------------------
-void File_Aac::Read_Buffer_Continue_raw_data_block()
+void File_Aac::Read_Buffer_Continue_payload()
 {
-    if (Frame_Count>Frame_Count_Valid)
-    {
-        Skip_XX(Element_Size,                                   "Data");
-        return; //Parsing completely only the 1st frame
-    }
-
     BS_Begin();
-    raw_data_block();
+    payload();
     BS_End();
     if (FrameIsAlwaysComplete && Element_Offset<Element_Size)
         Skip_XX(Element_Size-Element_Offset,                    "Unknown");
@@ -344,7 +379,9 @@ void File_Aac::Read_Buffer_Continue_raw_data_block()
             //No more need data
             if (Mode==Mode_LATM)
                 File__Analyze::Accept();
-            File__Analyze::Finish();
+            File__Analyze::Fill();
+            if (Config->ParseSpeed<1.0)
+                File__Analyze::Finish();
         }
     FILLING_ELSE();
         Infos=Infos_AudioSpecificConfig;

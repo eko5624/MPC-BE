@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -22,8 +22,6 @@
 #include "stdafx.h"
 #include "XySubPicQueueImpl.h"
 #include "XySubPicProvider.h"
-
-#define SUBPIC_TRACE_LEVEL 0
 
 //
 // CXySubPicQueueNoThread
@@ -110,11 +108,11 @@ STDMETHODIMP_(bool) CXySubPicQueueNoThread::LookupSubPic(REFERENCE_TIME rtNow, b
 				if (!bAllocSubPic && m_llSubId == id) { // same subtitle as last time
 					pSubPic->SetStop(rtStop);
 					ppSubPic = pSubPic;
-				} else if (m_pAllocator->IsDynamicWriteOnly()) {
+				}
+				else if (m_pAllocator->IsDynamicWriteOnly()) {
 					CComPtr<ISubPic> pStatic;
 					hr = m_pAllocator->GetStatic(&pStatic);
 					if (SUCCEEDED(hr)) {
-						pStatic->SetInverseAlpha(true);
 						hr = RenderTo(pStatic, rtStart, rtStop, fps, true);
 					}
 					if (SUCCEEDED(hr)) {
@@ -124,12 +122,10 @@ STDMETHODIMP_(bool) CXySubPicQueueNoThread::LookupSubPic(REFERENCE_TIME rtNow, b
 						ppSubPic = pSubPic;
 						m_llSubId = id;
 					}
-				} else {
-					pSubPic->SetInverseAlpha(true);
-					if (SUCCEEDED(RenderTo(pSubPic, rtStart, rtStop, fps, true))) {
-						ppSubPic = pSubPic;
-						m_llSubId = id;
-					}
+				}
+				else if (SUCCEEDED(RenderTo(pSubPic, rtStart, rtStop, fps, true))) {
+					ppSubPic = pSubPic;
+					m_llSubId = id;
 				}
 
 				if (ppSubPic) {

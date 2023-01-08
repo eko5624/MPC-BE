@@ -22,6 +22,7 @@
 
 //---------------------------------------------------------------------------
 #include "MediaInfo/Audio/File_DolbyAudioMetadata.h"
+#include "MediaInfo/TimeCode.h"
 #include "tinyxml2.h"
 #include "ThirdParty/base64/base64.h"
 using namespace tinyxml2;
@@ -53,11 +54,11 @@ static size_t metadata_segment_Name_Size=sizeof(metadata_segment_Name)/sizeof(co
 
 static const char* binaural_render_mode_Name[] =
 {
-    "Bypass",
+    "Off",
     "Near",
     "Far",
     "Mid",
-    "Not Indicated",
+    "Not Indicated (Mid)",
 };
 static size_t binaural_render_mode_Name_Size=sizeof(binaural_render_mode_Name)/sizeof(const char*);
 
@@ -67,7 +68,7 @@ static const char* warp_mode_Name[] =
     "Direct Render with room balance",
     "Dolby Pro Logic IIx",
     "Standard (Lo/Ro)",
-    "Not Indicated",
+    NULL,
 };
 static size_t warp_mode_Name_Size=sizeof(warp_mode_Name)/sizeof(const char*);
 
@@ -93,18 +94,18 @@ static size_t frames_per_second_Size=sizeof(frames_per_second_Values)/sizeof(flo
 
 static const char* downmix_type_5to2_Values[] =
 {
-    NULL,
-    "Standard (Lo/Ro)",
-    "Dolby Pro Logic",
-    "Dolby Pro Logic II",
+    "Not indicated (Lo/Ro)",
+    "Lo/Ro",
+    "Lt/Rt (Dolby Pro Logic)",
+    "Lt/Rt (Dolby Pro Logic II)",
     "Direct stereo render",
 };
 static size_t downmix_type_5to2_Size=sizeof(downmix_type_5to2_Values)/sizeof(const char*);
 
 static const char* phaseshift_90deg_5to2_Values[] =
 {
-    "No",
-    "Yes",
+    "w/o Phase 90",
+    "w/ Phase 90",
 };
 static size_t phaseshift_90deg_5to2_Size=sizeof(phaseshift_90deg_5to2_Values)/sizeof(const char*);
 
@@ -244,8 +245,8 @@ void File_DolbyAudioMetadata::Dolby_Atmos_Metadata_Segment()
 
     //Parsing
     Ztring content_creation_tool;
-    int32u content_creation_tool_version;
-    int8u warp_mode, frames_per_second, downmix_type_5to2, phaseshift_90deg_5to2;
+    int32u content_creation_tool_version, first_action_time_SS;
+    int8u warp_mode, frames_per_second, downmix_type_5to2, phaseshift_90deg_5to2, first_action_time_HH, first_action_time_MM;
     Skip_String(32,                                             "reserved");
     Element_Begin1("content_information");
     Get_UTF8(64, content_creation_tool,                         "content_creation_tool");
@@ -255,10 +256,15 @@ void File_DolbyAudioMetadata::Dolby_Atmos_Metadata_Segment()
     Skip_S1(4,                                                  "Unknown");
     Get_S1 (4, frames_per_second,                               "frames_per_second"); Param_Info1C(frames_per_second<frames_per_second_Size, frames_per_second_Values[frames_per_second]);
     BS_End();
-    Skip_XX(27,                                                 "Unknown");
+    Element_Begin1("first_action_time");
+        Get_L1 (first_action_time_HH,                           "HH");
+        Get_L1 (first_action_time_MM,                           "MM");
+        Get_L4 (first_action_time_SS,                           "1/100000 SS");
+    Element_End0();
+    Skip_XX(21,                                                 "Unknown");
     BS_Begin();
     Skip_SB(                                                    "Unknown");
-    Get_S1 (2, downmix_type_5to2,                               "downmix_type_5to2"); Param_Info1C(downmix_type_5to2<downmix_type_5to2_Size, downmix_type_5to2_Values[downmix_type_5to2]);
+    Get_S1 (3, downmix_type_5to2,                               "downmix_type_5to2"); Param_Info1C(downmix_type_5to2<downmix_type_5to2_Size, downmix_type_5to2_Values[downmix_type_5to2]);
     Skip_S1(2,                                                  "Unknown");
     Get_S1 (2, phaseshift_90deg_5to2,                           "phaseshift_90deg_5to2"); Param_Info1C(phaseshift_90deg_5to2<phaseshift_90deg_5to2_Size, phaseshift_90deg_5to2_Values[phaseshift_90deg_5to2]);
     BS_End();
@@ -278,10 +284,16 @@ void File_DolbyAudioMetadata::Dolby_Atmos_Metadata_Segment()
             +Ztring::ToZtring((content_creation_tool_version>>8)&0xFF)+__T('.')
             +Ztring::ToZtring(content_creation_tool_version&0xFF);
         Fill(Stream_Audio, 0, "Dolby_Atmos_Metadata Encoded_Application", content_creation_tool+__T(", ")+Version);
+        string Downmix_5to2;
         if (downmix_type_5to2 && downmix_type_5to2<downmix_type_5to2_Size)
-            Fill(Stream_Audio, 0, "Dolby_Atmos_Metadata Downmix_5to2", downmix_type_5to2_Values[downmix_type_5to2]);
+            Downmix_5to2=downmix_type_5to2_Values[downmix_type_5to2];
         if (phaseshift_90deg_5to2<phaseshift_90deg_5to2_Size)
-            Fill(Stream_Audio, 0, "Dolby_Atmos_Metadata Downmix_5to2_90deg", phaseshift_90deg_5to2_Values[phaseshift_90deg_5to2]);
+        {
+            if (!Downmix_5to2.empty())
+                Downmix_5to2+=' ';
+            Downmix_5to2+=phaseshift_90deg_5to2_Values[phaseshift_90deg_5to2];
+        }
+        Fill(Stream_Audio, 0, "Dolby_Atmos_Metadata Downmix_5to2", Downmix_5to2);
         if (warp_mode!=4) // Avoid "Not indicated"
             Fill(Stream_Audio, 0, "Dolby_Atmos_Metadata Downmix_5.1.x", warp_mode<warp_mode_Name_Size?warp_mode_Name[warp_mode]:Ztring().ToZtring(warp_mode).To_UTF8().c_str());
         if (frames_per_second && frames_per_second<frames_per_second_Size)
@@ -303,6 +315,26 @@ void File_DolbyAudioMetadata::Dolby_Atmos_Metadata_Segment()
             Fill_SetOptions(Stream_Audio, 0, "Dolby_Atmos_Metadata AssociatedVideo_FrameRate/String", "Y NTN");
             Fill_SetOptions(Stream_Audio, 0, "Dolby_Atmos_Metadata AssociatedVideo_FrameRate_DropFrame", "N NTY");
         }
+        if (first_action_time_HH!=(int8u)-1)
+        {
+            TimeCode TC;
+            if (((int8s)first_action_time_HH)<0)
+            {
+                TC.SetNegative();
+                TC.SetHours(-((int8s)first_action_time_HH));
+            }
+            else
+                TC.SetHours(first_action_time_HH);
+            const int32u FrameRate=100000;
+            TC.SetMinutes(first_action_time_MM);
+            TC.SetSeconds(first_action_time_SS/FrameRate);
+            TC.SetFrames(first_action_time_SS%FrameRate);
+            TC.SetFramesMax(FrameRate-1);
+            TC.SetIsTime();
+            TC.SetIsValid();
+            Fill(Stream_Audio, 0, "Dolby_Atmos_Metadata FirstFrameOfAction", TC.ToString());
+            Fill_SetOptions(Stream_Audio, 0, "Dolby_Atmos_Metadata FirstFrameOfAction", "Y NTY");
+        }
         FILLING_END()
 }
 
@@ -323,7 +355,7 @@ void File_DolbyAudioMetadata::Dolby_Atmos_Supplemental_Metadata_Segment()
     Skip_L1(                                                    "reserved");
     bitset<2> TrimAutoSet;
     bool TrimNotAlwaysManual=false;
-    Fill(Stream_Audio, 0, "Dolby_Atmos_Metadata JocTrimMode", "Yes");
+    Fill(Stream_Audio, 0, "Dolby_Atmos_Metadata TrimMode", "Yes");
     for (int cfg=0; cfg<9; cfg++)
     {
         Element_Begin1("config_trim");
@@ -332,7 +364,7 @@ void File_DolbyAudioMetadata::Dolby_Atmos_Supplemental_Metadata_Segment()
         Skip_S1(7,                                              "reserved");
         Get_SB (   auto_trim,                                   "auto_trim");
         BS_End();
-        string FieldPrefix="Dolby_Atmos_Metadata JocTrimMode JocTrimMode"+Ztring::ToZtring(cfg).To_UTF8()+'i';
+        string FieldPrefix="Dolby_Atmos_Metadata TrimMode TrimMode"+Ztring::ToZtring(cfg).To_UTF8()+'i';
         Fill(Stream_Audio, 0, FieldPrefix.c_str(), auto_trim?"Automatic":"Manual");
         TrimAutoSet.set(auto_trim);
         if (auto_trim)
@@ -347,12 +379,12 @@ void File_DolbyAudioMetadata::Dolby_Atmos_Supplemental_Metadata_Segment()
                     Fill_SetOptions(Stream_Audio, 0, FieldPrefix.c_str(), "N N Y");
             }
             Skip_XX(14,                                         "reserved");
-            Fill(Stream_Audio, 0, (FieldPrefix+" JocTrim_Center").c_str(), "Automatic");
-            Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" JocTrim_Center").c_str(), "N NTY");
-            Fill(Stream_Audio, 0, (FieldPrefix+" JocTrim_Surround").c_str(), "Automatic");
-            Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" JocTrim_Surround").c_str(), "N NTY");
-            Fill(Stream_Audio, 0, (FieldPrefix+" JocTrim_Height").c_str(), "Automatic");
-            Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" JocTrim_Height").c_str(), "N NTY");
+            Fill(Stream_Audio, 0, (FieldPrefix+" Trim_Center").c_str(), "Automatic");
+            Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" Trim_Center").c_str(), "N NTY");
+            Fill(Stream_Audio, 0, (FieldPrefix+" Trim_Surround").c_str(), "Automatic");
+            Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" Trim_Surround").c_str(), "N NTY");
+            Fill(Stream_Audio, 0, (FieldPrefix+" Trim_Height").c_str(), "Automatic");
+            Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" Trim_Height").c_str(), "N NTY");
         }
         else
         {
@@ -370,38 +402,38 @@ void File_DolbyAudioMetadata::Dolby_Atmos_Supplemental_Metadata_Segment()
             BS_End();
             if (center_trim)
             {
-                Fill(Stream_Audio, 0, (FieldPrefix+" JocTrim_Center").c_str(), center_trim);
-                Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" JocTrim_Center").c_str(), "N NTY");
-                Fill(Stream_Audio, 0, (FieldPrefix+" JocTrim_Center/String").c_str(), Ztring::ToZtring(center_trim, 2)+__T(" dB"));
-                Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" JocTrim_Center/String").c_str(), "Y NTN");
+                Fill(Stream_Audio, 0, (FieldPrefix+" Trim_Center").c_str(), center_trim);
+                Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" Trim_Center").c_str(), "N NTY");
+                Fill(Stream_Audio, 0, (FieldPrefix+" Trim_Center/String").c_str(), Ztring::ToZtring(center_trim, 2)+__T(" dB"));
+                Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" Trim_Center/String").c_str(), "Y NTN");
             }
             if (surround_trim)
             {
-                Fill(Stream_Audio, 0, (FieldPrefix+" JocTrim_Surround").c_str(), surround_trim);
-                Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" JocTrim_Surround").c_str(), "N NTY");
-                Fill(Stream_Audio, 0, (FieldPrefix+" JocTrim_Surround/String").c_str(), Ztring::ToZtring(surround_trim, 2)+__T(" dB"));
-                Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" JocTrim_Surround/String").c_str(), "Y NTN");
+                Fill(Stream_Audio, 0, (FieldPrefix+" Trim_Surround").c_str(), surround_trim);
+                Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" Trim_Surround").c_str(), "N NTY");
+                Fill(Stream_Audio, 0, (FieldPrefix+" Trim_Surround/String").c_str(), Ztring::ToZtring(surround_trim, 2)+__T(" dB"));
+                Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" Trim_Surround/String").c_str(), "Y NTN");
             }
             if (height_trim)
             {
-                Fill(Stream_Audio, 0, (FieldPrefix+" JocTrim_Height").c_str(), height_trim);
-                Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" JocTrim_Height").c_str(), "N NTY");
-                Fill(Stream_Audio, 0, (FieldPrefix+" JocTrim_Height/String").c_str(), Ztring::ToZtring(height_trim, 2)+__T(" dB"));
-                Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" JocTrim_Height/String").c_str(), "Y NTN");
+                Fill(Stream_Audio, 0, (FieldPrefix+" Trim_Height").c_str(), height_trim);
+                Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" Trim_Height").c_str(), "N NTY");
+                Fill(Stream_Audio, 0, (FieldPrefix+" Trim_Height/String").c_str(), Ztring::ToZtring(height_trim, 2)+__T(" dB"));
+                Fill_SetOptions(Stream_Audio, 0, (FieldPrefix+" Trim_Height/String").c_str(), "Y NTN");
             }
             if (frontback_balance_ohfl_amount)
             {
                 float32 frontback_balance_ohfl=((float32)frontback_balance_ohfl_amount)/127;
                 if (frontback_balance_ohfl_direction)
                     frontback_balance_ohfl=-frontback_balance_ohfl;
-                Fill(Stream_Audio, 0, (FieldPrefix+" JocBalance_FrontBackOverheadFloor").c_str(), frontback_balance_ohfl, 2);
+                Fill(Stream_Audio, 0, (FieldPrefix+" Balance_FrontBackOverheadFloor").c_str(), frontback_balance_ohfl, 2);
             }
             if (frontback_balance_lstr_amount)
             {
                 float32 frontback_balance_lstr=((float32)frontback_balance_lstr_amount)/127;
                 if (frontback_balance_lstr_direction)
                     frontback_balance_lstr=-frontback_balance_lstr;
-                Fill(Stream_Audio, 0, (FieldPrefix+" JocBalance_FrontBackListener").c_str(), frontback_balance_lstr, 2);
+                Fill(Stream_Audio, 0, (FieldPrefix+" Balance_FrontBackListener").c_str(), frontback_balance_lstr, 2);
             }
         }
         Element_End0();
@@ -417,11 +449,11 @@ void File_DolbyAudioMetadata::Dolby_Atmos_Supplemental_Metadata_Segment()
         {
             for (int cfg=0; cfg<9; cfg++)
             {
-                Fill_SetOptions(Stream_Audio, 0, (string("Dolby_Atmos_Metadata JocTrimMode JocTrimMode")+Ztring::ToZtring(cfg).To_UTF8()+'i').c_str(), "N NTY");
+                Fill_SetOptions(Stream_Audio, 0, (string("Dolby_Atmos_Metadata TrimMode TrimMode")+Ztring::ToZtring(cfg).To_UTF8()+'i').c_str(), "N NTY");
             }
         }
     }
-    Fill(Stream_Audio, 0, "Dolby_Atmos_Metadata JocTrimMode", List.Read(), true);
+    Fill(Stream_Audio, 0, "Dolby_Atmos_Metadata TrimMode", List.Read(), true);
 
     if (object_count)
     {
@@ -448,26 +480,111 @@ void File_DolbyAudioMetadata::Dolby_Atmos_Supplemental_Metadata_Segment()
     Element_End0();
     Element_Begin1("headphone_metadata");
     BS_Begin();
-    set<int8u> BinauralRenderModes;
     for (int obj=0; obj<object_count; obj++)
     {
         int8u head_track_mode, binaural_render_mode;
         Get_S1 (2, head_track_mode,                             "head_track_mode");
         Skip_S1(3,                                              "reserved");
         Get_S1 (3, binaural_render_mode,                        "binaural_render_mode"); Param_Info1C(binaural_render_mode<binaural_render_mode_Name_Size, binaural_render_mode_Name[binaural_render_mode]);
-        BinauralRenderModes.insert(binaural_render_mode);
+        BinauralRenderModes.push_back(binaural_render_mode);
     }
-    if (BinauralRenderModes.size()>1 || (BinauralRenderModes.size()==1 && *BinauralRenderModes.begin()!=4)) // Avoid "Not Indicated" alone
-        for (set<int8u>::iterator BinauralRenderMode=BinauralRenderModes.begin(); BinauralRenderMode!=BinauralRenderModes.end(); ++BinauralRenderMode)
-        {
-            int8u binaural_render_mode=*BinauralRenderMode;
-            Fill(Stream_Audio, 0, "Dolby_Atmos_Metadata BinauralRenderMode", binaural_render_mode<binaural_render_mode_Name_Size?binaural_render_mode_Name[binaural_render_mode]:Ztring().ToZtring(binaural_render_mode).To_UTF8().c_str());
-        }
     BS_End();
     Element_End0();
+}
+
+//***************************************************************************
+// Delayed
+//***************************************************************************
+
+//---------------------------------------------------------------------------
+void File_DolbyAudioMetadata::Merge(File__Analyze& In, size_t StreamPos)
+{
+    const auto& FirstFrameOfAction=In.Retrieve_Const(Stream_Audio, 0, "Dolby_Atmos_Metadata FirstFrameOfAction");
+    if (!FirstFrameOfAction.empty())
+    {
+        TimeCode TC(FirstFrameOfAction.To_UTF8());
+        const auto& Start=In.Retrieve_Const(Stream_Audio, 0, "Programme0 Start");
+        if (!Start.empty())
+        {
+            TimeCode TC2(Start.To_UTF8());
+            TC+=TC2;
+        }
+        auto FramesPerSecond=In.Retrieve_Const(Stream_Audio, 0, "Dolby_Atmos_Metadata AssociatedVideo_FrameRate").To_int64u();
+        auto DropFrame=In.Retrieve_Const(Stream_Audio, 0, "Dolby_Atmos_Metadata AssociatedVideo_FrameRate_DropFrame")==__T("Yes");
+        if (FramesPerSecond)
+        {
+            TimeCode TC_Frames(0, FramesPerSecond-1, DropFrame);
+            TC_Frames+=TC;
+            if (TC_Frames.ToMilliseconds()<TC.ToMilliseconds())
+            {
+                TC_Frames++;
+                string Warning("First frame of action ");
+                Warning+=TC.ToString();
+                Warning+=" has been rounded to nearest frame ";
+                Warning+=TC_Frames.ToString();
+                In.Fill(Stream_Audio, 0, "Warning", Warning);
+            }
+            TC=TC_Frames;
+        }
+        In.Fill(Stream_Audio, 0, "Dolby_Atmos_Metadata FirstFrameOfAction", TC.ToString(), false, true);
+    }
+
+    if (BinauralRenderModes.empty())
+        return;
+
+    auto TransportEmpty = In.Retrieve_Const(Stream_Audio, 0, "Transport0").empty();
+    ZtringList TrackUID_Pos;
+    TrackUID_Pos.Separator_Set(0, " + ");
+    static const auto BinauralRenderMode_String=" BinauralRenderMode";
+    static const auto LinkedTo_TrackUID_Pos_String=" LinkedTo_TrackUID_Pos";
+    static const auto TrackUID_String="TrackUID";
+
+    for (size_t TrackIndex=0; TrackIndex<BinauralRenderModes.size(); TrackIndex++)
+    {
+        if (TransportEmpty)
+            TrackUID_Pos.Write(Ztring().From_Number(TrackIndex)); // Fallback
+        else
+        {
+            TrackUID_Pos.Write(In.Retrieve_Const(Stream_Audio, 0, ("Transport0 TrackIndex"+to_string(TrackIndex)+LinkedTo_TrackUID_Pos_String).c_str()));
+            if (TrackUID_Pos.empty())
+                TrackUID_Pos.Write(Ztring().From_Number(TrackIndex)); // Fallback
+        }
+        auto binaural_render_mode=BinauralRenderModes[TrackIndex];
+        auto BinauralRenderMode=binaural_render_mode<binaural_render_mode_Name_Size?Ztring().From_UTF8(binaural_render_mode_Name[binaural_render_mode]):Ztring().ToZtring(binaural_render_mode).To_UTF8().c_str();
+        for (const auto& Pos : TrackUID_Pos)
+        {
+            string Name=TrackUID_String+Pos.To_UTF8();
+            auto PosI=(size_t)Pos.To_int64u();
+            Name+=BinauralRenderMode_String;
+            In.Fill(Stream_Audio, 0, Name.c_str(), BinauralRenderMode);
+        }
+    }
+
+    int64u NumberOfObjects=In.Retrieve_Const(Stream_Audio, 0, "NumberOfObjects").To_int64u();
+    for (size_t i=0; i<NumberOfObjects; i++)
+    {
+        string Name="Object"+Ztring::ToZtring(i).To_UTF8();
+        const Ztring& LinkedTos=In.Retrieve_Const(Stream_Audio, 0, (Name+LinkedTo_TrackUID_Pos_String).c_str());
+        ZtringList LinkedToList;
+        LinkedToList.Separator_Set(0, " + ");
+        LinkedToList.Write(LinkedTos);
+        Name+=BinauralRenderMode_String;
+        ZtringList BinauralRenderModes;
+        set<Ztring> BinauralRenderMode_Diffs;
+        BinauralRenderModes.Separator_Set(0, " + ");
+        for (size_t i=0; i<LinkedToList.size(); i++)
+        {
+            const auto& LinkedTo=LinkedToList[i].To_UTF8();
+            const Ztring& BinauralRenderMode=In.Retrieve_Const(Stream_Audio, 0, (TrackUID_String+LinkedTo+BinauralRenderMode_String).c_str());
+            BinauralRenderModes.push_back(BinauralRenderMode);
+            BinauralRenderMode_Diffs.insert(BinauralRenderMode);
+        }
+        if (BinauralRenderMode_Diffs.size()==1)
+            BinauralRenderModes.resize(1);
+        In.Fill(Stream_Audio, 0, Name.c_str(), BinauralRenderModes.Read());
+    }
 }
 
 } //NameSpace
 
 #endif //defined(MEDIAINFO_RIFF_YES) || defined(MEDIAINFO_MXF_YES)
-

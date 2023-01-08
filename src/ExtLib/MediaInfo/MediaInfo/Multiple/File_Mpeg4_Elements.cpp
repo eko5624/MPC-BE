@@ -97,6 +97,9 @@ using namespace std;
 #if defined(MEDIAINFO_ADPCM_YES)
     #include "MediaInfo/Audio/File_Adpcm.h"
 #endif
+#if defined(MEDIAINFO_FLAC_YES)
+    #include "MediaInfo/Audio/File_Flac.h"
+#endif
 #if defined(MEDIAINFO_MPEGA_YES)
     #include "MediaInfo/Audio/File_Mpega.h"
 #endif
@@ -658,6 +661,8 @@ namespace Elements
     const int64u moof=0x6D6F6F66;
     const int64u moof_mfhd=0x6D666864;
     const int64u moof_traf=0x74726166;
+    const int64u moof_traf_sbgp=0x73626770;
+    const int64u moof_traf_sgpd=0x73677064;
     const int64u moof_traf_sdtp=0x73647470;
     const int64u moof_traf_tfdt=0x74666474;
     const int64u moof_traf_tfhd=0x74666864;
@@ -700,6 +705,7 @@ namespace Elements
     const int64u moov_trak_edts_elst=0x656C7374;
     const int64u moov_trak_load=0x6C6F6164;
     const int64u moov_trak_mdia=0x6D646961;
+    const int64u moov_trak_mdia_elng=0x656C6E67;
     const int64u moov_trak_mdia_hdlr=0x68646C72;
     const int64u moov_trak_mdia_hdlr_alis=0x616C6973;
     const int64u moov_trak_mdia_hdlr_clcp=0x636C6370;
@@ -750,7 +756,9 @@ namespace Elements
     const int64u moov_trak_mdia_minf_stbl_co64=0x636F3634;
     const int64u moov_trak_mdia_minf_stbl_cslg=0x63736C67;
     const int64u moov_trak_mdia_minf_stbl_ctts=0x63747473;
+    const int64u moov_trak_mdia_minf_stbl_sbgp=0x73626770;
     const int64u moov_trak_mdia_minf_stbl_sdtp=0x73647470;
+    const int64u moov_trak_mdia_minf_stbl_sgpd=0x73677064;
     const int64u moov_trak_mdia_minf_stbl_stco=0x7374636F;
     const int64u moov_trak_mdia_minf_stbl_stdp=0x73746470;
     const int64u moov_trak_mdia_minf_stbl_stps=0x73747073;
@@ -797,12 +805,15 @@ namespace Elements
     const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_damr=0x64616D72;
     const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_dec3=0x64656333;
     const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_ddts=0x64647473;
+    const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_dfLa=0x64664C61;
     const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_dmlp=0x646D6C70;
     const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_dvc1=0x64766331;
     const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_dvcC=0x64766343;
     const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_dvvC=0x64767643;
+    const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_dvwC=0x64767743;
     const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_esds=0x65736473;
     const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_fiel=0x6669656C;
+    const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_gama=0x67616D61;
     const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_glbl=0x676C626C;
     const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_hvcC=0x68766343;
     const int64u moov_trak_mdia_minf_stbl_stsd_xxxx_hvcE=0x68766345;
@@ -939,6 +950,7 @@ namespace Elements
     const int64u RDVO=0x5244564F;
     const int64u RDVS=0x52445653;
     const int64u RED1=0x52454431;
+    const int64u RED2=0x52454432;
     const int64u REDA=0x52454441;
     const int64u REDV=0x52454456;
     const int64u REOB=0x52454F42;
@@ -1043,6 +1055,8 @@ void File_Mpeg4::Data_Parse()
         ATOM(moof_mfhd)
         LIST(moof_traf)
             ATOM_BEGIN
+            ATOM(moof_traf_sbgp)
+            ATOM(moof_traf_sgpd)
             ATOM(moof_traf_sdtp)
             ATOM(moof_traf_tfdt)
             ATOM(moof_traf_tfhd)
@@ -1092,6 +1106,7 @@ void File_Mpeg4::Data_Parse()
             ATOM(moov_trak_load)
             LIST(moov_trak_mdia)
                 ATOM_BEGIN
+                ATOM(moov_trak_mdia_elng)
                 ATOM(moov_trak_mdia_hdlr)
                 LIST(moov_trak_mdia_imap)
                     ATOM_BEGIN
@@ -1146,7 +1161,9 @@ void File_Mpeg4::Data_Parse()
                         ATOM(moov_trak_mdia_minf_stbl_co64)
                         ATOM(moov_trak_mdia_minf_stbl_cslg)
                         ATOM(moov_trak_mdia_minf_stbl_ctts)
+                        ATOM(moov_trak_mdia_minf_stbl_sgpd)
                         ATOM(moov_trak_mdia_minf_stbl_sdtp)
+                        ATOM(moov_trak_mdia_minf_stbl_sbgp)
                         ATOM(moov_trak_mdia_minf_stbl_stco)
                         ATOM(moov_trak_mdia_minf_stbl_stdp)
                         ATOM(moov_trak_mdia_minf_stbl_stps)
@@ -1202,12 +1219,15 @@ void File_Mpeg4::Data_Parse()
                                 ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_damr)
                                 ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_dec3)
                                 ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_ddts)
+                                ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_dfLa)
                                 ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_dmlp)
                                 ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_dvc1)
                                 ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_dvcC)
                                 ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_dvvC)
+                                ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_dvwC)
                                 ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_esds)
                                 ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_fiel)
+                                ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_gama)
                                 ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_glbl)
                                 ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_hvcC)
                                 ATOM(moov_trak_mdia_minf_stbl_stsd_xxxx_hvcE)
@@ -1377,6 +1397,7 @@ void File_Mpeg4::Data_Parse()
     ATOM(RDVO)
     ATOM(RDVS)
     ATOM(RED1)
+    ATOM(RED2)
     ATOM(REDA)
     ATOM(REDV)
     ATOM(REOB)
@@ -1781,6 +1802,14 @@ void File_Mpeg4::mdat()
     }
     Element_Name("Data");
 
+    if (Config->ParseSpeed<=-1 && !Streams.empty())
+    {
+        if (File_Offset+Buffer_Offset+Element_TotalSize_Get()>File_Size)
+            Fill(Stream_General, 0, "IsTruncated", "Yes");
+        Finish();
+        return;
+    }
+
     //Sizes
     if (Retrieve(Stream_General, 0, General_HeaderSize).empty())
     {
@@ -2019,10 +2048,10 @@ void File_Mpeg4::mdat_xxxx()
         #endif //MEDIAINFO_DEMUX
         Element_Show();
 
-        if (!Stream_Temp.IsFilled && Stream_Temp.Parsers[Pos]->Status[IsFilled])
+        if (!Stream_Temp.IsFilled && (Stream_Temp.Parsers[Pos]->Status[IsFilled] || Stream_Temp.Parsers[Pos]->Status[IsFinished]))
         {
             #if MEDIAINFO_DEMUX
-                if (Stream_Temp.StreamKind==Stream_Other) //If this is a TimeCode track
+                if (Stream_Temp.TimeCode) //If this is a TimeCode track
                 {
                     if (((File_Mpeg4_TimeCode*)Stream_Temp.Parsers[Pos])->Pos!=(int32u)-1)
                     {
@@ -2038,7 +2067,7 @@ void File_Mpeg4::mdat_xxxx()
 
             Stream_Temp.IsFilled=true;
 
-            if (Config->ParseSpeed<1 && !mdat_Pos.empty())
+            if (Config->ParseSpeed<1 && !mdat_Pos.empty() && !Stream_Temp.TimeCode)
             {
                 bool File_Offset_Next_IsValid;
                 int64u File_Offset_Next;
@@ -2127,6 +2156,12 @@ void File_Mpeg4::mdat_StreamJump()
 
     //Finding right file offset
     int64u ToJump=File_Size;
+    if (!mdat_Pos_ToParseInPriority_StreamIDs_ToRemove.empty())
+    {
+        int32u StreamIDNext=mdat_Pos_ToParseInPriority_StreamIDs_ToRemove[mdat_Pos_ToParseInPriority_StreamIDs_ToRemove.size()-1];
+        while (mdat_Pos_Temp!=mdat_Pos_Max && mdat_Pos_Temp->StreamID!=StreamIDNext)
+            mdat_Pos_Temp++;
+    }
     if (!mdat_Pos.empty() && mdat_Pos_Temp!=mdat_Pos_Max)
         ToJump=mdat_Pos_Temp->Offset;
     if (ToJump>File_Size)
@@ -2786,6 +2821,8 @@ void File_Mpeg4::moof()
     IsFragmented=true;
     moof_base_data_offset=File_Offset+Buffer_Offset-Header_Size;
     data_offset_present=true;
+    for (auto& Stream : Streams)
+        Stream.second.FramePos_Offset=Stream.second.stts_FrameCount;
 }
 
 //---------------------------------------------------------------------------
@@ -2875,7 +2912,21 @@ void File_Mpeg4::moof_traf_tfhd()
     if (default_sample_size_present)
         Get_B4 (moof_traf_default_sample_size,                  "default_sample_size");
     if (default_sample_flags_present)
-        Skip_B4(                                                "default_sample_flags");
+    {
+        Element_Begin1("default_sample_flags");
+        bool sample_is_non_sync_sample;
+        BS_Begin();
+        Skip_S1(4,                                              "reserved");
+        Skip_S1(2,                                              "is_leading");
+        Skip_S1(2,                                              "sample_depends_on");
+        Skip_S1(2,                                              "sample_is_depended_on");
+        Skip_S1(2,                                              "sample_has_redundancy");
+        Skip_S1(3,                                              "sample_padding_value");
+        Get_SB (   sample_is_non_sync_sample,                   "sample_is_non_sync_sample");
+        BS_End();
+        Skip_B2(                                                "sample_degradation_priority");
+        Element_End0();
+    }
 
     FILLING_BEGIN();
         Stream=Streams.find(moov_trak_tkhd_TrackID);
@@ -2929,10 +2980,25 @@ void File_Mpeg4::moof_traf_trun()
         Stream->second.stsz.resize(Stream->second.stsz.size()+sample_count, moof_traf_default_sample_size);
 
     if (first_sample_flags_present)
-        Skip_B4(                                                "first_sample_flags");
+    {
+        Element_Begin1("first_sample_flags");
+        bool sample_is_non_sync_sample;
+        BS_Begin();
+        Skip_S1(4,                                              "reserved");
+        Skip_S1(2,                                              "is_leading");
+        Skip_S1(2,                                              "sample_depends_on");
+        Skip_S1(2,                                              "sample_is_depended_on");
+        Skip_S1(2,                                              "sample_has_redundancy");
+        Skip_S1(3,                                              "sample_padding_value");
+        Get_SB (   sample_is_non_sync_sample,                   "sample_is_non_sync_sample");
+        BS_End();
+        Skip_B2(                                                "sample_degradation_priority");
+        Element_End0();
+    }
     for (int32u Pos=0; Pos<sample_count; Pos++)
     {
         Element_Begin1("sample");
+        Element_Info1(Stream->second.FramePos_Offset+Pos);
         if (sample_duration_present)
         {
             int32u sample_duration;
@@ -2950,11 +3016,25 @@ void File_Mpeg4::moof_traf_trun()
             //Filling
             Stream->second.stsz_StreamSize+=sample_size;
             Stream->second.stsz_Total.push_back(sample_size);
-            if (Stream->second.stsz.size()<FrameCount_MaxPerStream)
+            if (Stream->second.stsz.size()<FrameCount_MaxPerStream || Stream->second.TimeCode)
                 Stream->second.stsz.push_back(sample_size);
         }
         if (sample_flags_present)
-            Skip_B4(                                            "sample_flags");
+        {
+            Element_Begin1("sample_flags");
+            bool sample_is_non_sync_sample;
+            BS_Begin();
+            Skip_S1(4,                                          "reserved");
+            Skip_S1(2,                                          "is_leading");
+            Skip_S1(2,                                          "sample_depends_on");
+            Skip_S1(2,                                          "sample_is_depended_on");
+            Skip_S1(2,                                          "sample_has_redundancy");
+            Skip_S1(3,                                          "sample_padding_value");
+            Get_SB (   sample_is_non_sync_sample,               "sample_is_non_sync_sample");
+            BS_End();
+            Skip_B2(                                            "sample_degradation_priority");
+            Element_End0();
+        }
         if (sample_composition_time_offset_present)
         {
             Info_B4(sample_composition_time_offset,             "sample_composition_time_offset"); Param_Info1((int32s)sample_composition_time_offset);
@@ -3902,6 +3982,25 @@ void File_Mpeg4::moov_trak_mdia()
 }
 
 //---------------------------------------------------------------------------
+void File_Mpeg4::moov_trak_mdia_elng()
+{
+    NAME_VERSION_FLAG("Extended language");
+
+    //Parsing
+    if (Version!=0)
+    {
+        Skip_XX(Element_Size-Element_Offset,                    "Unknown");
+        return;
+    }
+    Ztring Value;
+    Get_UTF8 (Element_Size-Element_Offset, Value,               "Value");
+
+    FILLING_BEGIN()
+        Fill(StreamKind_Last, StreamPos_Last, Fill_Parameter(StreamKind_Last, Generic_Language), Value, true);
+    FILLING_END()
+}
+
+//---------------------------------------------------------------------------
 void File_Mpeg4::moov_trak_mdia_hdlr()
 {
     NAME_VERSION_FLAG("Handler Reference");
@@ -4182,7 +4281,8 @@ void File_Mpeg4::moov_trak_mdia_mdhd()
     Skip_B2(                                                    "Quality");
 
     FILLING_BEGIN();
-        Fill(StreamKind_Last, StreamPos_Last, "Language", Language_Get(Language));
+        if (Retrieve_Const(StreamKind_Last, StreamPos_Last, Fill_Parameter(StreamKind_Last, Generic_Language)).empty()) //elng has priority
+            Fill(StreamKind_Last, StreamPos_Last, "Language", Language_Get(Language));
         Streams[moov_trak_tkhd_TrackID].mdhd_Duration=Duration;
         Streams[moov_trak_tkhd_TrackID].mdhd_TimeScale=TimeScale;
 
@@ -4655,7 +4755,7 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_co64()
         return;
 
     std::vector<int64u> &stco=Streams[moov_trak_tkhd_TrackID].stco;
-    stco.resize(Count<FrameCount_MaxPerStream?Count:FrameCount_MaxPerStream);
+    stco.resize((Count<FrameCount_MaxPerStream || Streams[moov_trak_tkhd_TrackID].TimeCode)?Count:FrameCount_MaxPerStream);
     int64u* stco_Data=&stco[0];
 
     for (int32u Pos=0; Pos<Count; Pos++)
@@ -4671,7 +4771,7 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_co64()
         Offset=BigEndian2int64u(Buffer+Buffer_Offset+(size_t)Element_Offset);
         Element_Offset+=8;
 
-        if (Pos<FrameCount_MaxPerStream)
+        if (Pos<FrameCount_MaxPerStream || Streams[moov_trak_tkhd_TrackID].TimeCode)
         {
             (*stco_Data)=Offset;
             stco_Data++;
@@ -4720,6 +4820,92 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_ctts()
 }
 
 //---------------------------------------------------------------------------
+void File_Mpeg4::moov_trak_mdia_minf_stbl_sbgp()
+{
+    NAME_VERSION_FLAG("Sample to Group");
+    if (Version>1)
+    {
+        Skip_XX(Element_Size-Element_Offset,                    "Unknown");
+        return;
+    }
+
+    //Parsing
+    int64u Total=0;
+    int32u Count;
+    Skip_C4(                                                    "grouping_type");
+    if (Version==1)
+        Skip_C4(                                                "grouping_type_parameter");
+    Get_B4 (Count,                                              "entry_count");
+    auto& Stream=Streams[moov_trak_tkhd_TrackID];
+    for (int32u Pos=0; Pos<Count; Pos++)
+    {
+        Element_Begin1("sample");
+        Element_Info1(Total);
+        int32u sample_count, group_description_index;
+        Get_B4 (sample_count,                                   "sample_count"); Element_Info1(sample_count);
+        Get_B4 (group_description_index,                        "group_description_index"); Element_Info1(group_description_index);
+        Total+=sample_count;
+        Element_End0();
+    }
+    Element_Info2(Total, " samples");
+}
+
+//---------------------------------------------------------------------------
+void File_Mpeg4::moov_trak_mdia_minf_stbl_sgpd()
+{
+    NAME_VERSION_FLAG("Sample Group Description");
+    if (Version>2)
+    {
+        Skip_XX(Element_Size-Element_Offset,                    "Unknown");
+        return;
+    }
+
+    //Parsing
+    int32u grouping_type, Count, default_length;
+    Get_C4 (grouping_type,                                      "grouping_type");
+    if (Version==1)
+        Get_B4 (default_length,                                 "default_length");
+    if (Version>=2)
+        Skip_B4(                                                "default_sample_description_index");
+    Get_B4 (Count,                                              "entry_count");
+    if (Version!=1)
+    {
+        Skip_XX(Element_Size-Element_Offset,                    "Unknown");
+        return;
+    }
+    for (int32u Pos=0; Pos<Count; Pos++)
+    {
+        int32u description_length;
+        if (!default_length)
+            Get_B4 (description_length,                         "description_length");
+        else
+            description_length=default_length;
+        switch (description_length)
+        {
+            case 1: Skip_B1(                                    "SampleGroupEntry"); break;
+            case 2: 
+                switch (grouping_type)
+                {
+                    case 0x70726F6C: //prol
+                    case 0x726F6C6C: //roll
+                        {
+                        int16u roll_distance;
+                        Get_B2 (roll_distance,                  "roll_distance");
+                        if (roll_distance>=0x8000)
+                            Param_Info1((int16s)roll_distance);
+                        break;
+                        }
+                    default:
+                        Skip_B2(                                "SampleGroupEntry");
+                }
+                break;
+            case 4: Skip_B4(                                    "SampleGroupEntry"); break;
+            default: Skip_XX(description_length,                "SampleGroupEntry"); break;
+        }
+    }
+}
+
+//---------------------------------------------------------------------------
 void File_Mpeg4::moov_trak_mdia_minf_stbl_sdtp()
 {
     Element_Name("Sample Dependency");
@@ -4748,7 +4934,7 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_stco()
         Offset=BigEndian2int32u(Buffer+Buffer_Offset+(size_t)Element_Offset);
         Element_Offset+=4;
 
-        if (Pos<FrameCount_MaxPerStream)
+        if (Pos<FrameCount_MaxPerStream || Streams[moov_trak_tkhd_TrackID].TimeCode)
             Streams[moov_trak_tkhd_TrackID].stco.push_back(Offset);
     }
 }
@@ -4834,7 +5020,7 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_stsc()
         */
 
         //Faster
-        if (Pos<FrameCount_MaxPerStream)
+        if (Pos<FrameCount_MaxPerStream || Streams[moov_trak_tkhd_TrackID].TimeCode)
         {
             if (Element_Offset+12>Element_Size)
                 break; //Problem
@@ -5080,8 +5266,16 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_stsd_tmcd()
         mdat_Pos_ToParseInPriority_StreamIDs.push_back(moov_trak_tkhd_TrackID);
         Streams[moov_trak_tkhd_TrackID].IsPriorityStream=true;
         Parser->NumberOfFrames=NumberOfFrames; //tc->FrameDuration?(((float64)tc->TimeScale)/tc->FrameDuration):0;
+        if (tc->FrameDuration && NumberOfFrames)
+            Parser->FrameMultiplier=((int64u)tc->TimeScale+tc->FrameDuration/2)/tc->FrameDuration/NumberOfFrames;
         Parser->DropFrame=tc->DropFrame;
         Parser->NegativeTimes=tc->NegativeTimes;
+        Parser->tkhd_Duration=Streams[moov_trak_tkhd_TrackID].tkhd_Duration;
+        Parser->mvhd_Duration_TimeScale=moov_mvhd_TimeScale;
+        Parser->mdhd_Duration=Streams[moov_trak_tkhd_TrackID].mdhd_Duration;
+        Parser->mdhd_Duration_TimeScale=Streams[moov_trak_tkhd_TrackID].mdhd_TimeScale;
+        Parser->tmcd_Duration = tc->FrameDuration;
+        Parser->tmcd_Duration_TimeScale = tc->TimeScale;
 
         //Get delay from timecode track's edit list
         int64s FrameDurationInMediaUnits = tc->FrameDuration * Streams[moov_trak_tkhd_TrackID].mdhd_TimeScale;
@@ -5094,6 +5288,7 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_stsd_tmcd()
                 {
                     //Inform parser of offset (in TC frames) due to edit list
                     Parser->FirstEditOffset = Edit.Delay * tc->TimeScale / FrameDurationInMediaUnits;
+                    Parser->FirstEditDuration = Edit.Duration * tc->TimeScale / FrameDurationInMediaUnits;
                     break;
                 }
             }
@@ -5324,8 +5519,8 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_stsd_xxxxSound()
         {
             Channels=Channels16;
             SampleSize=SampleSize16;
-            SampleRate=SampleRate16;
         }
+        SampleRate=SampleRate16;
     }
     else
     {
@@ -5442,7 +5637,7 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_stsd_xxxxSound()
         {
             File_Aac* Parser=new File_Aac;
             Parser->AudioSpecificConfig_OutOfBand(SampleRate, 2);
-            Parser->Mode=File_Aac::Mode_raw_data_block;
+            Parser->Mode=File_Aac::Mode_payload;
             Parser->FrameIsAlwaysComplete=true;
             Streams[moov_trak_tkhd_TrackID].Parsers.push_back(Parser);
         }
@@ -5591,6 +5786,15 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_stsd_xxxxSound()
             #if MEDIAINFO_DEMUX
                 Streams[moov_trak_tkhd_TrackID].Demux_Level=4; //Intermediate
             #endif //MEDIAINFO_DEMUX
+        }
+        #endif
+        #if defined(MEDIAINFO_FLAC_YES)
+        if (MediaInfoLib::Config.CodecID_Get(Stream_Audio, InfoCodecID_Format_Mpeg4, Codec, InfoCodecID_Format)==__T("FLAC"))
+        {
+            //Creating the parser
+            File_Flac* Parser=new File_Flac;
+            Parser->NoFileHeader=true;
+            Streams[moov_trak_tkhd_TrackID].Parsers.push_back(Parser);
         }
         #endif
         #if defined(MEDIAINFO_MPEGA_YES)
@@ -6899,6 +7103,32 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_stsd_xxxx_ddts()
 }
 
 //---------------------------------------------------------------------------
+void File_Mpeg4::moov_trak_mdia_minf_stbl_stsd_xxxx_dfLa()
+{
+    NAME_VERSION_FLAG("FLAC Specific Box");
+
+    //Parsing
+    if (moov_trak_mdia_minf_stbl_stsd_Pos>1)
+        return; //Handling only the first description
+
+    #ifdef MEDIAINFO_FLAC_YES
+        if (Streams[moov_trak_tkhd_TrackID].Parsers.empty())
+        {
+            File_Flac* Parser=new File_Flac;
+            Open_Buffer_Init(Parser);
+            Parser->NoFileHeader=true;
+            Streams[moov_trak_tkhd_TrackID].Parsers.push_back(Parser);
+            mdat_MustParse=true; //Data is in MDAT
+        }
+
+        //Parsing
+        Open_Buffer_Continue(Streams[moov_trak_tkhd_TrackID].Parsers[0]);
+    #else
+        Skip_XX(Element_Size,                                   "FLAC Data");
+    #endif
+}
+
+//---------------------------------------------------------------------------
 void File_Mpeg4::moov_trak_mdia_minf_stbl_stsd_xxxx_dmlp()
 {
     Element_Name("MLPSpecificBox");
@@ -7159,6 +7389,18 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_stsd_xxxx_fiel()
 }
 
 //---------------------------------------------------------------------------
+void File_Mpeg4::moov_trak_mdia_minf_stbl_stsd_xxxx_gama()
+{
+    float32 Data;
+    Get_BFP4 (16, Data,                                          "Data");
+
+    FILLING_BEGIN();
+        if (Data)
+            Fill(Stream_Video, StreamPos_Last, "Gamma", Data);
+    FILLING_END();
+}
+
+//---------------------------------------------------------------------------
 void File_Mpeg4::moov_trak_mdia_minf_stbl_stsd_xxxx_glbl()
 {
     Element_Name("Global");
@@ -7193,7 +7435,16 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_stsd_xxxx_glbl()
 
     //Parsing
     for (size_t Pos=0; Pos<Streams[moov_trak_tkhd_TrackID].Parsers.size(); Pos++)
-        Open_Buffer_OutOfBand(Streams[moov_trak_tkhd_TrackID].Parsers[Pos]);
+    {
+        auto& Sub = Streams[moov_trak_tkhd_TrackID].Parsers[Pos];
+        Open_Buffer_OutOfBand(Sub);
+        if (Sub->Status[IsFinished])
+        {
+            delete Sub; //Sub = nullptr;
+            Streams[moov_trak_tkhd_TrackID].Parsers.erase(Streams[moov_trak_tkhd_TrackID].Parsers.begin()+Pos);
+            Pos--;
+        }
+    }
 }
 
 //---------------------------------------------------------------------------
@@ -7763,7 +8014,7 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_stsz()
 
             Stream->second.stsz_StreamSize+=Size;
             Stream->second.stsz_Total.push_back(Size);
-            if (Pos<FrameCount_MaxPerStream)
+            if (Pos<FrameCount_MaxPerStream || Stream->second.TimeCode)
                 Stream->second.stsz.push_back(Size);
         }
         /*
@@ -7828,9 +8079,15 @@ void File_Mpeg4::moov_trak_mdia_minf_stbl_stts()
     }
 
     FILLING_BEGIN();
-        if (StreamKind_Last==Stream_Video)
+        if (StreamKind_Last==Stream_Video || StreamKind_Last==Stream_Text)
         {
-            Fill(Stream_Video, StreamPos_Last, Video_FrameCount, Stream->second.stts_FrameCount);
+            Fill(StreamKind_Last, StreamPos_Last, Fill_Parameter(StreamKind_Last, Generic_FrameCount), Stream->second.stts_FrameCount);
+            if (NumberOfEntries==1 && Stream->second.mdhd_Duration && Stream->second.mdhd_TimeScale)
+            {
+                auto FrameRate=(((float64)Stream->second.mdhd_Duration)/Stream->second.mdhd_TimeScale);
+                if (FrameRate)
+                    Fill(StreamKind_Last, StreamPos_Last, Fill_Parameter(StreamKind_Last, Generic_FrameRate), Stream->second.stts_FrameCount/FrameRate);
+            }
 
             #ifdef MEDIAINFO_DVDIF_ANALYZE_YES
                 if (Streams[moov_trak_tkhd_TrackID].IsDvDif)
@@ -9039,6 +9296,7 @@ void File_Mpeg4::RED1()
         Accept("R3D");
 
         Fill(Stream_General, 0, General_Format, "R3D");
+        Fill(Stream_General, 0, General_Format_Version, Element_Code==Elements::RED1?"Version 1":"Version 2");
         //Source: http://peter.schlaile.de/redcode/
 
         Finish();

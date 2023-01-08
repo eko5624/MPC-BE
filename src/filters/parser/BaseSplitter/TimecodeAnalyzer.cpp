@@ -1,5 +1,5 @@
 /*
- * (C) 2016-2020 see Authors.txt
+ * (C) 2016-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,7 @@
 #include "stdafx.h"
 #include "TimecodeAnalyzer.h"
 
-static double Video_FrameRate_Rounding(double FrameRate)
+double TimecodeAnalyzer::FrameRate_RoundToStandard(double FrameRate)
 {
 	// rounded up to the standard values if the difference is not more than 0.05%
 	     if (FrameRate > 14.993 && FrameRate <  15.008) FrameRate = 15;
@@ -42,7 +42,7 @@ static double Video_FrameRate_Rounding(double FrameRate)
 	return FrameRate;
 }
 
-static REFERENCE_TIME Video_FrameDuration_Rounding(REFERENCE_TIME FrameDuration)
+REFERENCE_TIME TimecodeAnalyzer::FrameDuration_RoundToStandard(REFERENCE_TIME FrameDuration)
 {
 	// rounded up to the standard values if the difference is not more than 0.05%
 	     if (FrameDuration > 666333 && FrameDuration < 667000) FrameDuration = UNITS / 15;
@@ -63,7 +63,7 @@ static REFERENCE_TIME Video_FrameDuration_Rounding(REFERENCE_TIME FrameDuration)
 	return FrameDuration;
 }
 
-bool TimecodeAnalyzer::GetMonotoneInterval(std::vector<int64_t>& timecodes, uint64_t& interval, unsigned& num)
+bool TimecodeAnalyzer::GetMonotoneInterval(std::vector<int64_t>& timecodes, uint64_t& interval, unsigned& num, const int feeze)
 {
 	if (timecodes.size() < 2) {
 		return false;
@@ -108,7 +108,7 @@ bool TimecodeAnalyzer::GetMonotoneInterval(std::vector<int64_t>& timecodes, uint
 	uint64_t sum = durations[0];
 	unsigned count = 1;
 	for (size_t i = 1; i < durations.size(); i++) {
-		if (abs(durations[i - 1] - durations[i]) <= 1) {
+		if (abs(durations[i - 1] - durations[i]) <= feeze) {
 			sum += durations[i];
 			count++;
 
@@ -129,26 +129,26 @@ bool TimecodeAnalyzer::GetMonotoneInterval(std::vector<int64_t>& timecodes, uint
 	return true;
 }
 
-REFERENCE_TIME TimecodeAnalyzer::CalculateFrameTime(std::vector<int64_t>& timecodes, const unsigned timecodescaleRF)
+REFERENCE_TIME TimecodeAnalyzer::CalculateFrameTime(std::vector<int64_t>& timecodes, const unsigned timecodescaleRF, const int feeze)
 {
 	uint64_t interval;
 	unsigned num;
 
-	if (GetMonotoneInterval(timecodes, interval, num) && num >= 10) {
-		return Video_FrameDuration_Rounding((interval * timecodescaleRF) / num);
+	if (GetMonotoneInterval(timecodes, interval, num, feeze) && num >= 10) {
+		return FrameDuration_RoundToStandard((interval * timecodescaleRF) / num);
 	}
 
-	return 417083;
+	return 0;
 }
 
-double TimecodeAnalyzer::CalculateFPS(std::vector<int64_t>& timecodes, const unsigned timecodespersecond)
+double TimecodeAnalyzer::CalculateFPS(std::vector<int64_t>& timecodes, const unsigned timecodespersecond, const int feeze)
 {
 	uint64_t interval;
 	unsigned num;
 
-	if (GetMonotoneInterval(timecodes, interval, num) && num >= 10) {
-		return Video_FrameRate_Rounding((double)num * timecodespersecond / interval);
+	if (GetMonotoneInterval(timecodes, interval, num, feeze) && num >= 10) {
+		return FrameRate_RoundToStandard((double)num * timecodespersecond / interval);
 	}
 
-	return 24/1.001;
+	return 0.0;
 }

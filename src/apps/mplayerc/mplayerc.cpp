@@ -39,6 +39,8 @@
 #include <atlsync.h>
 #include "UpdateChecker.h"
 
+#include "Version.h"
+
 extern "C" {
 	// hack to avoid error "unresolved external symbol" when linking
 	int mingw_app_type = 1;
@@ -54,6 +56,7 @@ const LanguageResource CMPlayerCApp::languageResources[] = {
 	{ID_LANGUAGE_CATALAN,				1027,	L"Catalan",					L"ca",	L"cat"},
 	{ID_LANGUAGE_CHINESE_SIMPLIFIED,	2052,	L"Chinese (Simplified)",	L"sc",	L"chi"},
 	{ID_LANGUAGE_CHINESE_TRADITIONAL,	3076,	L"Chinese (Traditional)",	L"tc",	L"zht"},
+	{ID_LANGUAGE_CROATIAN,				1050,	L"Croatian",				L"hr",	L"hrv"},
 	{ID_LANGUAGE_CZECH,					1029,	L"Czech",					L"cz",	L"cze"},
 	{ID_LANGUAGE_DUTCH,					1043,	L"Dutch",					L"nl",	L"dut"},
 	{ID_LANGUAGE_ENGLISH,				0,		L"English",					L"en",	L"eng"},
@@ -237,14 +240,14 @@ bool CMPlayerCApp::GetAppSavePath(CString& path)
 	if (m_Profile.GetSettingsLocation() == SETS_PROGRAMDIR) { // If settings ini file found, store stuff in the same folder as the exe file
 		path = GetProgramDir();
 	} else {
-		HRESULT hr = SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, path.GetBuffer(MAX_PATH));
-		path.ReleaseBuffer();
+		PWSTR pathRoamingAppData = nullptr;
+		HRESULT hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &pathRoamingAppData);
+		path = CStringW(pathRoamingAppData) + L"\\MPC-BE\\";
+		CoTaskMemFree(pathRoamingAppData);
+
 		if (FAILED(hr)) {
 			return false;
 		}
-		CPath p;
-		p.Combine(path, L"MPC-BE");
-		path = AddSlash(p);
 	}
 
 	return true;
@@ -268,52 +271,51 @@ bool CMPlayerCApp::ChangeSettingsLocation(const SettingsLocation newSetLocation)
 	m_s.SaveSettings();
 
 	if (needFilesMove) {
+		HRESULT hr = S_OK;
+
 		const CStringW oldHistoryPath(oldpath + MPC_HISTORY_FILENAME);
 		const CStringW oldFavoritesPath(oldpath + MPC_FAVORITES_FILENAME);
 
 		CString newpath;
 		AfxGetMyApp()->GetAppSavePath(newpath); // call it after saving the settings
 
-		if (newSetLocation == SETS_REGISTRY && !::PathFileExistsW(newpath)) {
+		if (newSetLocation != SETS_PROGRAMDIR && !::PathFileExistsW(newpath)) {
 			EXECUTE_ASSERT(::CreateDirectoryW(newpath, nullptr));
 		}
 
-		const CStringW newHistoryPath(newpath + MPC_HISTORY_FILENAME);
-		const CStringW newFavoritesPath(newpath + MPC_FAVORITES_FILENAME);
-
-		m_HistoryFile.SetFilename(newHistoryPath);
-		m_FavoritesFile.SetFilename(newFavoritesPath);
+		m_HistoryFile.SetFilename(newpath + MPC_HISTORY_FILENAME);
+		m_FavoritesFile.SetFilename(newpath + MPC_FAVORITES_FILENAME);
 
 		if (::PathFileExistsW(oldHistoryPath)) {
 			// moving history file
-			int ret = FileOperation(oldHistoryPath, newHistoryPath, FO_MOVE);
-			if (ret != 0) {
+			hr = FileOperation(oldHistoryPath, newpath, nullptr, FO_MOVE, FOF_NO_UI);
+			if (FAILED(hr)) {
 				MessageBoxW(nullptr, L"Moving History file failed", ResStr(IDS_AG_ERROR), MB_OK);
 			}
 		}
 		if (::PathFileExistsW(oldFavoritesPath)) {
 			// moving favorites file
-			int ret = FileOperation(oldFavoritesPath, newFavoritesPath, FO_MOVE);
-			if (ret != 0) {
+			hr = FileOperation(oldFavoritesPath, newpath, nullptr, FO_MOVE, FOF_NO_UI);
+			if (FAILED(hr)) {
 				MessageBoxW(nullptr, L"Moving Favorites file failed", ResStr(IDS_AG_ERROR), MB_OK);
 			}
 		}
 
 		// moving shader files
-		CStringW oldFolderPath = oldpath + L"Shaders\\";
+		CStringW oldFolderPath = oldpath + L"Shaders";
 		if (::PathFileExistsW(oldFolderPath)) {
-			// use SHFileOperation, because MoveFile/MoveFileEx will fail on directory moves when the destination is on a different volume.
-			int ret = FileOperation(oldFolderPath, newpath, FO_MOVE);
-			if (ret != 0) {
+			// use IFileOperation::MoveItem, because MoveFile/MoveFileEx will fail on directory moves when the destination is on a different volume.
+			hr = FileOperation(oldFolderPath, newpath, nullptr, FO_MOVE, FOF_NO_UI);
+			if (FAILED(hr)) {
 				MessageBoxW(nullptr, L"Moving shader files failed", ResStr(IDS_AG_ERROR), MB_OK);
 			}
 		}
 
-		oldFolderPath = oldpath + L"Shaders11\\";
+		oldFolderPath = oldpath + L"Shaders11";
 		if (::PathFileExistsW(oldFolderPath)) {
-			// use SHFileOperation, because MoveFile/MoveFileEx will fail on directory moves when the destination is on a different volume.
-			int ret = FileOperation(oldFolderPath, newpath, FO_MOVE);
-			if (ret != 0) {
+			// use IFileOperation::MoveItem, because MoveFile/MoveFileEx will fail on directory moves when the destination is on a different volume.
+			hr = FileOperation(oldFolderPath, newpath, nullptr, FO_MOVE, FOF_NO_UI);
+			if (FAILED(hr)) {
 				MessageBoxW(nullptr, L"Moving shader 11 files failed", ResStr(IDS_AG_ERROR), MB_OK);
 			}
 		}
@@ -992,34 +994,35 @@ BOOL CMPlayerCApp::InitInstance()
 		}
 
 		// checking for the existence of the Shader and Shaders11 folders
-		CString shaderpath(appSavePath + L"Shaders");
-		CString shaderpath11(shaderpath + L"11");
-
-		BOOL bShaderDirExists = ::PathFileExistsW(shaderpath);
-		BOOL bShader11DirExists = ::PathFileExistsW(shaderpath11);
+		BOOL bShaderDirExists = ::PathFileExistsW(appSavePath + L"Shaders");
+		BOOL bShader11DirExists = ::PathFileExistsW(appSavePath + L"Shaders11");
 
 		// restore shaders if the shader folders is missing only, existing folders do not overwrite
 		if (!bShaderDirExists || !bShader11DirExists) {
-			CString shaderstorage;
-			SHGetFolderPathW(nullptr, CSIDL_COMMON_APPDATA, nullptr, 0, shaderstorage.GetBuffer(MAX_PATH));
-			shaderstorage.ReleaseBuffer();
-			shaderstorage.Append(L"\\MPC-BE\\");
+			if (!::PathFileExistsW(appSavePath)) {
+				EXECUTE_ASSERT(::CreateDirectoryW(appSavePath, nullptr));
+			}
+
+			PWSTR pathProgramData = nullptr;
+			SHGetKnownFolderPath(FOLDERID_ProgramData, 0, nullptr, &pathProgramData);
+			CString appStorage = CStringW(pathProgramData) + L"\\MPC-BE\\";
+			CoTaskMemFree(pathProgramData);
 
 			if (!bShaderDirExists) {
-				int ret = FileOperation(shaderstorage + L"Shaders\\*", shaderpath, FO_COPY);
-				if (ret == 0) {
+				hr = FileOperation(appStorage + L"Shaders", appSavePath, nullptr, FO_COPY, FOF_NO_UI);
+				if (SUCCEEDED(hr)) {
 					DLog(L"CMPlayerCApp::InitInstance(): default Shaders folder restored");
 				} else {
-					DLog(L"CMPlayerCApp::InitInstance(): default Shaders folder are not copied. Error: %x", ret);
+					DLog(L"CMPlayerCApp::InitInstance(): default Shaders folder are not copied. Error: %s", HR2Str(hr));
 				}
 			}
 
 			if (!bShader11DirExists) {
-				int ret = FileOperation(shaderstorage + L"Shaders11\\*", shaderpath11, FO_COPY);
-				if (ret == 0) {
+				hr = FileOperation(appStorage + L"Shaders11", appSavePath, nullptr, FO_COPY, FOF_NO_UI);
+				if (SUCCEEDED(hr)) {
 					DLog(L"CMPlayerCApp::InitInstance(): default Shaders11 folder restored");
 				} else {
-					DLog(L"CMPlayerCApp::InitInstance(): default Shaders11 folder are not copied. Error: %x", ret);
+					DLog(L"CMPlayerCApp::InitInstance(): default Shaders11 folder are not copied. Error: %s", HR2Str(hr));
 				}
 			}
 		}
@@ -1305,6 +1308,19 @@ int CMPlayerCApp::ExitInstance()
 	OleUninitialize();
 
 	return CWinApp::ExitInstance();
+}
+
+BOOL CMPlayerCApp::SaveAllModified()
+{
+	// CWinApp::SaveAllModified
+	// Called by the framework to save all documents
+	// when the application's main frame window is to be closed,
+	// or through a WM_QUERYENDSESSION message.
+	if (auto pMainFrame = AfxFindMainFrame()) {
+		pMainFrame->CloseMedia();
+	}
+
+	return TRUE;
 }
 
 /////////////////////////////////////////////////////////////////////////////

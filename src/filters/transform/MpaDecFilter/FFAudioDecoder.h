@@ -1,5 +1,5 @@
 /*
- * (C) 2014-2021 see Authors.txt
+ * (C) 2014-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -22,11 +22,13 @@
 
 #include "PaddedBuffer.h"
 #include "AudioTools/SampleFormat.h"
+#include "AudioTools/Mixer.h"
 
 struct AVCodec;
 struct AVCodecContext;
 struct AVCodecParserContext;
 struct AVFrame;
+struct AVPacket;
 
 enum AVCodecID FindCodec(const GUID subtype);
 const char* GetCodecDescriptorName(enum AVCodecID codec_id);
@@ -37,11 +39,12 @@ class CMpaDecFilter;
 
 class CFFAudioDecoder
 {
-protected:
-	const AVCodec*        m_pAVCodec;
-	AVCodecContext*       m_pAVCtx;
-	AVCodecParserContext* m_pParser;
-	AVFrame*              m_pFrame;
+private:
+	const AVCodec*        m_pAVCodec = nullptr;
+	AVCodecContext*       m_pAVCtx   = nullptr;
+	AVCodecParserContext* m_pParser  = nullptr;
+	AVFrame*              m_pFrame   = nullptr;
+	AVPacket*             m_pPacket  = nullptr;
 
 	struct {
 		int flavor;
@@ -50,13 +53,18 @@ protected:
 		int sub_packet_h;
 		int sub_packet_size;
 		unsigned int deint_id;
-	} m_raData;
+	} m_raData = {};
 
 	HRESULT ParseRealAudioHeader(const BYTE* extra, const int extralen);
 
-	bool m_bNeedSyncpoint;
-	bool m_bStereoDownmix;
-	bool m_bNeedReinit;
+	bool m_bNeedSyncpoint = false;
+	bool m_bStereoDownmix = false;
+	bool m_bNeedReinit    = false;
+
+	bool m_bNeedMix       = false;
+	int m_MixerChannels   = 0;
+	uint64_t m_MixerChannelLayout = 0;
+	CMixer m_Mixer;
 
 	CMpaDecFilter* m_pFilter;
 

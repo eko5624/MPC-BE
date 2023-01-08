@@ -103,7 +103,7 @@ namespace YoutubeDL
 		startup_info.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
 
 		CStringW args;
-		args.Format(LR"(%s -j --all-subs --sub-format vtt "%s")", ydl_path.GetString(), url.GetString());
+		args.Format(LR"(%s -j --all-subs --sub-format vtt --no-check-certificates "%s")", ydl_path.GetString(), url.GetString());
 		PROCESS_INFORMATION proc_info = {};
 		const bool bSuccess = CreateProcessW(nullptr, args.GetBuffer(), nullptr, nullptr, true, 0,
 											 nullptr, nullptr, &startup_info, &proc_info);
@@ -174,7 +174,8 @@ namespace YoutubeDL
 
 		if (!exitcode && buf_out.GetLength()) {
 			rapidjson::Document d;
-			if (!d.Parse(buf_out.GetString()).HasParseError()) {
+			const int k = buf_out.Find("\n{\"id\": ", 64); // check presence of second JSON root element and ignore it
+			if (!d.Parse(buf_out.GetString(), k > 0 ? k : buf_out.GetLength()).HasParseError()) {
 				int iTag = 1;
 				if (auto formats = GetJsonArray(d, "formats")) {
 					int vid_height = 0;

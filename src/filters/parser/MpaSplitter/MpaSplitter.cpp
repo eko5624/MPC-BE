@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -32,8 +32,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -126,7 +126,7 @@ HRESULT CMpaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 	std::vector<CMediaType> mts;
 	mts.push_back(m_pFile->GetMediaType());
 
-	CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Audio", this, this, &hr));
+	std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Audio", this, this, &hr));
 	AddOutputPin(0, pPinOut);
 
 	m_rtNewStart = m_rtCurrent = 0;
@@ -135,7 +135,7 @@ HRESULT CMpaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 	SetID3TagProperties(this, m_pFile->m_pID3Tag);
 	SetAPETagProperties(this, m_pFile->m_pAPETag);
 
-	return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+	return m_pOutputs.size() > 0 ? S_OK : E_FAIL;
 }
 
 STDMETHODIMP CMpaSplitterFilter::GetDuration(LONGLONG* pDuration)
@@ -188,7 +188,7 @@ bool CMpaSplitterFilter::DemuxLoop()
 			continue;
 		}
 
-		CAutoPtr<CPacket> p(DNew CPacket());
+		std::unique_ptr<CPacket> p(DNew CPacket());
 
 		if (m_pFile->IsRandomAccess()) {
 			FrameSize = (int)std::min((__int64)FrameSize, m_pFile->GetRemaining());
@@ -203,7 +203,7 @@ bool CMpaSplitterFilter::DemuxLoop()
 		p->rtStop  = m_rtime + rtDuration;
 		p->bSyncPoint = TRUE;
 
-		hr = DeliverPacket(p);
+		hr = DeliverPacket(std::move(p));
 
 		m_rtime += rtDuration;
 
@@ -221,5 +221,5 @@ CMpaSourceFilter::CMpaSourceFilter(LPUNKNOWN pUnk, HRESULT* phr)
 	: CMpaSplitterFilter(pUnk, phr)
 {
 	m_clsid = __uuidof(this);
-	m_pInput.Free();
+	m_pInput.reset();
 }

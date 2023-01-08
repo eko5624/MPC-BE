@@ -157,11 +157,13 @@ MediaInfo_Config_MediaInfo::MediaInfo_Config_MediaInfo()
         File_IgnoreSequenceFilesCount=false;
         File_SequenceFilesSkipFrames=0;
         File_DefaultFrameRate=0;
+        File_DefaultTimeCodeDropFrame=(int8u)-1;
         File_Source_List=false;
         File_RiskyBitRateEstimation=false;
         File_MergeBitRateInfo=true;
         File_HighestFormat=true;
         File_ChannelLayout=true;
+        File_FrameIsAlwaysComplete=false;
         #if MEDIAINFO_DEMUX
             File_Demux_Unpacketize_StreamLayoutChange_Skip=false;
         #endif //MEDIAINFO_DEMUX
@@ -232,7 +234,7 @@ MediaInfo_Config_MediaInfo::MediaInfo_Config_MediaInfo()
         File_DvDif_Analysis=false;
     #endif //defined(MEDIAINFO_DVDIF_ANALYZE_YES)
     #if MEDIAINFO_MACROBLOCKS
-        File_Macroblocks_Parse=false;
+        File_Macroblocks_Parse=0;
     #endif //MEDIAINFO_MACROBLOCKS
     File_GrowingFile_Delay=10;
     File_GrowingFile_Force=false;
@@ -498,6 +500,15 @@ Ztring MediaInfo_Config_MediaInfo::Option (const String &Option, const String &V
             return __T("File_DefaultTimeCode is disabled due to compilation options");
         #endif //MEDIAINFO_ADVANCED
     }
+    else if (Option_Lower==__T("file_defaulttimecodedropframe"))
+    {
+        #if MEDIAINFO_ADVANCED
+            return File_DefaultTimeCodeDropFrame_Set(Value);
+            return Ztring();
+        #else //MEDIAINFO_ADVANCED
+            return __T("File_DefaultTimeCodeDropFrame is disabled due to compilation options");
+        #endif //MEDIAINFO_ADVANCED
+    }
     else if (Option_Lower==__T("file_source_list"))
     {
         #if MEDIAINFO_ADVANCED
@@ -538,6 +549,15 @@ Ztring MediaInfo_Config_MediaInfo::Option (const String &Option, const String &V
     {
         #if MEDIAINFO_ADVANCED
             File_ChannelLayout_Set(Value==__T("2018"));
+            return Ztring();
+        #else //MEDIAINFO_ADVANCED
+            return __T("Advanced features are disabled due to compilation options");
+        #endif //MEDIAINFO_ADVANCED
+    }
+    else if (Option_Lower==__T("file_frameisalwayscomplete"))
+    {
+        #if MEDIAINFO_ADVANCED
+            File_FrameIsAlwaysComplete_Set(!(Value==__T("0") || Value.empty()));
             return Ztring();
         #else //MEDIAINFO_ADVANCED
             return __T("Advanced features are disabled due to compilation options");
@@ -1131,7 +1151,7 @@ Ztring MediaInfo_Config_MediaInfo::Option (const String &Option, const String &V
     else if (Option_Lower==__T("file_macroblocks_parse"))
     {
         #if MEDIAINFO_MACROBLOCKS
-            File_Macroblocks_Parse_Set(!(Value==__T("0") || Value.empty()));
+            File_Macroblocks_Parse_Set(Ztring(Value).To_int32s());
             return __T("");
         #else //MEDIAINFO_MACROBLOCKS
             return __T("Macroblock parsing is disabled due to compilation options");
@@ -1140,7 +1160,7 @@ Ztring MediaInfo_Config_MediaInfo::Option (const String &Option, const String &V
     else if (Option_Lower==__T("file_macroblocks_parse_get"))
     {
         #if MEDIAINFO_MACROBLOCKS
-            return File_Macroblocks_Parse_Get()?"1":"0";
+            return Ztring::ToZtring(File_Macroblocks_Parse_Get());
         #else //MEDIAINFO_MACROBLOCKS
             return __T("Macroblock parsing is disabled due to compilation options");
         #endif //MEDIAINFO_MACROBLOCKS
@@ -1549,6 +1569,7 @@ void MediaInfo_Config_MediaInfo::File_ExpandSubs_Update(void** Source)
                             if (Up_Pos!=string::npos && Up_Pos_End==Name.size()-4)
                             {
                                 Ztring Up=Name.substr(Up_Pos);
+                                auto IsComplementary=Up.FindAndReplace(__T("Complementary"), Ztring());
 
                                 //Hide
                                 Ztring ToHide=Name+__T("/String");
@@ -1670,6 +1691,8 @@ void MediaInfo_Config_MediaInfo::File_ExpandSubs_Update(void** Source)
                                                 if (!ID2.empty())
                                                     Temp.back()[Info_Name].insert(ToSearch.size(), __T("-Alt")+ID2);
                                                 Temp.back()[Info_Name].insert(0, SpacesCount, __T(' '));
+                                                if (IsComplementary)
+                                                    Temp.back()[Info_Name].FindAndReplace(__T(" Object"), __T("ComplementaryObject"));
                                                 if (!Found.empty())
                                                     Temp.back()[Info_Text]=Found;;
                                             }
@@ -1899,6 +1922,30 @@ string MediaInfo_Config_MediaInfo::File_DefaultTimeCode_Get()
 {
     CriticalSectionLocker CSL(CS);
     return File_DefaultTimeCode;
+}
+#endif //MEDIAINFO_ADVANCED
+
+//---------------------------------------------------------------------------
+#if MEDIAINFO_ADVANCED
+Ztring MediaInfo_Config_MediaInfo::File_DefaultTimeCodeDropFrame_Set(const String& NewValue)
+{
+    int8u NewValueI;
+    if (NewValue.empty())
+        NewValueI=(int8u)-1;
+    else if (NewValue.size()==1 && NewValue[0]>=__T('0') && NewValue[0] <=__T('1'))
+        NewValueI=NewValue[0]-__T('0');
+    else
+        return __T("File_DefaultTimeCodeDropFrame value must be empty, 0 or 1");
+
+    CriticalSectionLocker CSL(CS);
+    File_DefaultTimeCodeDropFrame=NewValueI;
+    return Ztring();
+}
+
+int8u MediaInfo_Config_MediaInfo::File_DefaultTimeCodeDropFrame_Get()
+{
+    CriticalSectionLocker CSL(CS);
+    return File_DefaultTimeCodeDropFrame;
 }
 #endif //MEDIAINFO_ADVANCED
 
@@ -3407,13 +3454,13 @@ bool MediaInfo_Config_MediaInfo::File_DvDif_Analysis_Get ()
 
 //---------------------------------------------------------------------------
 #if MEDIAINFO_MACROBLOCKS
-void MediaInfo_Config_MediaInfo::File_Macroblocks_Parse_Set (bool NewValue)
+void MediaInfo_Config_MediaInfo::File_Macroblocks_Parse_Set (int NewValue)
 {
     CriticalSectionLocker CSL(CS);
     File_Macroblocks_Parse=NewValue;
 }
 
-bool MediaInfo_Config_MediaInfo::File_Macroblocks_Parse_Get ()
+int MediaInfo_Config_MediaInfo::File_Macroblocks_Parse_Get ()
 {
     CriticalSectionLocker CSL(CS);
     return File_Macroblocks_Parse;

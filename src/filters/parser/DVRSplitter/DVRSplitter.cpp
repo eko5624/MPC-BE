@@ -1,5 +1,5 @@
 /*
- * (C) 2018-2021 see Authors.txt
+ * (C) 2018-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -32,8 +32,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] =
 
 const AMOVIESETUP_PIN sudpPins[] =
 {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] =
@@ -261,7 +261,7 @@ HRESULT CDVRSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 			}
 		}
 
-		CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Video", this, this, &hr));
+		std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Video", this, this, &hr));
 		EXECUTE_ASSERT(SUCCEEDED(AddOutputPin(0, pPinOut)));
 
 		if (m_rtOffsetAudio != INVALID_TIME) {
@@ -273,7 +273,7 @@ HRESULT CDVRSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 			mts.clear();
 			mts.push_back(mt);
 
-			CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Audio", this, this, &hr));
+			std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Audio", this, this, &hr));
 			EXECUTE_ASSERT(SUCCEEDED(AddOutputPin(1, pPinOut)));
 		}
 	} else if (m_bDHAV) {
@@ -374,7 +374,7 @@ HRESULT CDVRSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 						}
 					}
 
-					CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Video", this, this, &hr));
+					std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Video", this, this, &hr));
 					EXECUTE_ASSERT(SUCCEEDED(AddOutputPin(0, pPinOut)));
 				}
 			} else if (DHAV_AUDIO(hdr)) {
@@ -430,7 +430,7 @@ HRESULT CDVRSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 						mts.clear();
 						mts.push_back(mt);
 
-						CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Audio", this, this, &hr));
+						std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Audio", this, this, &hr));
 						EXECUTE_ASSERT(SUCCEEDED(AddOutputPin(1, pPinOut)));
 					}
 				}
@@ -521,7 +521,7 @@ HRESULT CDVRSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 				}
 			}
 
-			CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Video", this, this, &hr));
+			std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Video", this, this, &hr));
 			EXECUTE_ASSERT(SUCCEEDED(AddOutputPin(hdr.stream_id, pPinOut)));
 
 			m_rtNewStart = m_rtCurrent = 0;
@@ -546,7 +546,7 @@ HRESULT CDVRSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 		}
 	}
 
-	return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+	return m_pOutputs.size() > 0 ? S_OK : E_FAIL;
 }
 
 bool CDVRSplitterFilter::DemuxInit()
@@ -666,7 +666,7 @@ bool CDVRSplitterFilter::DemuxLoop()
 
 	if (m_bHXVS) {
 		REFERENCE_TIME last_rt = 0;
-		CAutoPtr<CPacket> vp;
+		std::unique_ptr<CPacket> vp;
 
 		while (SUCCEEDED(hr) && !CheckRequest(nullptr) && m_pFile->GetRemaining()) {
 			HXVSHeader hdr;
@@ -674,11 +674,11 @@ bool CDVRSplitterFilter::DemuxLoop()
 				if (hdr.sync == HXVS_VIDEO) {
 					// video packet
 					if (vp && last_rt != hdr.rt) {
-						hr = DeliverPacket(vp);
+						hr = DeliverPacket(std::move(vp));
 					}
 
 					if (!vp) {
-						vp.Attach(DNew CPacket());
+						vp.reset(DNew CPacket());
 						vp->bSyncPoint = hdr.key_frame;
 						vp->rtStart = hdr.rt - m_rtOffsetVideo;
 						vp->rtStop = vp->rtStart + m_AvgTimePerFrame;
@@ -694,7 +694,7 @@ bool CDVRSplitterFilter::DemuxLoop()
 				} else {
 					// audio packet
 					if (GetOutputPin(1)) {
-						CAutoPtr<CPacket> p(DNew CPacket());
+						std::unique_ptr<CPacket> p(DNew CPacket());
 						p->TrackNumber = 1;
 						p->bSyncPoint = TRUE;
 						p->rtStart = hdr.rt - m_rtOffsetAudio;
@@ -702,7 +702,7 @@ bool CDVRSplitterFilter::DemuxLoop()
 
 						p->resize(hdr.size);
 						if ((hr = m_pFile->ByteRead(p->data(), hdr.size)) == S_OK) {
-							hr = DeliverPacket(p);
+							hr = DeliverPacket(std::move(p));
 						}
 					} else {
 						m_pFile->Skip(hdr.size);
@@ -714,7 +714,7 @@ bool CDVRSplitterFilter::DemuxLoop()
 		}
 
 		if (vp) {
-			DeliverPacket(vp);
+			DeliverPacket(std::move(vp));
 		}
 	} else if (m_bDHAV) {
 		WORD video_pts_prev = WORD_MAX;
@@ -737,13 +737,13 @@ bool CDVRSplitterFilter::DemuxLoop()
 					video_rt += 10000LL * period;
 					video_pts_prev = hdr.pts;
 
-					CAutoPtr<CPacket> p(DNew CPacket());
+					std::unique_ptr<CPacket> p(DNew CPacket());
 					p->bSyncPoint = hdr.key_frame;
 					p->rtStart = video_rt;
 					p->rtStop  = p->rtStart + m_AvgTimePerFrame;
 					p->resize(hdr.size);
 					if ((hr = m_pFile->ByteRead(p->data(), hdr.size)) == S_OK) {
-						hr = DeliverPacket(p);
+						hr = DeliverPacket(std::move(p));
 						m_pFile->Skip(DHAV_FooterSize);
 					}
 				} else if (DHAV_AUDIO(hdr) && GetOutputPin(1)) {
@@ -757,14 +757,14 @@ bool CDVRSplitterFilter::DemuxLoop()
 					audio_rt += 10000LL * period;
 					audio_pts_prev = hdr.pts;
 
-					CAutoPtr<CPacket> p(DNew CPacket());
+					std::unique_ptr<CPacket> p(DNew CPacket());
 					p->TrackNumber = 1;
 					p->bSyncPoint = TRUE;
 					p->rtStart = audio_rt;
 					p->rtStop  = p->rtStart + 1;
 					p->resize(hdr.size);
 					if ((hr = m_pFile->ByteRead(p->data(), hdr.size)) == S_OK) {
-						hr = DeliverPacket(p);
+						hr = DeliverPacket(std::move(p));
 						m_pFile->Skip(DHAV_FooterSize);
 					}
 				} else {
@@ -779,7 +779,7 @@ bool CDVRSplitterFilter::DemuxLoop()
 			CCTVHeader hdr;
 			if (CCTVReadHeader(hdr) && hdr.size <= m_pFile->GetRemaining()) {
 				if (GetOutputPin(hdr.stream_id)) {
-					CAutoPtr<CPacket> p(DNew CPacket());
+					std::unique_ptr<CPacket> p(DNew CPacket());
 					p->TrackNumber = hdr.stream_id;
 					p->bSyncPoint = hdr.key == 1;
 					p->rtStart = hdr.frame_num * m_AvgTimePerFrame - m_rtOffsetVideo;
@@ -787,7 +787,7 @@ bool CDVRSplitterFilter::DemuxLoop()
 
 					p->resize(hdr.size);
 					if ((hr = m_pFile->ByteRead(p->data(), hdr.size)) == S_OK) {
-						hr = DeliverPacket(p);
+						hr = DeliverPacket(std::move(p));
 					}
 				} else {
 					m_pFile->Skip(hdr.size);
@@ -1062,7 +1062,7 @@ CDVRSourceFilter::CDVRSourceFilter(LPUNKNOWN pUnk, HRESULT* phr)
 	: CDVRSplitterFilter(pUnk, phr)
 {
 	m_clsid = __uuidof(this);
-	m_pInput.Free();
+	m_pInput.reset();
 }
 
 STDMETHODIMP CDVRSourceFilter::QueryFilterInfo(FILTER_INFO* pInfo)

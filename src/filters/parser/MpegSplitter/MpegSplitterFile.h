@@ -203,7 +203,8 @@ public:
 		DVDLPCM,
 		MPEG4Video,
 		AC4,
-		AES3
+		AES3,
+		AVS3
 	};
 
 	enum stream_type {
@@ -441,4 +442,6 @@ public:
 	std::map<DWORD, streamData> m_streamData;
 
 	std::vector<program::stream> m_pmt_streams;
+
+	int m_pix_fmt = -1;
 };

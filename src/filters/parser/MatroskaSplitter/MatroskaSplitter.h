@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <atlbase.h>
 #include "MatroskaFile.h"
 #include "MatroskaSplitterSettingsWnd.h"
 #include "../BaseSplitter/BaseSplitter.h"
@@ -45,7 +44,7 @@ public:
 	virtual ~CMatroskaSplitterOutputPin();
 
 	HRESULT DeliverNewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate);
-	HRESULT QueuePacket(CAutoPtr<CPacket> p);
+	HRESULT QueuePacket(std::unique_ptr<CPacket> p);
 };
 
 class __declspec(uuid("149D2E01-C32E-4939-80F6-C07B81015A7A"))
@@ -59,14 +58,16 @@ class __declspec(uuid("149D2E01-C32E-4939-80F6-C07B81015A7A"))
 	class CMatroskaPacket : public CPacket
 	{
 	public:
-		CAutoPtr<BlockGroup> bg;
+		std::unique_ptr<BlockGroup> bg;
 	};
 
 	void SetupChapters(LPCSTR lng, ChapterAtom* parent, int level = 0);
 	void InstallFonts();
 	void SendVorbisHeaderSample();
 
-	CAutoPtr<CMatroskaNode> m_pSegment, m_pCluster, m_pBlock;
+	std::unique_ptr<CMatroskaNode> m_pSegment;
+	std::unique_ptr<CMatroskaNode> m_pCluster;
+	std::unique_ptr<CMatroskaNode> m_pBlock;
 
 	REFERENCE_TIME m_Cluster_seek_rt;
 	UINT64 m_Cluster_seek_pos;
@@ -86,7 +87,7 @@ class __declspec(uuid("149D2E01-C32E-4939-80F6-C07B81015A7A"))
 	std::vector<SyncPoint> m_sps;
 
 	std::map<DWORD, REFERENCE_TIME> m_lastDuration;
-	std::map<DWORD, std::deque<CAutoPtr<CMatroskaPacket>>> m_packets;
+	std::map<DWORD, std::deque<std::unique_ptr<CMatroskaPacket>>> m_packets;
 
 	CCritSec m_csPackets;
 
@@ -107,8 +108,8 @@ protected:
 	void DemuxSeek(REFERENCE_TIME rt);
 	bool DemuxLoop();
 
-	HRESULT DeliverMatroskaPacket(TrackEntry* pTE, CAutoPtr<CMatroskaPacket> p);
-	HRESULT DeliverMatroskaPacket(CAutoPtr<CMatroskaPacket> p, REFERENCE_TIME rtBlockDuration = 0);
+	HRESULT DeliverMatroskaPacket(TrackEntry* pTE, std::unique_ptr<CMatroskaPacket> p);
+	HRESULT DeliverMatroskaPacket(std::unique_ptr<CMatroskaPacket> p, REFERENCE_TIME rtBlockDuration = 0);
 
 public:
 	CMatroskaSplitterFilter(LPUNKNOWN pUnk, HRESULT* phr);

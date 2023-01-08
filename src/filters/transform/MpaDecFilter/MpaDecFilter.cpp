@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -20,7 +20,6 @@
  */
 
 #include "stdafx.h"
-#include <atlbase.h>
 #include <MMReg.h>
 #include <Ks.h>
 #include <KsMedia.h>
@@ -74,6 +73,8 @@
 #define BS_MAT_POS_MIDDLE   (BS_HEADER_SIZE + 30708)    // middle point + 8 header bytes
 #define BS_MAT_OFFSET        2560
 #define BS_DTSHD_SIZE       32768
+
+#define MAX_JITTER  100000i64 // +-10ms jitter is allowed
 
 const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 	// DVD Audio
@@ -160,6 +161,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 	// ATRAC3
 	{&MEDIATYPE_Audio,				&MEDIASUBTYPE_ATRAC3},
 	{&MEDIATYPE_Audio,				&MEDIASUBTYPE_ATRAC3plus},
+	// ATRAC9
+	{&MEDIATYPE_Audio,				&MEDIASUBTYPE_ATRAC9},
 	// QDesign Music
 	{&MEDIATYPE_Audio,				&MEDIASUBTYPE_QDMC},
 	{&MEDIATYPE_Audio,				&MEDIASUBTYPE_QDM2},
@@ -211,6 +214,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 	{&MEDIATYPE_Audio,				&MEDIASUBTYPE_MULAW},
 	// AES3
 	{ &MEDIATYPE_Audio,				&MEDIASUBTYPE_AES3 },
+	// G.726 ADPCM
+	{ &MEDIATYPE_Audio,				&MEDIASUBTYPE_G726_ADPCM },
 };
 
 #ifdef REGISTER_FILTER
@@ -221,8 +226,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesOut[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut), sudPinTypesOut}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut), sudPinTypesOut}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -284,33 +289,17 @@ static const SampleFormat MPCtoSamplefmt[sfcount] = {
 
 CMpaDecFilter::CMpaDecFilter(LPUNKNOWN lpunk, HRESULT* phr)
 	: CTransformFilter(L"CMpaDecFilter", lpunk, __uuidof(this))
-	, m_Subtype(GUID_NULL)
 	, m_CodecId(AV_CODEC_ID_NONE)
-	, m_InternalSampleFormat(SAMPLE_FMT_NONE)
-	, m_rtStart(0)
-	, m_dStartOffset(0.0)
-	, m_bDiscontinuity(FALSE)
-	, m_bResync(FALSE)
-	, m_bResyncTimestamp(FALSE)
 	, m_buff(PADDING_SIZE)
-	, m_bNeedBitstreamCheck(TRUE)
-	, m_bHasVideo(FALSE)
-	, m_dRate(1.0)
-	, m_bFlushing(FALSE)
-	, m_bNeedSyncPoint(FALSE)
-	, m_DTSHDProfile(0)
+	, m_JitterLimit(MAX_JITTER)
 	, m_rtStartInput(INVALID_TIME)
 	, m_rtStopInput(INVALID_TIME)
 	, m_rtStartInputCache(INVALID_TIME)
 	, m_rtStopInputCache(INVALID_TIME)
-	, m_bUpdateTimeCache(TRUE)
 	, m_FFAudioDec(this)
-	, m_bAVSync(true)
-	, m_bDRC(false)
 {
-	if (phr) {
-		*phr = S_OK;
-	}
+	ASSERT(phr);
+	*phr = S_OK;
 
 	m_pInput = DNew CDeCSSInputPin(L"CDeCSSInputPin", this, phr, L"In");
 	if (!m_pInput) {
@@ -2690,7 +2679,7 @@ STDMETHODIMP_(CString) CMpaDecFilter::GetInformation(MPCAInfo index)
 	CString infostr;
 
 	if (index == AINFO_MPCVersion) {
-		infostr.Format(L"%s (build %d)", MPC_VERSION_WSTR, MPC_VERSION_REV);
+		infostr.SetString(MPC_VERSION_WSTR);
 
 		return infostr;
 	}

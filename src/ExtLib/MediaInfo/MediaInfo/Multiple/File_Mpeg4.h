@@ -100,6 +100,8 @@ private :
     void moof();
     void moof_mfhd();
     void moof_traf();
+    void moof_traf_sbgp() { moov_trak_mdia_minf_stbl_sbgp(); }
+    void moof_traf_sgpd() { moov_trak_mdia_minf_stbl_sgpd(); }
     void moof_traf_sdtp();
     void moof_traf_tfdt();
     void moof_traf_tfhd();
@@ -132,6 +134,7 @@ private :
     void moov_trak_edts_elst();
     void moov_trak_load();
     void moov_trak_mdia();
+    void moov_trak_mdia_elng();
     void moov_trak_mdia_hdlr();
     void moov_trak_mdia_imap();
     void moov_trak_mdia_imap_sean();
@@ -166,7 +169,9 @@ private :
     void moov_trak_mdia_minf_stbl_cslg();
     void moov_trak_mdia_minf_stbl_co64();
     void moov_trak_mdia_minf_stbl_ctts();
+    void moov_trak_mdia_minf_stbl_sbgp();
     void moov_trak_mdia_minf_stbl_sdtp();
+    void moov_trak_mdia_minf_stbl_sgpd();
     void moov_trak_mdia_minf_stbl_stco();
     void moov_trak_mdia_minf_stbl_stdp();
     void moov_trak_mdia_minf_stbl_stps();
@@ -212,12 +217,15 @@ private :
     void moov_trak_mdia_minf_stbl_stsd_xxxx_damr();
     void moov_trak_mdia_minf_stbl_stsd_xxxx_dec3();
     void moov_trak_mdia_minf_stbl_stsd_xxxx_ddts();
+    void moov_trak_mdia_minf_stbl_stsd_xxxx_dfLa();
     void moov_trak_mdia_minf_stbl_stsd_xxxx_dmlp();
     void moov_trak_mdia_minf_stbl_stsd_xxxx_dvc1();
     void moov_trak_mdia_minf_stbl_stsd_xxxx_dvcC();
     void moov_trak_mdia_minf_stbl_stsd_xxxx_dvvC() {moov_trak_mdia_minf_stbl_stsd_xxxx_dvcC();}
+    void moov_trak_mdia_minf_stbl_stsd_xxxx_dvwC() {moov_trak_mdia_minf_stbl_stsd_xxxx_dvcC();}
     void moov_trak_mdia_minf_stbl_stsd_xxxx_esds();
     void moov_trak_mdia_minf_stbl_stsd_xxxx_fiel();
+    void moov_trak_mdia_minf_stbl_stsd_xxxx_gama();
     void moov_trak_mdia_minf_stbl_stsd_xxxx_glbl();
     void moov_trak_mdia_minf_stbl_stsd_xxxx_hvcC();
     void moov_trak_mdia_minf_stbl_stsd_xxxx_hvcE();
@@ -342,6 +350,7 @@ private :
     void RDVO();
     void RDVS();
     void RED1();
+    void RED2() {RED1();}
     void REDA();
     void REDV();
     void REOB();
@@ -450,6 +459,7 @@ private :
         std::vector<int64u>     stsz_Total; //TODO: merge with stsz
         int64u                  stsz_StreamSize; //TODO: merge with stsz
         std::vector<int64u>     stss; //Sync Sample, base=0
+        int64u                  FramePos_Offset;
         struct stts_struct
         {
             int32u SampleCount;
@@ -469,6 +479,8 @@ private :
         int64u                  stts_Duration_FirstFrame;
         int64u                  stts_Duration_LastFrame;
         int64u                  stts_SampleDuration;
+        int64u                  FirstUsedOffset;
+        int64u                  LastUsedOffset;
         int32u                  mvex_trex_default_sample_duration;
         int32u                  mvex_trex_default_sample_size;
         int32u                  TimeCode_TrackID;
@@ -537,6 +549,7 @@ private :
             hdlr_Type=0x00000000;
             hdlr_SubType=0x00000000;
             hdlr_Manufacturer=0x00000000;
+            FramePos_Offset=0;
             stsz_StreamSize=0;
             stsz_Sample_Size=0;
             stsz_Sample_Multiplier=1;
@@ -551,6 +564,8 @@ private :
             stts_Duration_FirstFrame=0;
             stts_Duration_LastFrame=0;
             stts_SampleDuration = 0;
+            FirstUsedOffset=(int64u)-1;
+            LastUsedOffset=(int64u)-1;
             mvex_trex_default_sample_duration=0;
             mvex_trex_default_sample_size=0;
             TimeCode_TrackID=(int32u)-1;
@@ -636,6 +651,7 @@ private :
     mdat_Pos_Type* mdat_Pos_Temp_ToJump;
     mdat_Pos_Type* mdat_Pos_Max;
     std::vector<int32u> mdat_Pos_ToParseInPriority_StreamIDs;
+    std::vector<int32u> mdat_Pos_ToParseInPriority_StreamIDs_ToRemove;
     bool                mdat_Pos_NormalParsing;
     void Skip_NulString(const char* Name);
 

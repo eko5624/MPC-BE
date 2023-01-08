@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2022 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,6 @@
 
 #include "stdafx.h"
 #include "STS.h"
-#include <atlbase.h>
 #include <fstream>
 #include <regex>
 #include "RealTextParser.h"
@@ -2192,7 +2191,7 @@ const static OpenFunctStruct s_OpenFuncts[] = {
 	Subtitle::LRC,  TIME,  OpenLRC,
 	Subtitle::TTML, TIME,  OpenTTML,
 	Subtitle::SUB,  TIME,  OpenSubViewer,
-	Subtitle::SSA,  FRAME, OpenMicroDVD,
+	Subtitle::SUB,  FRAME, OpenMicroDVD,
 	Subtitle::SMI,  TIME,  OpenSami,
 	Subtitle::SRT,  TIME,  OpenVPlayer,
 	Subtitle::XSS,  TIME,  OpenXombieSub,

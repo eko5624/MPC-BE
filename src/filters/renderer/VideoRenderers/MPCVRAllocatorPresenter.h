@@ -1,5 +1,5 @@
 /*
- * (C) 2019-2021 see Authors.txt
+ * (C) 2019-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,14 +21,20 @@
 #pragma once
 
 #include "AllocatorCommon.h"
-#include "SubPic/SubPicAllocatorPresenterImpl.h"
+#include "AllocatorPresenterImpl.h"
 #include "SubPic/ISubRender.h"
+#include <d3d11_1.h>
+#include "SubPic/ISubRender11.h"
 
 namespace DSObjects
 {
-	class CMPCVRAllocatorPresenter : public CSubPicAllocatorPresenterImpl, ISubRenderCallback4
+	class CMPCVRAllocatorPresenter
+		: public CAllocatorPresenterImpl
+		, ISubRenderCallback4
+		, ISubRender11Callback
 	{
 		CComPtr<IUnknown> m_pMPCVR;
+		bool m_bMPCVRFullscreenControl = false;
 
 	public:
 		CMPCVRAllocatorPresenter(HWND hWnd, HRESULT& hr, CString& _Error);
@@ -66,7 +72,17 @@ namespace DSObjects
 							   const double videoStretchFactor = 1.0,
 							   int xOffsetInPixels = 0, DWORD flags = 0) override;
 
-		// ISubPicAllocatorPresenter3
+
+		// ISubRender11Callback
+		STDMETHODIMP SetDevice11(ID3D11Device* pD3DDev);
+
+		STDMETHODIMP Render11(REFERENCE_TIME rtStart, REFERENCE_TIME rtStop,
+							  REFERENCE_TIME atpf, RECT croppedVideoRect,
+							  RECT originalVideoRect, RECT viewportRect,
+							  const double videoStretchFactor = 1.0,
+							  int xOffsetInPixels = 0, DWORD flags = 0) override;
+
+		// IAllocatorPresenter
 		STDMETHODIMP CreateRenderer(IUnknown** ppRenderer) override;
 		STDMETHODIMP_(CLSID) GetAPCLSID() override;
 		STDMETHODIMP_(SIZE) GetVideoSize() override;
@@ -83,5 +99,7 @@ namespace DSObjects
 		STDMETHODIMP ClearPixelShaders(int target) override;
 		STDMETHODIMP AddPixelShader(int target, LPCWSTR name, LPCSTR profile, LPCSTR sourceCode) override;
 		STDMETHODIMP_(bool) IsRendering() override;
+		STDMETHODIMP_(void) SetStereo3DSettings(Stereo3DSettings* pStereo3DSets) override;
+		STDMETHODIMP_(void) SetExtraSettings(ExtraRendererSettings* pExtraSets) override;
 	};
 }

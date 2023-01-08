@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2020 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -24,7 +24,7 @@
 #include "FGFilter.h"
 #include "BaseGraph.h"
 
-#define LowMerit(x) (CStringW(x) + L" (low merit)")
+#define LowMerit(x) (x L" (low merit)")
 
 class CFGManager
 	: public CUnknown
@@ -58,7 +58,7 @@ private:
 	DWORD m_dwRegister;
 
 	CStreamPath m_streampath;
-	CAutoPtrArray<CStreamDeadEnd> m_deadends;
+	std::vector<std::unique_ptr<CStreamDeadEnd>> m_deadends;
 
 protected:
 	CComPtr<IFilterMapper2> m_pFM;
@@ -163,7 +163,7 @@ protected:
 	STDMETHODIMP ConnectDirect(IPin* pPinOut, IPin* pPinIn, const AM_MEDIA_TYPE* pmt);
 
 public:
-	CFGManagerPlayer(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, bool IsPreview = false);
+	CFGManagerPlayer(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, int preview = 0);
 };
 
 class CFGManagerDVD : public CFGManagerPlayer

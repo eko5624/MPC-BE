@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2022 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -102,7 +102,7 @@ public:
 			pBF->SetSwPixelFormat(PixFmt_YUY2, true);
 			pBF->SetSwPixelFormat(PixFmt_RGB32, true);
 
-			if (CComQIPtr<IExFilterConfig> pEFC = pBF) {
+			if (CComQIPtr<IExFilterConfig> pEFC = pBF.p) {
 				pEFC->SetBool("hw_decoding", false);
 			}
 		}
@@ -112,7 +112,7 @@ public:
 			pBF->SetFFMpegCodec(i, video_filters[i]);
 		}
 
-		if (CComQIPtr<IExFilterConfig> pEFC = pBF) {
+		if (CComQIPtr<IExFilterConfig> pEFC = pBF.p) {
 			int iMvcOutputMode = MVC_OUTPUT_Auto;
 			switch (s.iStereo3DMode) {
 				case STEREO3D_MONO:              iMvcOutputMode = MVC_OUTPUT_Mono;          break;
@@ -121,8 +121,9 @@ public:
 				case STEREO3D_HALFOVERUNDER:     iMvcOutputMode = MVC_OUTPUT_HalfTopBottom; break;
 				case STEREO3D_OVERUNDER:         iMvcOutputMode = MVC_OUTPUT_TopBottom;     break;
 			}
+			const int mvc_mode_value = (iMvcOutputMode << 16) | (s.bStereo3DSwapLR ? 1 : 0);
 
-			pEFC->SetInt("mvc_mode", iMvcOutputMode << 16 | (int)s.bStereo3DSwapLR);
+			pEFC->SetInt("mvc_mode", mvc_mode_value);
 		}
 
 		*ppBF = pBF.Detach();
@@ -443,10 +444,20 @@ HRESULT CFGManager::EnumSourceFilters(LPCWSTR lpcwstrFileName, CFGFilterList& fl
 	{
 		// Filters Priority
 		CAppSettings& s = AfxGetAppSettings();
-		CMediaFormatCategory* mfc = s.m_Formats.FindMediaByExt(ext);
-		if (mfc || protocol == L"udp" || httpbuf.size()) {
-			CString type = httpbuf.size() ? L"http" : (protocol == L"udp" ? L"udp" : mfc->GetLabel());
-			if (const auto it = s.FiltersPrioritySettings.values.find(type); it != s.FiltersPrioritySettings.values.cend() && it->second != CLSID_NULL) {
+
+		CStringW type;
+		if (httpbuf.size()) {
+			type = L"http";
+		}
+		else if (protocol == L"udp") {
+			type = L"udp";
+		}
+		else if (CMediaFormatCategory* mfc = s.m_Formats.FindMediaByExt(ext)) {
+			type = mfc->GetLabel();
+		}
+
+		if (type.GetLength()) {
+			if (const auto it = s.FiltersPriority.values.find(type); it != s.FiltersPriority.values.cend() && it->second != CLSID_NULL) {
 				const auto& clsid_value = it->second;
 
 				for (const auto& pFGF : m_override) {
@@ -661,7 +672,7 @@ HRESULT CFGManager::AddSourceFilter(CFGFilter* pFGF, LPCWSTR lpcwstrFileName, LP
 		return hr;
 	}
 
-	CComQIPtr<IFileSourceFilter> pFSF = pBF;
+	CComQIPtr<IFileSourceFilter> pFSF = pBF.p;
 	if (!pFSF) {
 		return E_NOINTERFACE;
 	}
@@ -1066,7 +1077,7 @@ HRESULT CFGManager::Connect(IPin* pPinOut, IPin* pPinIn, bool bContinueRender)
 			};
 
 			if (!m_bIsPreview && !pMadVRAllocatorPresenter) {
-				if (CComQIPtr<IMFGetService> pMFGS = pBF) {
+				if (CComQIPtr<IMFGetService> pMFGS = pBF.p) {
 					// hook IDirectXVideoDecoderService to get DXVA status & logging;
 					// why before ConnectFilterDirect() - some decoder, like ArcSoft & Cyberlink, init DXVA2 decoder while connect to the renderer ...
 					// madVR crash on call ::GetService() before connect
@@ -1092,29 +1103,29 @@ HRESULT CFGManager::Connect(IPin* pPinOut, IPin* pPinIn, bool bContinueRender)
 
 					POSITION pos = pUnks.GetHeadPosition();
 					while (pos) {
-						if (CComQIPtr<IMixerPinConfig, &IID_IMixerPinConfig> pMPC = pUnks.GetNext(pos)) {
+						if (CComQIPtr<IMixerPinConfig, &IID_IMixerPinConfig> pMPC = pUnks.GetNext(pos).p) {
 							pMPC->SetAspectRatioMode(AM_ARMODE_STRETCHED);
 						}
 					}
 
-					if (CComQIPtr<IVMRAspectRatioControl> pARC = pBF) {
+					if (CComQIPtr<IVMRAspectRatioControl> pARC = pBF.p) {
 						pARC->SetAspectRatioMode(VMR_ARMODE_NONE);
 					}
 
-					if (CComQIPtr<IVMRAspectRatioControl9> pARC = pBF) {
+					if (CComQIPtr<IVMRAspectRatioControl9> pARC = pBF.p) {
 						pARC->SetAspectRatioMode(VMR_ARMODE_NONE);
 					}
 
-					if (CComQIPtr<IVMRMixerControl9> pVMRMC9 = pBF) {
+					if (CComQIPtr<IVMRMixerControl9> pVMRMC9 = pBF.p) {
 						m_pUnks.AddTail(pVMRMC9);
 					}
 
-					CComQIPtr<IMFVideoMixerBitmap> pMFVMB = pBF; // get custom EVR-CP or EVR-Sync interface
+					CComQIPtr<IMFVideoMixerBitmap> pMFVMB = pBF.p; // get custom EVR-CP or EVR-Sync interface
 					if (pMFVMB) {
 						m_pUnks.AddTail(pMFVMB);
 					}
 
-					if (CComQIPtr<IMFGetService> pMFGS = pBF) {
+					if (CComQIPtr<IMFGetService> pMFGS = pBF.p) {
 						CComPtr<IMFVideoDisplayControl>	pMFVDC;
 						CComPtr<IMFVideoProcessor>		pMFVP;
 
@@ -1152,7 +1163,7 @@ HRESULT CFGManager::Connect(IPin* pPinOut, IPin* pPinIn, bool bContinueRender)
 	}
 
 	if (fDeadEnd) {
-		CAutoPtr<CStreamDeadEnd> psde(DNew CStreamDeadEnd());
+		std::unique_ptr<CStreamDeadEnd> psde(DNew CStreamDeadEnd());
 		psde->insert(psde->end(), m_streampath.begin(), m_streampath.end());
 		int skip = 0;
 		BeginEnumMediaTypes(pPinOut, pEM, pmt) {
@@ -1163,7 +1174,7 @@ HRESULT CFGManager::Connect(IPin* pPinOut, IPin* pPinIn, bool bContinueRender)
 		}
 		EndEnumMediaTypes(pmt)
 		if (skip < (int)psde->mts.size()) {
-			m_deadends.Add(psde);
+			m_deadends.emplace_back(std::move(psde));
 		}
 	}
 
@@ -1187,7 +1198,7 @@ STDMETHODIMP CFGManager::RenderFile(LPCWSTR lpcwstrFileName, LPCWSTR lpcwstrPlay
 	CAutoLock cAutoLock(this);
 
 	m_streampath.clear();
-	m_deadends.RemoveAll();
+	m_deadends.clear();
 
 	HRESULT hr;
 
@@ -1204,7 +1215,7 @@ STDMETHODIMP CFGManager::RenderFile(LPCWSTR lpcwstrFileName, LPCWSTR lpcwstrPlay
 		return hr;
 	}
 
-	CAutoPtrArray<CStreamDeadEnd> deadends;
+	std::vector<std::unique_ptr<CStreamDeadEnd>> deadends;
 
 	hr = VFW_E_CANNOT_RENDER;
 
@@ -1214,7 +1225,7 @@ STDMETHODIMP CFGManager::RenderFile(LPCWSTR lpcwstrFileName, LPCWSTR lpcwstrPlay
 
 		if (SUCCEEDED(hr = AddSourceFilter(pFGF, lpcwstrFileName, pFGF->GetName(), &pBF))) {
 			m_streampath.clear();
-			m_deadends.RemoveAll();
+			m_deadends.clear();
 
 			hr = ConnectFilter(pBF, nullptr);
 			if (SUCCEEDED(hr)) {
@@ -1225,14 +1236,16 @@ STDMETHODIMP CFGManager::RenderFile(LPCWSTR lpcwstrFileName, LPCWSTR lpcwstrPlay
 			NukeDownstream(pBF);
 			RemoveFilter(pBF);
 
-			deadends.Append(m_deadends);
+			for (auto& de : m_deadends) {
+				deadends.emplace_back(std::move(de));
+			}
 		} else if (hr == E_ABORT) {
 			m_bOpeningAborted = false;
 			return hr;
 		}
 	}
 
-	m_deadends.Copy(deadends);
+	m_deadends = std::move(deadends);
 	m_bOpeningAborted = false;
 
 	return hr;
@@ -1324,7 +1337,7 @@ STDMETHODIMP CFGManager::RenderEx(IPin* pPinOut, DWORD dwFlags, DWORD* pvContext
 	CAutoLock cAutoLock(this);
 
 	m_streampath.clear();
-	m_deadends.RemoveAll();
+	m_deadends.clear();
 
 	if (!pPinOut || dwFlags > AM_RENDEREX_RENDERTOEXISTINGRENDERERS || pvContext) {
 		return E_INVALIDARG;
@@ -1334,7 +1347,7 @@ STDMETHODIMP CFGManager::RenderEx(IPin* pPinOut, DWORD dwFlags, DWORD* pvContext
 		CInterfaceList<IBaseFilter> pBFs;
 
 		BeginEnumFilters(this, pEF, pBF) {
-			if (CComQIPtr<IAMFilterMiscFlags> pAMMF = pBF) {
+			if (CComQIPtr<IAMFilterMiscFlags> pAMMF = pBF.p) {
 				if (pAMMF->GetMiscFlags() & AM_FILTER_MISC_FLAGS_IS_RENDERER) {
 					pBFs.AddTail(pBF);
 				}
@@ -1577,9 +1590,11 @@ STDMETHODIMP CFGManager::ConnectFilter(IBaseFilter* pBF, IPin* pPinIn)
 			}
 
 			if (SUCCEEDED(hr)) {
-				for (ptrdiff_t i = m_deadends.GetCount() - 1; i >= 0; i--) {
+				for (ptrdiff_t i = m_deadends.size() - 1; i >= 0; i--) {
 					if (m_deadends[i]->Compare(m_streampath)) {
-						m_deadends.RemoveAt(i);
+						auto it = m_deadends.begin();
+						std::advance(it, i);
+						m_deadends.erase(it);
 					}
 				}
 				nRendered++;
@@ -1760,14 +1775,14 @@ STDMETHODIMP_(size_t) CFGManager::GetCount()
 {
 	CAutoLock cAutoLock(this);
 
-	return m_deadends.GetCount();
+	return m_deadends.size();
 }
 
 STDMETHODIMP CFGManager::GetDeadEnd(int iIndex, std::list<CStringW>& path, std::list<CMediaType>& mts)
 {
 	CAutoLock cAutoLock(this);
 
-	if (iIndex < 0 || iIndex >= (int)m_deadends.GetCount()) {
+	if (iIndex < 0 || iIndex >= (int)m_deadends.size()) {
 		return E_FAIL;
 	}
 
@@ -1804,7 +1819,7 @@ STDMETHODIMP CFGManager::RenderSubFile(LPCWSTR lpcwstrFileName)
 	CComPtr<IBaseFilter> pBF;
 	if (SUCCEEDED(hr = AddSourceFilter(pFG, lpcwstrFileName, pFG->GetName(), &pBF))) {
 		m_streampath.clear();
-		m_deadends.RemoveAll();
+		m_deadends.clear();
 
 		hr = ConnectFilter(pBF, nullptr);
 	}
@@ -1851,7 +1866,7 @@ CFGManagerCustom::CFGManagerCustom(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, boo
 	}
 
 	if (src[SRC_UDP] && !IsPreview) {
-		pFGF = DNew CFGFilterInternal<CUDPReader>(UDPReaderName);
+		pFGF = DNew CFGFilterInternal<CUDPReader>(StreamReaderName);
 		pFGF->m_protocols.emplace_back(L"udp");
 		pFGF->m_protocols.emplace_back(L"http");
 		pFGF->m_protocols.emplace_back(L"https");
@@ -1859,7 +1874,7 @@ CFGManagerCustom::CFGManagerCustom(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, boo
 	}
 
 	if (src[SRC_STDINPUT] && !IsPreview) {
-		pFGF = DNew CFGFilterInternal<CUDPReader>(STDInReaderName);
+		pFGF = DNew CFGFilterInternal<CUDPReader>(StreamReaderName);
 		pFGF->m_protocols.emplace_back(L"pipe");
 		m_source.push_back(pFGF);
 	}
@@ -1965,8 +1980,9 @@ CFGManagerCustom::CFGManagerCustom(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, boo
 
 	if (src[SRC_MPA] && !IsPreview) {
 		pFGF = DNew CFGFilterInternal<CMpaSourceFilter>(MpaSourceName);
-		pFGF->m_chkbytes.emplace_back(L"0,2,FFE0,FFE0");
+		pFGF->m_chkbytes.emplace_back(L"0,2,FFE0,FFE0");               // Mpeg Audio
 		pFGF->m_chkbytes.emplace_back(L"0,10,FFFFFF00000080808080,49443300000000000000");
+		pFGF->m_chkbytes.emplace_back(L"0,2,FFE0,56E0");               // AAC LATM
 		pFGF->m_extensions.emplace_back(L".mp3");
 		pFGF->m_extensions.emplace_back(L".aac");
 		m_source.push_back(pFGF);
@@ -1979,6 +1995,7 @@ CFGManagerCustom::CFGManagerCustom(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, boo
 		pFGF->m_chkbytes.emplace_back(L"4,4,,F8726FBB");               // MLP
 		pFGF->m_chkbytes.emplace_back(L"4,4,,F8726FBA");               // TrueHD
 		pFGF->m_extensions.emplace_back(L".ac3");
+		pFGF->m_extensions.emplace_back(L".ec3");
 		pFGF->m_extensions.emplace_back(L".eac3");
 		pFGF->m_extensions.emplace_back(L".thd");
 		m_source.push_back(pFGF);
@@ -2327,6 +2344,7 @@ CFGManagerCustom::CFGManagerCustom(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, boo
 		pFGF = DNew CFGFilterInternal<CMpaDecFilter>(MPCAudioDecName, MERIT64_ABOVE_DSHOW);
 		pFGF->AddType(MEDIATYPE_Audio, MEDIASUBTYPE_ATRAC3);
 		pFGF->AddType(MEDIATYPE_Audio, MEDIASUBTYPE_ATRAC3plus);
+		pFGF->AddType(MEDIATYPE_Audio, MEDIASUBTYPE_ATRAC9);
 		m_transform.push_back(pFGF);
 
 		pFGF = DNew CFGFilterInternal<CMpaDecFilter>(
@@ -2379,6 +2397,7 @@ CFGManagerCustom::CFGManagerCustom(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, boo
 		pFGF->AddType(MEDIATYPE_Audio, MEDIASUBTYPE_ADPCM_SWF);
 		pFGF->AddType(MEDIATYPE_Audio, MEDIASUBTYPE_IMA_AMV);
 		pFGF->AddType(MEDIATYPE_Audio, MEDIASUBTYPE_ADX_ADPCM);
+		pFGF->AddType(MEDIATYPE_Audio, MEDIASUBTYPE_G726_ADPCM);
 		// AES3
 		pFGF->AddType(MEDIATYPE_Audio, MEDIASUBTYPE_AES3);
 		m_transform.push_back(pFGF);
@@ -2569,12 +2588,11 @@ CFGManagerCustom::CFGManagerCustom(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, boo
 
 	// Keep Mpeg2DecFilter after DXVA/ffmpeg decoder !
 	pFGF = DNew CFGFilterInternal<CMpeg2DecFilter>(
-				(video[VDEC_DVD_LIBMPEG2] || IsPreview) ? Mpeg2DecFilterName : LowMerit(Mpeg2DecFilterName),
-				(video[VDEC_DVD_LIBMPEG2] || IsPreview) ? MERIT64_ABOVE_DSHOW : MERIT64_DO_USE);
+				(video[VDEC_DVD] || IsPreview) ? DvdVideoDecoderName : LowMerit(DvdVideoDecoderName),
+				(video[VDEC_DVD] || IsPreview) ? MERIT64_ABOVE_DSHOW : MERIT64_DO_USE);
 	// MPC-BE uses this filter for DVD-Video only
-	pFGF->AddType(MEDIATYPE_DVD_ENCRYPTED_PACK, MEDIASUBTYPE_MPEG2_VIDEO); // used by DVD Navigator for MPEG-2 and MPEG-1
-	pFGF->AddType(MEDIATYPE_MPEG2_PACK, MEDIASUBTYPE_MPEG2_VIDEO);
-	pFGF->AddType(MEDIATYPE_MPEG2_PES, MEDIASUBTYPE_MPEG2_VIDEO);
+	pFGF->AddType(MEDIATYPE_DVD_ENCRYPTED_PACK, MEDIASUBTYPE_MPEG2_VIDEO); // used by for MPEG-2 and MPEG-1
+	//pFGF->AddType(MEDIATYPE_MPEG2_PES, MEDIASUBTYPE_MPEG2_VIDEO);
 	m_transform.push_back(pFGF);
 
 	// TODO - make optional RoQ A/V decoder
@@ -2693,10 +2711,7 @@ CFGManagerCustom::CFGManagerCustom(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, boo
 	// Overrides
 	WORD merit_low = 1;
 
-	POSITION pos = s.m_filters.GetTailPosition();
-	while (pos) {
-		FilterOverride* fo = s.m_filters.GetPrev(pos);
-
+	for (const auto& fo : s.m_ExternalFilters) {
 		if (fo->fDisabled || (fo->type == FilterOverride::EXTERNAL && !CPath(MakeFullPath(fo->path)).FileExists())) {
 			continue;
 		}
@@ -2769,8 +2784,8 @@ STDMETHODIMP CFGManagerCustom::AddFilter(IBaseFilter* pBF, LPCWSTR pName)
 // CFGManagerPlayer
 //
 
-CFGManagerPlayer::CFGManagerPlayer(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, bool IsPreview)
-	: CFGManagerCustom(pName, pUnk, hWnd, IsPreview)
+CFGManagerPlayer::CFGManagerPlayer(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, int preview)
+	: CFGManagerCustom(pName, pUnk, hWnd, (preview > 0))
 {
 	DLog(L"CFGManagerPlayer::CFGManagerPlayer() on thread: %u", GetCurrentThreadId());
 	CFGFilter* pFGF;
@@ -2830,7 +2845,12 @@ CFGManagerPlayer::CFGManagerPlayer(LPCTSTR pName, LPUNKNOWN pUnk, HWND hWnd, boo
 				break;
 		}
 	} else {
-		m_transform.push_back(DNew CFGFilterVideoRenderer(m_hWnd, CLSID_EnhancedVideoRenderer, L"EVR - Preview Window", MERIT64_ABOVE_DSHOW + 2));
+		if (preview == 1) {
+			m_transform.push_back(DNew CFGFilterVideoRenderer(m_hWnd, CLSID_EnhancedVideoRenderer, L"EVR - Preview Window", MERIT64_ABOVE_DSHOW + 2, true));
+		}
+		else if (preview == 2) {
+			m_transform.push_back(DNew CFGFilterVideoRenderer(m_hWnd, CLSID_EVRAllocatorPresenter, L"EVR-CP - Preview Window", MERIT64_ABOVE_DSHOW + 2, true));
+		}
 	}
 
 	if (!m_bIsPreview) {
@@ -2967,6 +2987,8 @@ STDMETHODIMP CFGManagerDVD::AddSourceFilter(LPCWSTR lpcwstrFileName, LPCWSTR lpc
 			|| len == 0) {
 		return E_INVALIDARG;
 	}
+
+	pDVDC->SetOption(DVD_EnablePortableBookmarks, TRUE); // DVD bookmarks can be used on another computer
 
 	pDVDC->SetOption(DVD_ResetOnStop, FALSE);
 	pDVDC->SetOption(DVD_HMSF_TimeCodeEvents, TRUE);

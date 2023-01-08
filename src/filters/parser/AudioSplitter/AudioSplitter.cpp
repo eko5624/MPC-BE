@@ -1,5 +1,5 @@
 /*
- * (C) 2013-2021 see Authors.txt
+ * (C) 2013-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -37,8 +37,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesOut[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut), sudPinTypesOut}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut), sudPinTypesOut}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -173,12 +173,19 @@ HRESULT CAudioSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 			std::vector<CMediaType> mts;
 			mts.push_back(mt);
-			CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, m_pAudioFile->GetName() + L" Audio Output", this, this, &hr));
+
+			const CStringW name = m_pAudioFile->GetName();
+
+			std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, name + L" Audio Output", this, this, &hr));
 			EXECUTE_ASSERT(SUCCEEDED(AddOutputPin(0, pPinOut)));
+
+			if (name == L"Flac") {
+				m_pFile->SetCacheSize(64 * KILOBYTE);
+			}
 		}
 	}
 
-	if (m_pOutputs.GetCount() == 0) {
+	if (m_pOutputs.size() == 0) {
 		return E_FAIL;
 	}
 
@@ -242,16 +249,16 @@ bool CAudioSplitterFilter::DemuxLoop()
 	HRESULT hr = S_OK;
 
 	while (m_pAudioFile && SUCCEEDED(hr) && !CheckRequest(nullptr)) {
-		CAutoPtr<CPacket> p(DNew CPacket());
+		std::unique_ptr<CPacket> p(DNew CPacket());
 		p->bSyncPoint = TRUE;
 
-		if (!m_pAudioFile->GetAudioFrame(p, m_rtime)) {
+		if (!m_pAudioFile->GetAudioFrame(p.get(), m_rtime)) {
 			break;
 		}
 
 		m_rtime = p->rtStop;
 
-		hr = DeliverPacket(p);
+		hr = DeliverPacket(std::move(p));
 	}
 
 	return true;
@@ -265,5 +272,5 @@ CAudioSourceFilter::CAudioSourceFilter(LPUNKNOWN pUnk, HRESULT* phr)
 	: CAudioSplitterFilter(pUnk, phr)
 {
 	m_clsid = __uuidof(this);
-	m_pInput.Free();
+	m_pInput.reset();
 }

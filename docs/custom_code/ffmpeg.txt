@@ -4,6 +4,8 @@
 * config.asm
 * ffmpeg.mak
 
+* compat/w32dlfcn.h
+
 * libavcodec/x86/hevcdsp.h
 * libavcodec/x86/hevcdsp_init.c
 
@@ -11,9 +13,9 @@
 * libavcodec/aacsbr_template.c
 * libavcodec/bsf_list.c
 * libavcodec/codec_list.c
-* libavcodec/decode.c
 * libavcodec/dxva2.c
 * libavcodec/dxva2_av1.c
+* libavcodec/dxva2_hevc.c
 * libavcodec/h264_refs.c
 * libavcodec/h264_slice.c
 * libavcodec/h264dec.c
@@ -23,7 +25,7 @@
 * libavcodec/hevcpred.c
 * libavcodec/hevcpred.h
 * libavcodec/hwconfig.h
-* libavcodec/internal.h
+* libavcodec/mlpdec.c
 * libavcodec/mpeg4audio.h
 * libavcodec/mpeg12dec.c
 * libavcodec/mpegaudio_parser.c

@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,13 +21,13 @@
 #pragma once
 
 #include "AllocatorCommon.h"
-#include "SubPic/SubPicAllocatorPresenterImpl.h"
+#include "AllocatorPresenterImpl.h"
 #include "SubPic/ISubRender.h"
 
 namespace DSObjects
 {
 	class CDXRAllocatorPresenter
-		: public CSubPicAllocatorPresenterImpl
+		: public CAllocatorPresenterImpl
 	{
 		class CSubRenderCallback : public CUnknown, public ISubRenderCallback, public CCritSec
 		{
@@ -87,7 +87,7 @@ namespace DSObjects
 			REFERENCE_TIME rtStart, REFERENCE_TIME rtStop, REFERENCE_TIME atpf,
 			int left, int top, int right, int bottom, int width, int height);
 
-		// ISubPicAllocatorPresenter3
+		// IAllocatorPresenter
 		STDMETHODIMP CreateRenderer(IUnknown** ppRenderer) override;
 		STDMETHODIMP_(CLSID) GetAPCLSID() override;
 		STDMETHODIMP_(SIZE) GetVideoSize() override;

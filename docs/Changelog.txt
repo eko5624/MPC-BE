@@ -1,16 +1,217 @@
 ﻿This file includes only a short list of the changes between Media Player Classic - BE's versions.
 
-1.6.2 alpha
+1.6.5.x dev
+=============================
+MPCStreamReader
+Added support for URL redirection for HLS.
+
+AudioSplitter
+Fixed playback of initial samples of FLAC files.
+
+MpaDecFilter
+Fixed decoding of some TrueHD streams.
+
+MPCVideoDec
+Fixed decoding of some MPEG-4 ASP.
+
+MpcAudioRenderer
+Fixed audio dropout when changing speed at the end of playback.
+
+VideoRenderers
+Refactoring and optimization.
+EVR-CP can now be used as a preview renderer.
+
+Subtitles
+Improved parsing of polygon parameters in SSA/ASS subtitles.
+Minor rendering optimizations for PGS/DVB subtitles.
+
+Player
+Added option to select preview renderer.
+Fixed placement of a vertically stretched frame in the preview window.
+Additional tracks will no longer appear in the list of recent Windows files.
+
+Updated Korean translation (by Potmarigold and Hackjjang).
+Updated Italian translation (by mapi68).
+
+Updated libraries:
+	MediaInfo git-v22.12-g69756e4c1.
+
+1.6.5.3
+=============================
+Fixed crash when playing AVS3 video on CPU without AVX instructions.
+
+1.6.5
+=============================
+Splitters
+Fixed reading images from ID3v2 tags.
+
+MPCStreamReader
+The filter will not connect to completed broadcasts.
+
+MpaSplitter
+Added support for multiple ID3 tags at the beginning of a file or stream.
+
+OggSplitter
+Added update of metadata while playing radio broadcasts.
+
+MpegSplitter
+Unsupported G.722.1 audio tracks for Hikvision (IMKH) camera files will be ignored.
+Added support for AVS3 video codec.
+
+MatroskaSplitter
+Fixed a crash on some MKVs.
+Added support for AVS3 video codec.
+
+MP4Splitter
+Added support for MP4 with multiple headers.
+
+RawVideoSplitter
+Added support for color range and color location for YUV4MPEG2.
+
+MPCVideoDec
+Fixed output media type properties for RAW video when MPC Video Converter is used.
+Fixed angle switching for Stereo 3D.
+Added support for AVS3 video decoding.
+
+Player
+Added the ability to specify "User agent". The default is "Mozilla/5.0".
+Fixed blinking of the preview window.
+Fixed remembering history when opening BD ISO.
+The display of the list of player translations has been optimized.
+Fixed player operation in case of impossibility to change the playback speed.
+Added the ability to temporarily disable (and re-enable) the preview window for the current file by clicking the middle mouse button.
+The function to add all files from a folder now ignores playlists.
+Fixed decoding error for some JPEG files.
+Fixed update of the "Information" panel for Ogg radio.
+Fixed detection of file extensions for URLs.
+Optimized CD/DVD presence detection for some drives.
+Fixed playback from the webcam after resetting the settings.
+Various interface fixes.
+
+Updated Hungarian translation (by mickey).
+Updated Turkish translation (by cmhrky).
+Updated German translation (by Klaus1189).
+Updated Chinese (Simplified) translation (by wushantao).
+Updated Dutch and Chinese (Traditional) translation (by beter).
+Updated Japanese translation.
+Updated Italian translation (by mapi68).
+
+Updated libraries:
+	ffmpeg git-n5.2-dev-1381-g65f96a965a;
+	Little-CMS git-lcms2.14rc1-3-g496293a;
+	MediaInfo git-v22.09-8-gb4863b677;
+
+1.6.4
+=============================
+MPCStreamReader (MPC UDP/HTTP Reader)
+Added support for HLS Live.
+
+MPegSplitter
+Fixed playback of VOB files with an incorrect empty block at the beginning.
+Faster navigation for Blu-ray files, added support for keyframes.
+Optimized calculation of unknown frame rate.
+
+MpcDvdVideoDecoder (Mpeg2DecFilter)
+Removed option to read aspect ratio from video stream. This option is not required when playing DVD-Video.
+
+MPCVideoDec
+Implemented correct output of YUV 4:2:0 and 4:2:2 formats when odd sizes are specified for the video stream.
+Improved operation of D3D11 Copy Back and NVDEC decoders in some situations.
+Added support for MEDIASUBTYPE_av01.
+
+VideoRenderers
+Сolor management now works for 10-bit surfaces as well.
+
+Subtitles
+Subtitle delay is now applied on pause.
+Fixed display of symbols in some external fonts.
+
+Youtube and other online services
+Fixed work with yt-dlp on some sites.
+Use "ffmpeg.exe" to merge individual video and audio files obtained using the "Save As" command.
+Disable SSL certificate verification in yt-dlp.
+Improved support for online playlists.
+
+Player
+Fixed display of text with "&" symbols in the "Information" panel.
+Fixed LAV Splitter freezing when watching some Live broadcasts.
+Fixed detection of "dxva2cb" mode when using LAV Video Decoder.
+Fixed player crash during frame-by-frame navigation at the end of playback.
+
+Installer
+Compiling the installer requires InnoSetup 6.1.0 or later.
+Updated installer translation files.
+Added the ability to install "MPC Video Renderer 0.6.3".
+Added the ability to offline install previously downloaded components.
+
+Updated German translation (by Klaus1189).
+Updated Turkish translation (by cmhrky).
+Updated Spanish translation (by pruebaz).
+Updated Catalan translation (by pruebaz).
+Updated Japanese translation.
+Added Croatian translation.
+
+Updated libraries:
+	dav1d git-1.0.0-45-ga029d68;
+	ffmpeg git-n5.2-dev-506-g5c217119c8;
+	Little-CMS git-lcms2.13.1-70-gf3f6b7b;
+	MediaInfo git-v22.06-34-g90e59c5ed;
+	ZenLib git-v0.4.39-12-gde2787a;
+	nanosvg git-bd16c4e;
+
+1.6.3
 =============================
 MpaSplitter
 Fixed working with online streams.
 Improved support for embedded images.
 
+AudioSplitter
+Improved FLAC playback via HTTP.
+Fixed APE Tag reading in some situations.
+
 MP4Splitter
 Fixed playing files with tracks with negative delay.
+Improved work with PCM audio.
+Fixed opening of some corrupted files.
+
+MatroskaSplitter
+Fixed aspect ratio setting for VFW codecs.
+
+MpaDecFilter
+Added support for AAC 22.2 audio decoding with automatic mixing in 7.1.
+Added support for ATRAC9.
+Fixed "stereodownmix" setting.
+
+MPCVideoDec
+Fixed D3D11 decoder in some situations.
+Added support for Intel D3D11 hardware acceleration for HEVC 4:2:0 12bit, 4:2:2 10/12bit, 4:4:4 8/10/12bit decoding.
+Fixed support for AV1 hardware decoding in D3D11 Copy-Back and NVDEC modes.
+
+VideoRenderers
+Fixed frame rotating for SyncVR.
+Removed PS 2.x shader support for EVR-CP and SyncVR.
+
+Subtitles
+Added support for outputting subtitles in DirectX 11 mode. Used together with MPC Video Renderer 0.6.0.1896 or later.
+Various subtitle output optimizations in DirectX 9 mode.
+Fixed positioning of subtitles in MicroDVD format.
+
+Youtube
+Added support for links "youtube.com/clip/", "youtube.com/c/.../live" and "youtube.com/channel/.../live".
 
 Player
 Added option "Use Window Media Controls". It is disabled by default.
+Added shaders to convert stereo 3D to red-cyan anaglyph for Direct3D9.
+Added the ability to set the color of the program window title on Windows 11.
+Fixed EVR-CP bug with "Failed to RegisterClass" error for the case when playback is forced to end after the first frame.
+Fixed remembering the starting window size for some situations.
+Moving a window outside the video area now also works for a maximized window.
+Deleting from history also removes entries from the list of recent files in the taskbar.
+Added the ability to open local files with a long path (more than 260 characters).
+Fixed saving position in history when shutting down Windows.
+Improved blocking the computer from going to sleep.
+Added the ability to use DVD bookmarks with a position on another computer.
+Added extension .ec3 in group of formats AC-3.
 Miscellaneous fixes.
 
 Updated Turkish translation (by cmhrky).
@@ -18,16 +219,21 @@ Updated German translation (by Klaus1189).
 Updated Chinese (Simplified) translation (by wushantao).
 Updated Ukrainian translation (by arestarh).
 Updated Japanese translation.
+Updated Dutch and Chinese (Traditional) translation (by beter).
+Updated Hungarian translation (by mickey).
+Updated Spanish translation (by IPeluchito).
 
 Updated libraries:
 	dav1d git-1.0.0;
 	Detours git-v4.0.1-97-g66d6f2d;
-	ffmpeg git-n5.1-dev-539-g538be75a69;
+	ffmpeg git-n5.1-dev-1440-gaa0829d834;
 	libflac git-1.3.3-93-ga2fe43f6;
-	Little-CMS git-lcms2.13.1-6-g8ab8932;
-	MediaInfo git-v21.09-141-g7545cdfe1;
+	Little-CMS git-lcms2.13.1-23-gab22640;
+	MediaInfo git-v22.03-g6d3271df;
 	openjpeg git-v2.4.0-89-g6a29f5a9;
 	rapidjson git-v1.1.0-685-ge4bde977;
+	zlib 1.2.12;
+	nanosvg git-3bcdf2f;
 
 
 1.6.1

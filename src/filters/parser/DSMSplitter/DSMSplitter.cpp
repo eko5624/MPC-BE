@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -33,8 +33,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -145,7 +145,7 @@ HRESULT CDSMSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 		std::vector<CMediaType> mts;
 		mts.push_back(mt);
 
-		CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, name, this, this, &hr));
+		std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, name, this, this, &hr));
 
 		name.Empty();
 
@@ -187,7 +187,7 @@ HRESULT CDSMSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 		}
 	}
 
-	return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+	return m_pOutputs.size() > 0 ? S_OK : E_FAIL;
 }
 
 bool CDSMSplitterFilter::DemuxInit()
@@ -216,14 +216,14 @@ bool CDSMSplitterFilter::DemuxLoop()
 		__int64 pos = m_pFile->GetPos();
 
 		if (type == DSMP_SAMPLE) {
-			CAutoPtr<CPacket> p(DNew CPacket());
-			if (m_pFile->Read(len, p)) {
+			std::unique_ptr<CPacket> p(DNew CPacket());
+			if (m_pFile->Read(len, p.get())) {
 				if (p->rtStart != INVALID_TIME) {
 					p->rtStart -= m_pFile->m_rtFirst;
 					p->rtStop -= m_pFile->m_rtFirst;
 				}
 
-				hr = DeliverPacket(p);
+				hr = DeliverPacket(std::move(p));
 			}
 		}
 
@@ -268,5 +268,5 @@ CDSMSourceFilter::CDSMSourceFilter(LPUNKNOWN pUnk, HRESULT* phr)
 	: CDSMSplitterFilter(pUnk, phr)
 {
 	m_clsid = __uuidof(this);
-	m_pInput.Free();
+	m_pInput.reset();
 }

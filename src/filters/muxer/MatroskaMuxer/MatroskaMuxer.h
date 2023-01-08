@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include <atlbase.h>
-#include <atlcoll.h>
 #include "MatroskaFile.h"
 
 #define MAXCLUSTERTIME 1000
@@ -32,8 +30,8 @@
 
 class CMatroskaMuxerInputPin : public CBaseInputPin
 {
-	CAutoPtr<MatroskaWriter::TrackEntry> m_pTE;
-	CAutoPtrArray<MatroskaWriter::CBinary> m_pVorbisHdrs;
+	std::unique_ptr<MatroskaWriter::TrackEntry> m_pTE;
+	std::vector<std::unique_ptr<MatroskaWriter::CBinary>> m_pVorbisHdrs;
 
 	bool m_fActive;
 	CCritSec m_csReceive;
@@ -47,12 +45,12 @@ public:
 	DECLARE_IUNKNOWN;
 	STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void** ppv);
 
-	MatroskaWriter::TrackEntry* GetTrackEntry() { return m_pTE; }
+	MatroskaWriter::TrackEntry* GetTrackEntry() { return m_pTE.get(); }
 
 	REFERENCE_TIME m_rtDur;
 
 	CCritSec m_csQueue;
-	CAutoPtrList<MatroskaWriter::BlockGroup> m_blocks;
+	std::list<std::unique_ptr<MatroskaWriter::BlockGroup>> m_blocks;
 	bool m_fEndOfStreamReceived;
 
 	HRESULT CheckMediaType(const CMediaType* pmt);
@@ -102,8 +100,8 @@ class __declspec(uuid("1E1299A2-9D42-4F12-8791-D79E376F4143"))
 	, public IMatroskaMuxer
 {
 protected:
-	CAutoPtrList<CMatroskaMuxerInputPin> m_pInputs;
-	CAutoPtr<CMatroskaMuxerOutputPin> m_pOutput;
+	std::list<std::unique_ptr<CMatroskaMuxerInputPin>> m_pInputs;
+	std::unique_ptr<CMatroskaMuxerOutputPin> m_pOutput;
 
 	REFERENCE_TIME m_rtCurrent;
 

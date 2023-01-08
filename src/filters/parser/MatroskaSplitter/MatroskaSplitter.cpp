@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2022 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -33,7 +33,6 @@
 
 #include <moreuuids.h>
 #include <basestruct.h>
-#include <cmath>
 #include <libavutil/pixfmt.h>
 #include <libavutil/intreadwrite.h>
 
@@ -51,8 +50,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -250,11 +249,11 @@ bool CMatroskaSplitterFilter::ReadFirtsBlock(std::vector<byte>& pData, TrackEntr
 			CBlockGroupNode bgn;
 
 			if (m_pBlock->m_id == MATROSKA_ID_BLOCKGROUP) {
-				bgn.Parse(m_pBlock, true);
+				bgn.Parse(m_pBlock.get(), true);
 			} else if (m_pBlock->m_id == MATROSKA_ID_SIMPLEBLOCK) {
-				CAutoPtr<BlockGroup> bg(DNew BlockGroup());
-				bg->Block.Parse(m_pBlock, true);
-				bgn.emplace_back(bg);
+				std::unique_ptr<BlockGroup> bg(DNew BlockGroup());
+				bg->Block.Parse(m_pBlock.get(), true);
+				bgn.emplace_back(std::move(bg));
 			}
 
 			for (const auto& bg : bgn) {
@@ -271,11 +270,11 @@ bool CMatroskaSplitterFilter::ReadFirtsBlock(std::vector<byte>& pData, TrackEntr
 			}
 		} while (m_pBlock->NextBlock() && !CheckRequest(nullptr) && pData.empty());
 
-		m_pBlock.Free();
+		m_pBlock.reset();
 	} while (m_pFile->GetPos() < (__int64)std::min(m_pFile->m_segment.pos + m_pFile->m_segment.len, 1024ULL * MEGABYTE)
 		&& m_pCluster->Next(true) && !CheckRequest(nullptr) && pData.empty());
 
-	m_pCluster.Free();
+	m_pCluster.reset();
 
 	m_pFile->Seek(pos);
 
@@ -291,8 +290,9 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 	m_pTrackEntryMap.clear();
 	m_pOrderedTrackArray.clear();
 
-	std::vector<CMatroskaSplitterOutputPin*> pinOut;
-	std::vector<TrackEntry*> pinOutTE;
+	std::list<std::pair<CMatroskaSplitterOutputPin*, TrackEntry*>> VideoTrackPins;
+	std::list<std::pair<CMatroskaSplitterOutputPin*, TrackEntry*>> AudioTrackPins;
+	std::list<std::pair<CMatroskaSplitterOutputPin*, TrackEntry*>> SubtitleTrackPins;
 
 	m_pFile.reset(DNew CMatroskaFile(pAsyncReader, hr));
 	if (!m_pFile) {
@@ -314,8 +314,7 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 	m_rtNewStart = m_rtCurrent = 0;
 	m_rtNewStop = m_rtStop = m_rtDuration = 0;
 
-	int iVideo = 1, iAudio = 1, iSubtitle = 1;
-	bool bHasVideo = false;
+	int nVideo = 0, nAudio = 0, nSubtitle = 0;
 
 	REFERENCE_TIME codecAvgTimePerFrame = 0;
 	BOOL bInterlaced = FALSE;
@@ -336,8 +335,15 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 			CMediaType mt;
 			std::vector<CMediaType> mts;
 
-			if (pTE->TrackType == TrackEntry::TypeVideo && !bHasVideo) {
-				outputDesc.Format(L"Video %d", iVideo++);
+			// Video
+			if (pTE->TrackType == TrackEntry::TypeVideo) {
+				nVideo++;
+				outputDesc.Format(L"Video %d", nVideo);
+
+				if (VideoTrackPins.size()) {
+					DLog(L"CMatroskaSplitterFilter::CreateOutputs() :Additional video stream '%S' (%I64u) is ignored", CodecID, (UINT64)pTE->TrackType);
+					continue;
+				}
 
 				mt.majortype = MEDIATYPE_Video;
 				mt.SetSampleSize(1); // variable frame size?
@@ -384,26 +390,24 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 					pvih->bmiHeader.biSizeImage = DIBSIZE(pvih->bmiHeader);
 					mt.SetSampleSize(pvih->bmiHeader.biSizeImage); // fix frame size
 
-					if (!bHasVideo) {
-						mts.push_back(mt);
+					mts.push_back(mt);
 
-						if (mt.subtype == MEDIASUBTYPE_HM10) {
-							std::vector<BYTE> pData;
-							if (ReadFirtsBlock(pData, pTE)) {
-								CBaseSplitterFileEx::hevchdr h;
-								CMediaType mt2;
-								if (m_pFile->CBaseSplitterFileEx::Read(h, pData, &mt2)) {
-									mts.insert(mts.cbegin(), mt2);
-								}
+					if (mt.subtype == MEDIASUBTYPE_HM10) {
+						std::vector<BYTE> pData;
+						if (ReadFirtsBlock(pData, pTE.get())) {
+							CBaseSplitterFileEx::hevchdr h;
+							CMediaType mt2;
+							if (m_pFile->CBaseSplitterFileEx::Read(h, pData, &mt2)) {
+								mts.insert(mts.cbegin(), mt2);
 							}
 						}
-
-						if (mt.subtype == MEDIASUBTYPE_H264 || mt.subtype == MEDIASUBTYPE_h264) {
-							m_dtsonly = (pTE->CodecPrivate.empty() || pTE->CodecPrivate.data()[0] != 1);
-						}
 					}
-					bHasVideo = true;
-				} else if (CodecID == "V_MPEG4/ISO/AVC") {
+
+					if (mt.subtype == MEDIASUBTYPE_H264 || mt.subtype == MEDIASUBTYPE_h264) {
+						m_dtsonly = (pTE->CodecPrivate.empty() || pTE->CodecPrivate.data()[0] != 1);
+					}
+				}
+				else if (CodecID == "V_MPEG4/ISO/AVC") {
 					if (pTE->CodecPrivate.size() > 9) {
 						vc_params_t params;
 						AVCParser::ParseSequenceParameterSet(pTE->CodecPrivate.data() + 9, pTE->CodecPrivate.size() - 9, params);
@@ -425,24 +429,22 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 					ReduceDim(aspect);
 					CreateMPEG2VIfromAVC(&mt, &pbmi, 0, aspect, pTE->CodecPrivate.data(), pTE->CodecPrivate.size());
 
-					if (!bHasVideo) {
-						mts.push_back(mt);
+					mts.push_back(mt);
 
-						if (SUCCEEDED(CreateMPEG2VIfromMVC(&mt, &pbmi, 0, aspect, pTE->CodecPrivate.data(), pTE->CodecPrivate.size()))) {
-							mts.insert(mts.cbegin(), mt);
-						} else if (pTE->CodecPrivate.empty()) {
-							std::vector<BYTE> pData;
-							if (ReadFirtsBlock(pData, pTE)) {
-								CBaseSplitterFileEx::avchdr h;
-								CMediaType mt2;
-								if (m_pFile->CBaseSplitterFileEx::Read(h, pData, &mt2)) {
-									mts.insert(mts.cbegin(), mt2);
-								}
+					if (SUCCEEDED(CreateMPEG2VIfromMVC(&mt, &pbmi, 0, aspect, pTE->CodecPrivate.data(), pTE->CodecPrivate.size()))) {
+						mts.insert(mts.cbegin(), mt);
+					} else if (pTE->CodecPrivate.empty()) {
+						std::vector<BYTE> pData;
+						if (ReadFirtsBlock(pData, pTE.get())) {
+							CBaseSplitterFileEx::avchdr h;
+							CMediaType mt2;
+							if (m_pFile->CBaseSplitterFileEx::Read(h, pData, &mt2)) {
+								mts.insert(mts.cbegin(), mt2);
 							}
 						}
 					}
-					bHasVideo = true;
-				} else if (StartsWith(CodecID, "V_MPEG4/ISO/")) {
+				}
+				else if (StartsWith(CodecID, "V_MPEG4/ISO/")) {
 					BITMAPINFOHEADER pbmi;
 					memset(&pbmi, 0, sizeof(BITMAPINFOHEADER));
 					pbmi.biSize			= sizeof(pbmi);
@@ -456,10 +458,10 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 					CSize aspect(pbmi.biWidth, pbmi.biHeight);
 					ReduceDim(aspect);
 					CreateMPEG2VISimple(&mt, &pbmi, 0, aspect, pTE->CodecPrivate.data(), pTE->CodecPrivate.size());
-					if (!bHasVideo)
-						mts.push_back(mt);
-					bHasVideo = true;
-				} else if (CodecID == "V_DIRAC") {
+
+					mts.push_back(mt);
+				}
+				else if (CodecID == "V_DIRAC") {
 					mt.subtype = MEDIASUBTYPE_DiracVideo;
 					mt.formattype = FORMAT_DiracVideoInfo;
 					DIRACINFOHEADER* dvih = (DIRACINFOHEADER*)mt.AllocFormatBuffer(FIELD_OFFSET(DIRACINFOHEADER, dwSequenceHeader) + pTE->CodecPrivate.size());
@@ -477,19 +479,16 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 					memcpy(pSequenceHeader, pTE->CodecPrivate.data(), pTE->CodecPrivate.size());
 					dvih->cbSequenceHeader = (DWORD)pTE->CodecPrivate.size();
 
-					if (!bHasVideo)
-						mts.push_back(mt);
-					bHasVideo = true;
-				} else if (CodecID == "V_MPEG2") {
+					mts.push_back(mt);
+				}
+				else if (CodecID == "V_MPEG2") {
 					BYTE* seqhdr = pTE->CodecPrivate.data();
 					DWORD len = (DWORD)pTE->CodecPrivate.size();
 					int w = (int)pTE->v.PixelWidth;
 					int h = (int)pTE->v.PixelHeight;
 
 					if (MakeMPEG2MediaType(mt, seqhdr, len, w, h)) {
-						if (!bHasVideo)
-							mts.push_back(mt);
-						bHasVideo = true;
+						mts.push_back(mt);
 
 						std::vector<BYTE> buf;
 						buf.resize(len);
@@ -500,7 +499,8 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 							bInterlaced = TRUE;
 						}
 					}
-				} else if (CodecID == "V_DSHOW/MPEG1VIDEO" || CodecID == "V_MPEG1") {
+				}
+				else if (CodecID == "V_MPEG1" || CodecID == "V_DSHOW/MPEG1VIDEO") {
 					mt.majortype	= MEDIATYPE_Video;
 					mt.subtype		= MEDIASUBTYPE_MPEG1Payload;
 					mt.formattype	= FORMAT_MPEGVideo;
@@ -516,10 +516,10 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 					pm1vi->hdr.bmiHeader.biSizeImage	= DIBSIZE(pm1vi->hdr.bmiHeader);
 
 					mt.SetSampleSize(pm1vi->hdr.bmiHeader.biWidth * pm1vi->hdr.bmiHeader.biHeight * 4);
-					if (!bHasVideo)
-						mts.push_back(mt);
-					bHasVideo = true;
-				} else if (CodecID == "V_MPEGH/ISO/HEVC") {
+
+					mts.push_back(mt);
+				}
+				else if (CodecID == "V_MPEGH/ISO/HEVC") {
 					BITMAPINFOHEADER pbmi;
 					memset(&pbmi, 0, sizeof(BITMAPINFOHEADER));
 					pbmi.biSize			= sizeof(pbmi);
@@ -550,21 +550,19 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 						}
 					}
 
-					if (!bHasVideo) {
-						mts.push_back(mt);
-						if (pTE->CodecPrivate.empty()) {
-							std::vector<BYTE> pData;
-							if (ReadFirtsBlock(pData, pTE)) {
-								CBaseSplitterFileEx::hevchdr h;
-								CMediaType mt2;
-								if (m_pFile->CBaseSplitterFileEx::Read(h, pData, &mt2)) {
-									mts.insert(mts.cbegin(), mt2);
-								}
+					mts.push_back(mt);
+					if (pTE->CodecPrivate.empty()) {
+						std::vector<BYTE> pData;
+						if (ReadFirtsBlock(pData, pTE.get())) {
+							CBaseSplitterFileEx::hevchdr h;
+							CMediaType mt2;
+							if (m_pFile->CBaseSplitterFileEx::Read(h, pData, &mt2)) {
+								mts.insert(mts.cbegin(), mt2);
 							}
 						}
 					}
-					bHasVideo = true;
-				} else {
+				}
+				else {
 					DWORD fourcc = 0;
 					WORD bitdepth = 0;
 					if (CodecID == "V_MJPEG") {
@@ -595,6 +593,8 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 						fourcc = CodecID[7] + (CodecID[8] << 8) + (CodecID[9] << 16) + (CodecID[10] << 24);
 					} else if (CodecID == "V_FFV1") {
 						fourcc = FCC('FFV1');
+					} else if (CodecID == "V_AVS3") {
+						fourcc = FCC('AVS3');
 					} else if (CodecID == "V_UNCOMPRESSED") {
 						fourcc = FCC((DWORD)pTE->v.ColourSpace);
 						switch (fourcc) {
@@ -646,121 +646,125 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 						pvih->bmiHeader.biCompression = fourcc;
 						pvih->bmiHeader.biSizeImage = DIBSIZE(pvih->bmiHeader);
 
-						if (!bHasVideo) {
-							mts.push_back(mt);
+						mts.push_back(mt);
 
-							if (StartsWith(CodecID, "V_REAL/RV") && pTE->CodecPrivate.size() > 26) {
-								const BYTE* extra = pTE->CodecPrivate.data() + 26;
-								const size_t extralen = pTE->CodecPrivate.size() - 26;
+						if (StartsWith(CodecID, "V_REAL/RV") && pTE->CodecPrivate.size() > 26) {
+							const BYTE* extra = pTE->CodecPrivate.data() + 26;
+							const size_t extralen = pTE->CodecPrivate.size() - 26;
 
-								VIDEOINFOHEADER* pvih = (VIDEOINFOHEADER*)mt.ReallocFormatBuffer(sizeof(VIDEOINFOHEADER) + extralen);
-								memcpy(pvih + 1, extra, extralen);
+							VIDEOINFOHEADER* pvih = (VIDEOINFOHEADER*)mt.ReallocFormatBuffer(sizeof(VIDEOINFOHEADER) + extralen);
+							memcpy(pvih + 1, extra, extralen);
+							mts.insert(mts.cbegin(), mt);
+						}
+
+						if (mt.subtype == MEDIASUBTYPE_AV01) {
+							if (pTE->CodecPrivate.size() >= 4 && pTE->CodecPrivate.front() == 0x81) { // marker = 1(1), version = 1(7)
+								pvih = (VIDEOINFOHEADER*)mt.ReallocFormatBuffer(sizeof(VIDEOINFOHEADER) + pTE->CodecPrivate.size());
+								BYTE* extra = (BYTE*)(pvih + 1);
+								memcpy(extra, pTE->CodecPrivate.data(), pTE->CodecPrivate.size());
+
 								mts.insert(mts.cbegin(), mt);
-							}
+							} else {
+								std::vector<BYTE> pData;
+								if (ReadFirtsBlock(pData, pTE.get())) {
+									AV1Parser::AV1SequenceParameters seq_params;
+									std::vector<uint8_t> obu_sequence_header;
+									if (AV1Parser::ParseOBU(pData.data(), pData.size(), seq_params, obu_sequence_header)) {
+										pvih = (VIDEOINFOHEADER*)mt.ReallocFormatBuffer(sizeof(VIDEOINFOHEADER) + 4 + obu_sequence_header.size());
+										BYTE* extra = (BYTE*)(pvih + 1);
 
-							if (mt.subtype == MEDIASUBTYPE_AV01) {
-								if (pTE->CodecPrivate.size() >= 4 && pTE->CodecPrivate.front() == 0x81) { // marker = 1(1), version = 1(7)
-									pvih = (VIDEOINFOHEADER*)mt.ReallocFormatBuffer(sizeof(VIDEOINFOHEADER) + pTE->CodecPrivate.size());
-									BYTE* extra = (BYTE*)(pvih + 1);
-									memcpy(extra, pTE->CodecPrivate.data(), pTE->CodecPrivate.size());
+										CBitsWriter bw(extra, 4);
+										bw.writeBits(1, 1); // marker
+										bw.writeBits(7, 1); // version
+										bw.writeBits(3, seq_params.profile);
+										bw.writeBits(5, seq_params.level);
+										bw.writeBits(1, seq_params.tier);
+										bw.writeBits(1, seq_params.bitdepth > 8);
+										bw.writeBits(1, seq_params.bitdepth == 12);
+										bw.writeBits(1, seq_params.monochrome);
+										bw.writeBits(1, seq_params.chroma_subsampling_x);
+										bw.writeBits(1, seq_params.chroma_subsampling_y);
+										bw.writeBits(2, seq_params.chroma_sample_position);
+										bw.writeBits(8, 0); // padding
 
-									mts.insert(mts.cbegin(), mt);
-								} else {
-									std::vector<BYTE> pData;
-									if (ReadFirtsBlock(pData, pTE)) {
-										AV1Parser::AV1SequenceParameters seq_params;
-										std::vector<uint8_t> obu_sequence_header;
-										if (AV1Parser::ParseOBU(pData.data(), pData.size(), seq_params, obu_sequence_header)) {
-											pvih = (VIDEOINFOHEADER*)mt.ReallocFormatBuffer(sizeof(VIDEOINFOHEADER) + 4 + obu_sequence_header.size());
-											BYTE* extra = (BYTE*)(pvih + 1);
+										memcpy(extra + 4, obu_sequence_header.data(), obu_sequence_header.size());
 
-											CBitsWriter bw(extra, 4);
-											bw.writeBits(1, 1); // marker
-											bw.writeBits(7, 1); // version
-											bw.writeBits(3, seq_params.profile);
-											bw.writeBits(5, seq_params.level);
-											bw.writeBits(1, seq_params.tier);
-											bw.writeBits(1, seq_params.bitdepth > 8);
-											bw.writeBits(1, seq_params.bitdepth == 12);
-											bw.writeBits(1, seq_params.monochrome);
-											bw.writeBits(1, seq_params.chroma_subsampling_x);
-											bw.writeBits(1, seq_params.chroma_subsampling_y);
-											bw.writeBits(2, seq_params.chroma_sample_position);
-											bw.writeBits(8, 0); // padding
-
-											memcpy(extra + 4, obu_sequence_header.data(), obu_sequence_header.size());
-
-											mts.insert(mts.cbegin(), mt);
-										}
+										mts.insert(mts.cbegin(), mt);
 									}
 								}
-							} else if (mt.subtype == MEDIASUBTYPE_VP90) {
-								std::vector<BYTE> pData;
-								if (ReadFirtsBlock(pData, pTE)) {
-									CGolombBuffer gb(pData.data(), pData.size());
-									const BYTE marker = gb.BitRead(2);
-									if (marker == 0x2) {
-										BYTE profile = gb.BitRead(1);
-										profile |= gb.BitRead(1) << 1;
-										if (profile == 3) {
-											profile += gb.BitRead(1);
-										}
+							}
+						} else if (mt.subtype == MEDIASUBTYPE_VP90) {
+							std::vector<BYTE> pData;
+							if (ReadFirtsBlock(pData, pTE.get())) {
+								CGolombBuffer gb(pData.data(), pData.size());
+								const BYTE marker = gb.BitRead(2);
+								if (marker == 0x2) {
+									BYTE profile = gb.BitRead(1);
+									profile |= gb.BitRead(1) << 1;
+									if (profile == 3) {
+										profile += gb.BitRead(1);
+									}
 
-										#define VP9_SYNCCODE 0x498342
+									#define VP9_SYNCCODE 0x498342
 
-										AVPixelFormat pix_fmt = AV_PIX_FMT_NONE;
-										int bits = 0;
-										if (!gb.BitRead(1)) {
-											const BYTE keyframe = !gb.BitRead(1);
-											gb.BitRead(1);
-											gb.BitRead(1);
+									AVPixelFormat pix_fmt = AV_PIX_FMT_NONE;
+									int bits = 0;
+									if (!gb.BitRead(1)) {
+										const BYTE keyframe = !gb.BitRead(1);
+										gb.BitRead(1);
+										gb.BitRead(1);
 
-											if (keyframe) {
-												if (VP9_SYNCCODE == gb.BitRead(24)) {
-													static const enum AVColorSpace colorspaces[8] = {
-														AVCOL_SPC_UNSPECIFIED, AVCOL_SPC_BT470BG, AVCOL_SPC_BT709, AVCOL_SPC_SMPTE170M,
-														AVCOL_SPC_SMPTE240M, AVCOL_SPC_BT2020_NCL, AVCOL_SPC_RESERVED, AVCOL_SPC_RGB,
+										if (keyframe) {
+											if (VP9_SYNCCODE == gb.BitRead(24)) {
+												static const enum AVColorSpace colorspaces[8] = {
+													AVCOL_SPC_UNSPECIFIED, AVCOL_SPC_BT470BG, AVCOL_SPC_BT709, AVCOL_SPC_SMPTE170M,
+													AVCOL_SPC_SMPTE240M, AVCOL_SPC_BT2020_NCL, AVCOL_SPC_RESERVED, AVCOL_SPC_RGB,
+												};
+
+												bits = profile <= 1 ? 0 : 1 + gb.BitRead(1); // 0:8, 1:10, 2:12
+												const AVColorSpace colorspace = colorspaces[gb.BitRead(3)];
+												if (colorspace == AVCOL_SPC_RGB) {
+													static const enum AVPixelFormat pix_fmt_rgb[3] = {
+														AV_PIX_FMT_GBRP, AV_PIX_FMT_GBRP10, AV_PIX_FMT_GBRP12
+													};
+													pix_fmt = pix_fmt_rgb[bits];
+												} else {
+													static const enum AVPixelFormat pix_fmt_for_ss[3][2 /* v */][2 /* h */] = {
+														{ { AV_PIX_FMT_YUV444P, AV_PIX_FMT_YUV422P },
+															{ AV_PIX_FMT_YUV440P, AV_PIX_FMT_YUV420P } },
+														{ { AV_PIX_FMT_YUV444P10, AV_PIX_FMT_YUV422P10 },
+															{ AV_PIX_FMT_YUV440P10, AV_PIX_FMT_YUV420P10 } },
+														{ { AV_PIX_FMT_YUV444P12, AV_PIX_FMT_YUV422P12 },
+															{ AV_PIX_FMT_YUV440P12, AV_PIX_FMT_YUV420P12 } }
 													};
 
-													bits = profile <= 1 ? 0 : 1 + gb.BitRead(1); // 0:8, 1:10, 2:12
-													const AVColorSpace colorspace = colorspaces[gb.BitRead(3)];
-													if (colorspace == AVCOL_SPC_RGB) {
-														static const enum AVPixelFormat pix_fmt_rgb[3] = {
-															AV_PIX_FMT_GBRP, AV_PIX_FMT_GBRP10, AV_PIX_FMT_GBRP12
-														};
-														pix_fmt = pix_fmt_rgb[bits];
+													gb.BitRead(1);
+													if (profile & 1) {
+														const BYTE h = gb.BitRead(1);
+														const BYTE v = gb.BitRead(1);
+														pix_fmt = pix_fmt_for_ss[bits][v][h];
 													} else {
-														static const enum AVPixelFormat pix_fmt_for_ss[3][2 /* v */][2 /* h */] = {
-															{ { AV_PIX_FMT_YUV444P, AV_PIX_FMT_YUV422P },
-																{ AV_PIX_FMT_YUV440P, AV_PIX_FMT_YUV420P } },
-															{ { AV_PIX_FMT_YUV444P10, AV_PIX_FMT_YUV422P10 },
-																{ AV_PIX_FMT_YUV440P10, AV_PIX_FMT_YUV420P10 } },
-															{ { AV_PIX_FMT_YUV444P12, AV_PIX_FMT_YUV422P12 },
-																{ AV_PIX_FMT_YUV440P12, AV_PIX_FMT_YUV420P12 } }
-														};
-
-														gb.BitRead(1);
-														if (profile & 1) {
-															const BYTE h = gb.BitRead(1);
-															const BYTE v = gb.BitRead(1);
-															pix_fmt = pix_fmt_for_ss[bits][v][h];
-														} else {
-															pix_fmt = pix_fmt_for_ss[bits][1][1];
-														}
+														pix_fmt = pix_fmt_for_ss[bits][1][1];
 													}
 												}
 											}
 										}
-
-										m_profile = profile;
-										m_pix_fmt = pix_fmt;
-										m_bits    = bits == 0 ? 8 : bits == 1 ? 10 : 12;
 									}
+
+									m_profile = profile;
+									m_pix_fmt = pix_fmt;
+									m_bits    = bits == 0 ? 8 : bits == 1 ? 10 : 12;
+								}
+							}
+						} else if (mt.subtype == MEDIASUBTYPE_AVS3) {
+							std::vector<BYTE> pData;
+							if (ReadFirtsBlock(pData, pTE.get())) {
+								AVS3Parser::AVS3SequenceHeader seq_header;
+								if (AVS3Parser::ParseSequenceHeader(pData.data(), pData.size(), seq_header)) {
+									m_pix_fmt = seq_header.bitdepth == 10 ? AV_PIX_FMT_YUV420P10 : AV_PIX_FMT_YUV420P;
 								}
 							}
 						}
-
-						bHasVideo = true;
 					}
 				}
 
@@ -790,19 +794,20 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 					do {
 						Cluster c;
-						c.ParseTimeCode(m_pCluster);
+						c.ParseTimeCode(m_pCluster.get());
 
-						if (CAutoPtr<CMatroskaNode> pBlock = m_pCluster->GetFirstBlock()) {
+						std::unique_ptr<CMatroskaNode> pBlock = m_pCluster->GetFirstBlock();
+						if (pBlock) {
 							do {
 								CBlockGroupNode bgn;
 
 								if (pBlock->m_id == MATROSKA_ID_BLOCKGROUP) {
-									bgn.Parse(pBlock, true);
+									bgn.Parse(pBlock.get(), true);
 								}
 								else if (pBlock->m_id == MATROSKA_ID_SIMPLEBLOCK) {
-									CAutoPtr<BlockGroup> bg(DNew BlockGroup());
-									bg->Block.Parse(pBlock, true);
-									bgn.emplace_back(bg);
+									std::unique_ptr<BlockGroup> bg(DNew BlockGroup());
+									bg->Block.Parse(pBlock.get(), true);
+									bgn.emplace_back(std::move(bg));
 								}
 
 								for (const auto& bg : bgn) {
@@ -820,9 +825,12 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 						}
 					} while (readmore && m_pCluster->Next(true));
 
-					m_pCluster.Free();
+					m_pCluster.reset();
 
 					framerate = TimecodeAnalyzer::CalculateFPS(timecodes, 1000000000ui64 / m_pFile->m_segment.SegmentInfo.TimeCodeScale);
+					if (framerate == 0.0) {
+						framerate = 24 / 1.001;
+					}
 				}
 
 				if (bInterlaced && codecAvgTimePerFrame) {
@@ -1030,8 +1038,11 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 						}
 					}
 				}
-			} else if (pTE->TrackType == TrackEntry::TypeAudio) {
-				outputDesc.Format(L"Audio %d", iAudio++);
+			}
+			// Audio
+			else if (pTE->TrackType == TrackEntry::TypeAudio) {
+				nAudio++;
+				outputDesc.Format(L"Audio %d", nAudio);
 
 				mt.majortype = MEDIATYPE_Audio;
 				mt.formattype = FORMAT_WaveFormatEx;
@@ -1070,7 +1081,7 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 					mt.subtype = FOURCCMap(wfe->wFormatTag = WAVE_FORMAT_DOLBY_AC3);
 
 					std::vector<BYTE> pData;
-					if (ReadFirtsBlock(pData, pTE)) {
+					if (ReadFirtsBlock(pData, pTE.get())) {
 						audioframe_t aframe;
 						const int size = ParseAC3Header(pData.data(), &aframe);
 						if (size && aframe.param1) {
@@ -1083,7 +1094,7 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 					mt.subtype = MEDIASUBTYPE_DOLBY_DDPLUS;
 
 					std::vector<BYTE> pData;
-					if (ReadFirtsBlock(pData, pTE)) {
+					if (ReadFirtsBlock(pData, pTE.get())) {
 						audioframe_t aframe;
 						int size = ParseEAC3Header(pData.data(), &aframe);
 						if (!size || aframe.param1 == EAC3_FRAME_TYPE_DEPENDENT) {
@@ -1121,7 +1132,7 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 					m_pCluster = m_pSegment->Child(MATROSKA_ID_CLUSTER);
 
 					Cluster c;
-					c.ParseTimeCode(m_pCluster);
+					c.ParseTimeCode(m_pCluster.get());
 
 					if (!m_pBlock) {
 						m_pBlock = m_pCluster->GetFirstBlock();
@@ -1132,11 +1143,11 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 						CBlockGroupNode bgn;
 
 						if (m_pBlock->m_id == MATROSKA_ID_BLOCKGROUP) {
-							bgn.Parse(m_pBlock, true);
+							bgn.Parse(m_pBlock.get(), true);
 						} else if (m_pBlock->m_id == MATROSKA_ID_SIMPLEBLOCK) {
-							CAutoPtr<BlockGroup> bg(DNew BlockGroup());
-							bg->Block.Parse(m_pBlock, true);
-							bgn.emplace_back(bg);
+							std::unique_ptr<BlockGroup> bg(DNew BlockGroup());
+							bg->Block.Parse(m_pBlock.get(), true);
+							bgn.emplace_back(std::move(bg));
 						}
 
 						for (const auto& bg : bgn) {
@@ -1145,7 +1156,7 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 							}
 
 							if (!bg->Block.BlockData.empty()) {
-								const auto& pb = bg->Block.BlockData.cbegin()->m_p;
+								const auto& pb = bg->Block.BlockData.front();
 								pTE->Expand(*pb, ContentEncoding::AllFrameContents);
 
 								BYTE* start	= pb->data();
@@ -1189,8 +1200,8 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 						}
 					} while (m_pBlock->NextBlock() && SUCCEEDED(hr) && !CheckRequest(nullptr) && !bIsParse);
 
-					m_pBlock.Free();
-					m_pCluster.Free();
+					m_pBlock.reset();
+					m_pCluster.reset();
 
 					m_pFile->Seek(pos);
 
@@ -1286,7 +1297,7 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 						wfe->wFormatTag = WAVE_FORMAT_PCM;
 					} else {
 						WAVEFORMATEXTENSIBLE* wfex = (WAVEFORMATEXTENSIBLE*)mt.ReallocFormatBuffer(sizeof(WAVEFORMATEXTENSIBLE));
-						if (pTE->a.BitDepth&7) {
+						if (pTE->a.BitDepth & 7) {
 							wfex->Format.wBitsPerSample = (WORD)(pTE->a.BitDepth + 7) & 0xFFF8;
 							wfex->Format.nBlockAlign = wfex->Format.nChannels * wfex->Format.wBitsPerSample / 8;
 							wfex->Format.nAvgBytesPerSec = wfex->Format.nSamplesPerSec * wfex->Format.nBlockAlign;
@@ -1327,10 +1338,11 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 				} else if (CodecID == "A_MS/ACM") {
 					wfe = (WAVEFORMATEX*)mt.AllocFormatBuffer(pTE->CodecPrivate.size());
 					memcpy(wfe, (WAVEFORMATEX*)pTE->CodecPrivate.data(), pTE->CodecPrivate.size());
-					if (wfe->wFormatTag == WAVE_FORMAT_EXTENSIBLE && wfe->cbSize == 22) {
+					if (wfe->wFormatTag == WAVE_FORMAT_EXTENSIBLE && wfe->cbSize >= 22) {
 						mt.subtype = ((WAVEFORMATEXTENSIBLE*)wfe)->SubFormat;
+					} else {
+						mt.subtype = FOURCCMap(wfe->wFormatTag);
 					}
-					else mt.subtype = FOURCCMap(wfe->wFormatTag);
 					mts.push_back(mt);
 				} else if (CodecID == "A_VORBIS") {
 					CreateVorbisMediaType(mt, mts,
@@ -1381,8 +1393,11 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 					memcpy(p + 12, pTE->CodecPrivate.data(), pTE->CodecPrivate.size());
 					mts.push_back(mt);
 				}
-			} else if (pTE->TrackType == TrackEntry::TypeSubtitle) {
-				outputDesc.Format(L"Subtitle %d", iSubtitle++);
+			}
+			// Subtitle
+			else if (pTE->TrackType == TrackEntry::TypeSubtitle) {
+				nSubtitle++;
+				outputDesc.Format(L"Subtitle %d", nSubtitle);
 
 				mt.SetSampleSize(1);
 
@@ -1435,12 +1450,14 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 						}
 					}
 				}
-			} else {
+			}
+			// Unknown
+			else {
 				outputDesc.Format(L"Output %I64u", (UINT64)pTE->TrackNumber);
 			}
 
 			if (mts.empty()) {
-				DLog(L"CMatroskaSplitterFilter::CreateOutputs() : Unsupported or multiple TrackType '%S' (%I64u)", CodecID, (UINT64)pTE->TrackType);
+				DLog(L"CMatroskaSplitterFilter::CreateOutputs() : Unsupported TrackType '%S' (%I64u)", CodecID, (UINT64)pTE->TrackType);
 				continue;
 			}
 
@@ -1491,22 +1508,30 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 				pPinOut->SetProperty(L"LANG", CString(pTE->Language));
 			}
 
-			if (!isSub) {
-				pinOut.insert(pinOut.begin() + (iVideo + iAudio - 3), pPinOut);
-				pinOutTE.insert(pinOutTE.begin() + (iVideo + iAudio - 3), pTE);
-			} else {
-				pinOut.push_back(pPinOut);
-				pinOutTE.push_back(pTE);
+			switch (pTE->TrackType) {
+			case TrackEntry::TypeVideo:
+				VideoTrackPins.emplace_back(pPinOut, pTE.get());
+				break;
+			case TrackEntry::TypeAudio:
+				AudioTrackPins.emplace_back(pPinOut, pTE.get());
+				break;
+			case TrackEntry::TypeSubtitle:
+				SubtitleTrackPins.emplace_back(pPinOut, pTE.get());
+				break;
 			}
 		}
 	}
 
-	for (size_t i = 0; i < pinOut.size(); i++) {
-		CAutoPtr<CBaseSplitterOutputPin> pPinOut;
-		pPinOut.Attach(pinOut[i]);
-		TrackEntry* pTE = pinOutTE[i];
+	bool bHasVideo = (VideoTrackPins.size() > 0);
 
+	std::list<std::pair<CMatroskaSplitterOutputPin*, TrackEntry*>> TrackPins;
+	TrackPins.splice(TrackPins.end(), VideoTrackPins);
+	TrackPins.splice(TrackPins.end(), AudioTrackPins);
+	TrackPins.splice(TrackPins.end(), SubtitleTrackPins);
+
+	for (auto& [pPO, pTE]: TrackPins) {
 		if (pTE != nullptr) {
+			std::unique_ptr<CBaseSplitterOutputPin> pPinOut(pPO);
 			AddOutputPin((DWORD)pTE->TrackNumber, pPinOut);
 			m_pTrackEntryMap[(DWORD)pTE->TrackNumber] = pTE;
 			m_pOrderedTrackArray.push_back(pTE);
@@ -1524,7 +1549,7 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 		// calculate duration from video track;
 		m_pSegment = Root.Child(MATROSKA_ID_SEGMENT);
 		m_pCluster = m_pSegment->Child(MATROSKA_ID_CLUSTER);
-		m_pBlock.Free();
+		m_pBlock.reset();
 
 		Segment& s = m_pFile->m_segment;
 		UINT64 TrackNumber = s.GetMasterTrack();
@@ -1551,19 +1576,19 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 					do {
 						Cluster c;
-						c.ParseTimeCode(m_pCluster);
+						c.ParseTimeCode(m_pCluster.get());
 
-						if (CAutoPtr<CMatroskaNode> pBlock = m_pCluster->GetFirstBlock()) {
-
+						std::unique_ptr<CMatroskaNode> pBlock = m_pCluster->GetFirstBlock();
+						if (pBlock) {
 							do {
 								CBlockGroupNode bgn;
 
 								if (pBlock->m_id == MATROSKA_ID_BLOCKGROUP) {
-									bgn.Parse(pBlock, true);
+									bgn.Parse(pBlock.get(), true);
 								} else if (pBlock->m_id == MATROSKA_ID_SIMPLEBLOCK) {
-									CAutoPtr<BlockGroup> bg(DNew BlockGroup());
-									bg->Block.Parse(pBlock, true);
-									bgn.emplace_back(bg);
+									std::unique_ptr<BlockGroup> bg(DNew BlockGroup());
+									bg->Block.Parse(pBlock.get(), true);
+									bgn.emplace_back(std::move(bg));
 								}
 
 								for (const auto& bg : bgn) {
@@ -1591,8 +1616,8 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 				}
 			}
 		}
-		m_pCluster.Free();
-		m_pBlock.Free();
+		m_pCluster.reset();
+		m_pBlock.reset();
 
 		if (rtDur != INVALID_TIME) {
 			m_rtDuration = std::min(m_rtDuration, rtDur);
@@ -1699,7 +1724,7 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 		SetProperty(L"TITL", Title);
 	}
 
-	if (!m_pOutputs.IsEmpty() && !m_pFile->m_segment.Cues.empty()) {
+	if (!m_pOutputs.empty() && !m_pFile->m_segment.Cues.empty()) {
 		auto& s = m_pFile->m_segment;
 		const UINT64 TrackNumber = s.GetMasterTrack();
 		UINT64 lastCueClusterPosition = ULONGLONG_MAX;
@@ -1732,7 +1757,7 @@ HRESULT CMatroskaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 		}
 	}
 
-	return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+	return m_pOutputs.size() > 0 ? S_OK : E_FAIL;
 }
 
 void CMatroskaSplitterFilter::SetupChapters(LPCSTR lng, ChapterAtom* parent, int level)
@@ -1836,7 +1861,7 @@ void CMatroskaSplitterFilter::SendVorbisHeaderSample()
 
 			for (const long len : sizes) {
 
-				CAutoPtr<CPacket> p(DNew CPacket());
+				std::unique_ptr<CPacket> p(DNew CPacket());
 				p->TrackNumber	= (DWORD)pTE->TrackNumber;
 				p->rtStart		= 0;
 				p->rtStop		= 1;
@@ -1845,7 +1870,7 @@ void CMatroskaSplitterFilter::SendVorbisHeaderSample()
 				p->SetData(ptr, len);
 				ptr += len;
 
-				hr = DeliverPacket(p);
+				hr = DeliverPacket(std::move(p));
 			}
 
 			if (FAILED(hr)) {
@@ -1876,24 +1901,24 @@ bool CMatroskaSplitterFilter::DemuxInit()
 		m_nOpenProgress = 0;
 		s.SegmentInfo.Duration.Set(0);
 
-		CAutoPtr<Cue> pCue(DNew Cue());
+		std::unique_ptr<Cue> pCue(DNew Cue());
 
 		do {
 			Cluster c;
-			c.ParseTimeCode(m_pCluster);
+			c.ParseTimeCode(m_pCluster.get());
 
 			const auto clusterTime = s.GetRefTime(c.TimeCode);
 			const auto rtOffset = (clusterTime >= m_pFile->m_rtOffset) ? m_pFile->m_rtOffset : 0LL;
 
 			s.SegmentInfo.Duration.Set((float)c.TimeCode - rtOffset / 10000);
 
-			CAutoPtr<CuePoint> pCuePoint(DNew CuePoint());
-			CAutoPtr<CueTrackPosition> pCueTrackPosition(DNew CueTrackPosition());
+			std::unique_ptr<CuePoint> pCuePoint(DNew CuePoint());
+			std::unique_ptr<CueTrackPosition> pCueTrackPosition(DNew CueTrackPosition());
 			pCuePoint->CueTime.Set(c.TimeCode);
 			pCueTrackPosition->CueTrack.Set(TrackNumber);
 			pCueTrackPosition->CueClusterPosition.Set(m_pCluster->m_filepos - m_pSegment->m_start);
-			pCuePoint->CueTrackPositions.emplace_back(pCueTrackPosition);
-			pCue->CuePoints.emplace_back(pCuePoint);
+			pCuePoint->CueTrackPositions.emplace_back(std::move(pCueTrackPosition));
+			pCue->CuePoints.emplace_back(std::move(pCuePoint));
 
 			m_nOpenProgress = m_pFile->GetPos() * 100 / m_pFile->GetLength();
 
@@ -1907,12 +1932,12 @@ bool CMatroskaSplitterFilter::DemuxInit()
 			}
 		} while (!m_fAbort && m_pCluster->Next(true));
 
-		m_pCluster.Free();
+		m_pCluster.reset();
 
 		m_nOpenProgress = 100;
 
 		if (!m_fAbort) {
-			s.Cues.emplace_back(pCue);
+			s.Cues.emplace_back(std::move(pCue));
 		}
 
 		m_fAbort = false;
@@ -1979,7 +2004,7 @@ bool CMatroskaSplitterFilter::DemuxInit()
 void CMatroskaSplitterFilter::DemuxSeek(REFERENCE_TIME rt)
 {
 	m_pCluster = m_pSegment->Child(MATROSKA_ID_CLUSTER);
-	m_pBlock.Free();
+	m_pBlock.reset();
 
 	if (!m_pCluster) {
 		return;
@@ -2005,7 +2030,7 @@ void CMatroskaSplitterFilter::DemuxSeek(REFERENCE_TIME rt)
 			}
 
 			Cluster c;
-			c.ParseTimeCode(m_pCluster);
+			c.ParseTimeCode(m_pCluster.get());
 
 			const auto clusterTime = s.GetRefTime(c.TimeCode);
 			const auto rtOffset = (clusterTime >= m_pFile->m_rtOffset) ? m_pFile->m_rtOffset : 0LL;
@@ -2023,7 +2048,7 @@ void CMatroskaSplitterFilter::DemuxSeek(REFERENCE_TIME rt)
 
 			do {
 				Cluster c;
-				if (FAILED(c.ParseTimeCode(m_pCluster))) {
+				if (FAILED(c.ParseTimeCode(m_pCluster.get()))) {
 					continue;
 				}
 
@@ -2042,7 +2067,7 @@ void CMatroskaSplitterFilter::DemuxSeek(REFERENCE_TIME rt)
 
 				do {
 					Cluster c;
-					if (FAILED(c.ParseTimeCode(m_pCluster))) {
+					if (FAILED(c.ParseTimeCode(m_pCluster.get()))) {
 						continue;
 					}
 
@@ -2062,7 +2087,7 @@ void CMatroskaSplitterFilter::DemuxSeek(REFERENCE_TIME rt)
 
 	end:
 		Cluster c;
-		c.ParseTimeCode(m_pCluster);
+		c.ParseTimeCode(m_pCluster.get());
 		m_Cluster_seek_rt = s.GetRefTime(c.TimeCode);
 		const auto rtOffset = (m_Cluster_seek_rt >= m_pFile->m_rtOffset) ? m_pFile->m_rtOffset : 0LL;
 		m_Cluster_seek_pos = m_pCluster->m_filepos;
@@ -2077,11 +2102,11 @@ void CMatroskaSplitterFilter::DemuxSeek(REFERENCE_TIME rt)
 			do {
 				CBlockGroupNode bgn;
 				if (m_pBlock->m_id == MATROSKA_ID_BLOCKGROUP) {
-					bgn.Parse(m_pBlock, true);
+					bgn.Parse(m_pBlock.get(), true);
 				} else if (m_pBlock->m_id == MATROSKA_ID_SIMPLEBLOCK) {
-					CAutoPtr<BlockGroup> bg(DNew BlockGroup());
-					bg->Block.Parse(m_pBlock, true);
-					bgn.emplace_back(bg);
+					std::unique_ptr<BlockGroup> bg(DNew BlockGroup());
+					bg->Block.Parse(m_pBlock.get(), true);
+					bgn.emplace_back(std::move(bg));
 				}
 
 				for (const auto& bg : bgn) {
@@ -2098,7 +2123,7 @@ void CMatroskaSplitterFilter::DemuxSeek(REFERENCE_TIME rt)
 							m_pBlock->SeekTo(block_pos);
 							m_pBlock->Parse();
 						} else {
-							m_pBlock.Free();
+							m_pBlock.reset();
 							m_pCluster->SeekTo(m_Cluster_seek_pos);
 						}
 						bFound = true;
@@ -2110,7 +2135,7 @@ void CMatroskaSplitterFilter::DemuxSeek(REFERENCE_TIME rt)
 			} while (!bFound && m_pBlock->NextBlock());
 
 			if (!bFound) {
-				m_pBlock.Free();
+				m_pBlock.reset();
 				m_pCluster->SeekTo(m_Cluster_seek_pos);
 			}
 		}
@@ -2148,7 +2173,7 @@ bool CMatroskaSplitterFilter::DemuxLoop()
 	};
 
 	if (m_Cluster_seek_rt > 0 && m_bSupportSubtitlesCueDuration) {
-		CAutoPtr<CMatroskaNode> pCluster = m_pSegment->Child(MATROSKA_ID_CLUSTER);
+		std::unique_ptr<CMatroskaNode> pCluster = m_pSegment->Child(MATROSKA_ID_CLUSTER);
 		if (pCluster) {
 			bool bBreak = false;
 			UINT64 lastCueRelativePosition = ULONGLONG_MAX;
@@ -2191,31 +2216,31 @@ bool CMatroskaSplitterFilter::DemuxLoop()
 							lastCueRelativePosition = pos + pCueTrackPositions->CueRelativePosition;
 
 							pCluster->SeekTo(pos + pCueTrackPositions->CueRelativePosition);
-							CAutoPtr<CMatroskaNode> pBlock(DNew CMatroskaNode(pCluster));
+							std::unique_ptr<CMatroskaNode> pBlock(DNew CMatroskaNode(pCluster.get()));
 							if (!pBlock) {
 								continue;
 							}
 
 							Cluster c;
-							c.ParseTimeCode(pCluster);
+							c.ParseTimeCode(pCluster.get());
 							const auto clusterTime = s.GetRefTime(c.TimeCode);
 							const auto rtOffset = (clusterTime >= m_pFile->m_rtOffset) ? m_pFile->m_rtOffset : 0LL;
 
 							CBlockGroupNode bgn;
 							if (pBlock->m_id == MATROSKA_ID_BLOCKGROUP) {
-								bgn.Parse(pBlock, true);
+								bgn.Parse(pBlock.get(), true);
 							} else if (pBlock->m_id == MATROSKA_ID_SIMPLEBLOCK) {
-								CAutoPtr<BlockGroup> bg(DNew BlockGroup());
-								bg->Block.Parse(pBlock, true);
+								std::unique_ptr<BlockGroup> bg(DNew BlockGroup());
+								bg->Block.Parse(pBlock.get(), true);
 								if (!(bg->Block.Lacing & 0x80)) {
 									bg->ReferenceBlock.Set(0); // not a kf
 								}
-								bgn.emplace_back(bg);
+								bgn.emplace_back(std::move(bg));
 							}
 
 							for (auto &bg : bgn) {
-								CAutoPtr<CMatroskaPacket> p(DNew CMatroskaPacket());
-								p->bg = bg;
+								std::unique_ptr<CMatroskaPacket> p(DNew CMatroskaPacket());
+								p->bg = std::move(bg);
 
 								if (!Contains(m_subtitlesTrackNumbers, (UINT64)p->bg->Block.TrackNumber)) {
 									continue;
@@ -2230,13 +2255,13 @@ bool CMatroskaSplitterFilter::DemuxLoop()
 								}
 								TrackEntry* pTE = (*it).second;
 
-								SetBlockTime(p.m_p, pTE, clusterTime, rtOffset);
+								SetBlockTime(p.get(), pTE, clusterTime, rtOffset);
 
 								if (p->rtStart >= m_Cluster_seek_rt || p->rtStop < m_Cluster_seek_rt) {
 									continue;
 								}
 
-								hr = DeliverMatroskaPacket(pTE, p);
+								hr = DeliverMatroskaPacket(pTE, std::move(p));
 							}
 						}
 					}
@@ -2258,7 +2283,7 @@ bool CMatroskaSplitterFilter::DemuxLoop()
 		}
 
 		Cluster c;
-		c.ParseTimeCode(m_pCluster);
+		c.ParseTimeCode(m_pCluster.get());
 		const auto clusterTime = s.GetRefTime(c.TimeCode);
 		const auto rtOffset = (clusterTime >= m_pFile->m_rtOffset) ? m_pFile->m_rtOffset : 0LL;
 
@@ -2266,19 +2291,19 @@ bool CMatroskaSplitterFilter::DemuxLoop()
 			CBlockGroupNode bgn;
 
 			if (m_pBlock->m_id == MATROSKA_ID_BLOCKGROUP) {
-				bgn.Parse(m_pBlock, true);
+				bgn.Parse(m_pBlock.get(), true);
 			} else if (m_pBlock->m_id == MATROSKA_ID_SIMPLEBLOCK) {
-				CAutoPtr<BlockGroup> bg(DNew BlockGroup());
-				bg->Block.Parse(m_pBlock, true);
+				std::unique_ptr<BlockGroup> bg(DNew BlockGroup());
+				bg->Block.Parse(m_pBlock.get(), true);
 				if (!(bg->Block.Lacing & 0x80)) {
 					bg->ReferenceBlock.Set(0); // not a kf
 				}
-				bgn.emplace_back(bg);
+				bgn.emplace_back(std::move(bg));
 			}
 
 			for (auto &bg : bgn) {
-				CAutoPtr<CMatroskaPacket> p(DNew CMatroskaPacket());
-				p->bg = bg;
+				std::unique_ptr<CMatroskaPacket> p(DNew CMatroskaPacket());
+				p->bg = std::move(bg);
 
 				p->bSyncPoint = !p->bg->ReferenceBlock.IsValid();
 				p->TrackNumber = (DWORD)p->bg->Block.TrackNumber;
@@ -2289,9 +2314,9 @@ bool CMatroskaSplitterFilter::DemuxLoop()
 				}
 				TrackEntry* pTE = (*it).second;
 
-				SetBlockTime(p.m_p, pTE, clusterTime, rtOffset);
+				SetBlockTime(p.get(), pTE, clusterTime, rtOffset);
 
-				hr = DeliverMatroskaPacket(pTE, p);
+				hr = DeliverMatroskaPacket(pTE, std::move(p));
 
 				if (FAILED(hr)) {
 					break;
@@ -2299,16 +2324,16 @@ bool CMatroskaSplitterFilter::DemuxLoop()
 			}
 		} while (m_pBlock->NextBlock() && SUCCEEDED(hr) && !CheckRequest(nullptr));
 
-		m_pBlock.Free();
+		m_pBlock.reset();
 	} while (m_pFile->GetPos() < (__int64)(m_pFile->m_segment.pos + m_pFile->m_segment.len)
 			 && m_pCluster->Next(true) && SUCCEEDED(hr) && !CheckRequest(nullptr));
 
-	m_pCluster.Free();
+	m_pCluster.reset();
 
 	CAutoLock cAutoLock(&m_csPackets);
 	for (auto& [TrackNumber, packets] : m_packets) {
 		for (auto& p : packets) {
-			DeliverMatroskaPacket(p);
+			DeliverMatroskaPacket(std::move(p));
 		}
 
 		packets.clear();
@@ -2317,7 +2342,7 @@ bool CMatroskaSplitterFilter::DemuxLoop()
 	return true;
 }
 
-HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(TrackEntry* pTE, CAutoPtr<CMatroskaPacket> p)
+HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(TrackEntry* pTE, std::unique_ptr<CMatroskaPacket> p)
 {
 	for (const auto& pb : p->bg->Block.BlockData) {
 		pTE->Expand(*pb, ContentEncoding::AllFrameContents);
@@ -2325,15 +2350,15 @@ HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(TrackEntry* pTE, CAutoPtr
 
 	HRESULT hr = S_OK;
 	if (pTE->TrackType == TrackEntry::TypeSubtitle) {
-		hr = DeliverMatroskaPacket(p);
+		hr = DeliverMatroskaPacket(std::move(p));
 	} else {
 		CAutoLock cAutoLock(&m_csPackets);
 		auto& packets = m_packets[p->TrackNumber];
-		packets.emplace_back(p);
+		packets.emplace_back(std::move(p));
 
 		if (packets.size() == 2) {
 			const auto rtBlockDuration = packets.back()->rtStart - packets.front()->rtStart;
-			hr = DeliverMatroskaPacket(packets.front(), rtBlockDuration);
+			hr = DeliverMatroskaPacket(std::move(packets.front()), rtBlockDuration);
 			packets.pop_front();
 		}
 	}
@@ -2343,7 +2368,7 @@ HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(TrackEntry* pTE, CAutoPtr
 
 // reconstruct full wavpack blocks from mangled matroska ones.
 // From LAV's ffmpeg
-static bool ParseWavpack(const CMediaType* mt, CBinary* Data, CAutoPtr<CPacket>& p)
+static bool ParseWavpack(const CMediaType* mt, CBinary* Data, std::unique_ptr<CPacket>& p)
 {
 	CheckPointer(mt->pbFormat, false);
 
@@ -2365,7 +2390,7 @@ static bool ParseWavpack(const CMediaType* mt, CBinary* Data, CAutoPtr<CPacket>&
 		}
 	}
 
-	CAutoPtr<CBinary> ptr(DNew CBinary());
+	CBinary buf;
 
 	while (gb.RemainingSize() >= 8) {
 		DWORD flags     = gb.ReadDwordLE();
@@ -2384,8 +2409,8 @@ static bool ParseWavpack(const CMediaType* mt, CBinary* Data, CAutoPtr<CPacket>&
 			return false;
 		}
 
-		ptr->resize(dstlen + blocksize + 32);
-		BYTE *dst = ptr->data();
+		buf.resize(dstlen + blocksize + 32);
+		BYTE *dst = buf.data();
 
 		dstlen += blocksize + 32;
 
@@ -2404,12 +2429,12 @@ static bool ParseWavpack(const CMediaType* mt, CBinary* Data, CAutoPtr<CPacket>&
 		offset += blocksize + 32;
 	}
 
-	p->SetData(ptr->data(), ptr->size());
+	p->SetData(buf.data(), buf.size());
 
 	return true;
 }
 
-HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(CAutoPtr<CMatroskaPacket> p, REFERENCE_TIME rtBlockDuration/* = 0*/)
+HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(std::unique_ptr<CMatroskaPacket> p, REFERENCE_TIME rtBlockDuration/* = 0*/)
 {
 	const auto pPin = GetOutputPin(p->TrackNumber);
 	CheckPointer(pPin, E_FAIL);
@@ -2435,7 +2460,7 @@ HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(CAutoPtr<CMatroskaPacket>
 	rtLastDuration = rtDuration;
 
 	for (const auto& pb : p->bg->Block.BlockData) {
-		CAutoPtr<CPacket> pOutput(DNew CPacket());
+		std::unique_ptr<CPacket> pOutput(DNew CPacket());
 
 		pOutput->TrackNumber    = p->TrackNumber;
 		pOutput->bDiscontinuity = p->bDiscontinuity;
@@ -2449,7 +2474,7 @@ HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(CAutoPtr<CMatroskaPacket>
 			pOutput->SetData(start_code, sizeof(start_code));
 			pOutput->AppendData(pb->data(), pb->size());
 		} else if (mt.subtype == MEDIASUBTYPE_WAVPACK4) {
-			if (!ParseWavpack(&mt, pb, pOutput)) {
+			if (!ParseWavpack(&mt, pb.get(), pOutput)) {
 				continue;
 			}
 		} else if (mt.subtype == MEDIASUBTYPE_icpf) {
@@ -2485,7 +2510,7 @@ HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(CAutoPtr<CMatroskaPacket>
 							break;
 						}
 
-						CAutoPtr<CPacket> pPacket(DNew CPacket());
+						std::unique_ptr<CPacket> pPacket(DNew CPacket());
 						pPacket->SetData(pData, sz);
 
 						pPacket->TrackNumber    = pOutput->TrackNumber;
@@ -2498,7 +2523,7 @@ HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(CAutoPtr<CMatroskaPacket>
 							rtStartTmp      = INVALID_TIME;
 							rtStopTmp       = INVALID_TIME;
 						}
-						if (S_OK != (hr = DeliverPacket(pPacket))) {
+						if (S_OK != (hr = DeliverPacket(std::move(pPacket)))) {
 							break;
 						}
 
@@ -2521,7 +2546,7 @@ HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(CAutoPtr<CMatroskaPacket>
 			pOutput->SetData(pb->data(), pb->size());
 		}
 
-		if (S_OK != (hr = DeliverPacket(pOutput))) {
+		if (S_OK != (hr = DeliverPacket(std::move(pOutput)))) {
 			break;
 		}
 
@@ -2534,7 +2559,7 @@ HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(CAutoPtr<CMatroskaPacket>
 
 	if (mt.subtype == MEDIASUBTYPE_WAVPACK4) {
 		for (const auto& bm : p->bg->ba.bm) {
-			CAutoPtr<CPacket> pOutput(DNew CPacket());
+			std::unique_ptr<CPacket> pOutput(DNew CPacket());
 
 			pOutput->TrackNumber = p->TrackNumber;
 			pOutput->rtStart     = p->rtStart;
@@ -2543,8 +2568,8 @@ HRESULT CMatroskaSplitterFilter::DeliverMatroskaPacket(CAutoPtr<CMatroskaPacket>
 			if (!ParseWavpack(&mt, &bm->BlockAdditional, pOutput)) {
 				continue;
 			}
-
-			if (S_OK != (hr = DeliverPacket(pOutput))) {
+			hr = DeliverPacket(std::move(pOutput));
+			if (S_OK != hr) {
 				break;
 			}
 		}
@@ -2589,7 +2614,7 @@ CMatroskaSourceFilter::CMatroskaSourceFilter(LPUNKNOWN pUnk, HRESULT* phr)
 	: CMatroskaSplitterFilter(pUnk, phr)
 {
 	m_clsid = __uuidof(this);
-	m_pInput.Free();
+	m_pInput.reset();
 }
 
 // ITrackInfo
@@ -2879,7 +2904,7 @@ HRESULT CMatroskaSplitterOutputPin::DeliverNewSegment(REFERENCE_TIME tStart, REF
 	return __super::DeliverNewSegment(tStart, tStop, dRate);
 }
 
-HRESULT CMatroskaSplitterOutputPin::QueuePacket(CAutoPtr<CPacket> p)
+HRESULT CMatroskaSplitterOutputPin::QueuePacket(std::unique_ptr<CPacket> p)
 {
 	if (!ThreadExists()) {
 		return S_FALSE;
@@ -2930,5 +2955,5 @@ HRESULT CMatroskaSplitterOutputPin::QueuePacket(CAutoPtr<CPacket> p)
 		return m_hrDeliver;
 	}
 
-	return __super::QueuePacket(p);
+	return __super::QueuePacket(std::move(p));
 }

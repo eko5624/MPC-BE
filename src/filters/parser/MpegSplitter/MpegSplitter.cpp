@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -51,8 +51,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr},
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr},
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -588,6 +588,7 @@ STDMETHODIMP CMpegSplitterFilter::NonDelegatingQueryInterface(REFIID riid, void*
 		QI(ISpecifyPropertyPages)
 		QI(ISpecifyPropertyPages2)
 		QI(IAMStreamSelect)
+		QI(IExFilterInfo)
 		__super::NonDelegatingQueryInterface(riid, ppv);
 }
 
@@ -665,15 +666,15 @@ STDMETHODIMP CMpegSplitterFilter::Load(LPCOLESTR pszFileName, const AM_MEDIA_TYP
 	return __super::Load(pszFileName, pmt);
 }
 
-HRESULT CMpegSplitterFilter::DeliverPacket(CAutoPtr<CPacket> p)
+HRESULT CMpegSplitterFilter::DeliverPacket(std::unique_ptr<CPacket> p)
 {
 	const DWORD TrackNumber = p->TrackNumber;
 
 	if (m_bUseMVCExtension) {
 		if (TrackNumber == m_dwMVCExtensionTrackNumber) {
-			m_MVCExtensionQueue.emplace_back(p);
+			m_MVCExtensionQueue.emplace_back(std::move(p));
 		} else if (TrackNumber == m_dwMasterH264TrackNumber) {
-			m_MVCBaseQueue.emplace_back(p);
+			m_MVCBaseQueue.emplace_back(std::move(p));
 			if (m_MVCExtensionQueue.empty()) {
 				return S_OK;
 			}
@@ -684,7 +685,7 @@ HRESULT CMpegSplitterFilter::DeliverPacket(CAutoPtr<CPacket> p)
 						pMVCBasePacket->AppendData(*pMVCExtensionPacket);
 						m_MVCExtensionQueue.erase(m_MVCExtensionQueue.begin());
 
-						__super::DeliverPacket(pMVCBasePacket);
+						__super::DeliverPacket(std::move(pMVCBasePacket));
 						m_MVCBaseQueue.erase(m_MVCBaseQueue.begin());
 						break;
 					} else if (pMVCExtensionPacket->rtStart < pMVCBasePacket->rtStart) {
@@ -698,13 +699,13 @@ HRESULT CMpegSplitterFilter::DeliverPacket(CAutoPtr<CPacket> p)
 				}
 			}
 		} else {
-			return __super::DeliverPacket(p);
+			return __super::DeliverPacket(std::move(p));
 		}
 
 		return S_OK;
 	}
 
-	return __super::DeliverPacket(p);
+	return __super::DeliverPacket(std::move(p));
 }
 
 template<typename T>
@@ -716,16 +717,16 @@ inline HRESULT CMpegSplitterFilter::HandleMPEGPacket(const DWORD TrackNumber, co
 		if (bStreamUsePTS) {
 			const BOOL bPacketStart = h.fpts;
 
-			CAutoPtr<CPacket>& p = pPackets[TrackNumber];
+			std::unique_ptr<CPacket>& p = pPackets[TrackNumber];
 			if (bPacketStart && p) {
 				if (p->bSyncPoint) {
 					if (m_rtSeekOffset != INVALID_TIME && p->rtStart < m_rtSeekOffset) {
 						DLog(L"CMpegSplitterFilter::HandleMPEGPacket() : [%u] Dropping packet %I64d, seek offset is %I64d", p->TrackNumber, p->rtStart, m_rtSeekOffset);
 					} else {
-						hr = DeliverPacket(p);
+						hr = DeliverPacket(std::move(p));
 					}
 				}
-				p.Free();
+				p.reset();
 			}
 
 			if (!p) {
@@ -734,7 +735,7 @@ inline HRESULT CMpegSplitterFilter::HandleMPEGPacket(const DWORD TrackNumber, co
 					return S_OK;
 				}
 
-				p.Attach(DNew CPacket());
+				p.reset(DNew CPacket());
 				p->TrackNumber = TrackNumber;
 				p->bSyncPoint  = bPacketStart;
 				p->rtStart     = h.fpts ? (h.pts - rtStartOffset) : INVALID_TIME;
@@ -754,7 +755,7 @@ inline HRESULT CMpegSplitterFilter::HandleMPEGPacket(const DWORD TrackNumber, co
 				rtStart = m_rtGlobalPCRTimeStamp - rtStartOffset;
 			}
 
-			CAutoPtr<CPacket> p(DNew CPacket());
+			std::unique_ptr<CPacket> p(DNew CPacket());
 			p->TrackNumber = TrackNumber;
 			p->rtStart     = rtStart;
 			p->rtStop      = (p->rtStart == INVALID_TIME) ? INVALID_TIME : p->rtStart + 1;
@@ -762,7 +763,7 @@ inline HRESULT CMpegSplitterFilter::HandleMPEGPacket(const DWORD TrackNumber, co
 			p->Flag        = Flag;
 			p->resize(nBytes);
 			m_pFile->ByteRead(p->data(), nBytes);
-			hr = DeliverPacket(p);
+			hr = DeliverPacket(std::move(p));
 		}
 	}
 
@@ -1052,17 +1053,10 @@ CString CMpegSplitterFilter::FormatStreamName(const CMpegSplitterFile::stream& s
 
 __int64 CMpegSplitterFilter::SeekBD(const REFERENCE_TIME rt)
 {
-	if (!m_Items.empty()) {
-		for (const auto& Item : m_Items) {
-			if (!Item.m_sps.empty()
-					&& rt >= Item.m_rtStartTime && rt <= (Item.m_rtStartTime + Item.Duration())) {
-
-				const auto rtSeek = rt - Item.m_rtStartTime + Item.m_rtIn;
-				const int i = range_bsearch(Item.m_sps, rtSeek);
-				if (i >= 0) {
-					return Item.m_sps[i].fp + Item.m_SizeIn;
-				}
-			}
+	if (!m_sps.empty()) {
+		const int i = range_bsearch(m_sps, rt);
+		if (i >= 0) {
+			return m_sps[i].fp;
 		}
 	}
 
@@ -1240,7 +1234,8 @@ HRESULT CMpegSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 			for(size_t i = 0; i < s.mts.size(); i++) {
 				mts.push_back(s.mts[i]);
 			}
-			CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CMpegSplitterOutputPin(mts, (CMpegSplitterFile::stream_type)type, str, this, this, &hr));
+
+			std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CMpegSplitterOutputPin(mts, (CMpegSplitterFile::stream_type)type, str, this, this, &hr));
 
 			if (type == CMpegSplitterFile::stream_type::audio) {
 				if (audio_sel == stream_idx && (S_OK == AddOutputPin(s, pPinOut))) {
@@ -1275,65 +1270,74 @@ HRESULT CMpegSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 	m_rtNewStop = m_rtStop = m_rtDuration;
 
-	if (m_bUseMVCExtension && !m_Items.empty()) {
-		SetProperty(L"STEREOSCOPIC3DMODE", m_MVC_Base_View_R_flag ? L"mvc_rl" : L"mvc_lr");
+	if (!m_Items.empty()) {
+		if (m_bUseMVCExtension) {
+			SetProperty(L"STEREOSCOPIC3DMODE", m_MVC_Base_View_R_flag ? L"mvc_rl" : L"mvc_lr");
 
-		// PG offsets
-		const auto& Item = m_Items.begin();
-		if (Item->m_pg_offset_sequence_id.size()) {
-			std::list<BYTE> pg_offsets;
-			for (auto it = Item->m_pg_offset_sequence_id.begin(); it != Item->m_pg_offset_sequence_id.end(); it++) {
-				if (*it != 0xff) {
-					pg_offsets.push_back(*it);
+			// PG offsets
+			const auto& Item = m_Items.begin();
+			if (Item->m_pg_offset_sequence_id.size()) {
+				std::list<BYTE> pg_offsets;
+				for (auto it = Item->m_pg_offset_sequence_id.begin(); it != Item->m_pg_offset_sequence_id.end(); it++) {
+					if (*it != 0xff) {
+						pg_offsets.push_back(*it);
 
-					CString offset; offset.Format(L"%u", *it);
-					SetProperty(L"stereo_subtitle_offset_id", offset);
-				}
-			}
-			if (pg_offsets.size()) {
-				CString offsets;
-
-				pg_offsets.sort();
-				pg_offsets.unique();
-				for (auto it = pg_offsets.begin(); it != pg_offsets.end(); it++) {
-					if (offsets.IsEmpty()) {
-						offsets.Format(L"%u", *it);
-					} else {
-						offsets.AppendFormat(L",%u", *it);
+						CString offset; offset.Format(L"%u", *it);
+						SetProperty(L"stereo_subtitle_offset_id", offset);
 					}
 				}
+				if (pg_offsets.size()) {
+					CString offsets;
 
-				SetProperty(L"stereo_subtitle_offset_ids", offsets);
+					pg_offsets.sort();
+					pg_offsets.unique();
+					for (auto it = pg_offsets.begin(); it != pg_offsets.end(); it++) {
+						if (offsets.IsEmpty()) {
+							offsets.Format(L"%u", *it);
+						} else {
+							offsets.AppendFormat(L",%u", *it);
+						}
+					}
+
+					SetProperty(L"stereo_subtitle_offset_ids", offsets);
+				}
+			}
+
+			// IG offsets
+			if (Item->m_ig_offset_sequence_id.size()) {
+				std::list<BYTE> ig_offsets;
+				for (auto it = Item->m_ig_offset_sequence_id.begin(); it != Item->m_ig_offset_sequence_id.end(); it++) {
+					if (*it != 0xff) {
+						ig_offsets.push_back(*it);
+					}
+				}
+				if (ig_offsets.size()) {
+					CString offsets;
+
+					ig_offsets.sort();
+					ig_offsets.unique();
+					for (auto it = ig_offsets.begin(); it != ig_offsets.end(); it++) {
+						if (offsets.IsEmpty()) {
+							offsets.Format(L"%u", *it);
+						} else {
+							offsets.AppendFormat(L",%u", *it);
+						}
+					}
+
+					SetProperty(L"stereo_interactive_offset_ids", offsets);
+				}
 			}
 		}
 
-		// IG offsets
-		if (Item->m_ig_offset_sequence_id.size()) {
-			std::list<BYTE> ig_offsets;
-			for (auto it = Item->m_ig_offset_sequence_id.begin(); it != Item->m_ig_offset_sequence_id.end(); it++) {
-				if (*it != 0xff) {
-					ig_offsets.push_back(*it);
-				}
-			}
-			if (ig_offsets.size()) {
-				CString offsets;
-
-				ig_offsets.sort();
-				ig_offsets.unique();
-				for (auto it = ig_offsets.begin(); it != ig_offsets.end(); it++) {
-					if (offsets.IsEmpty()) {
-						offsets.Format(L"%u", *it);
-					} else {
-						offsets.AppendFormat(L",%u", *it);
-					}
-				}
-
-				SetProperty(L"stereo_interactive_offset_ids", offsets);
+		for (const auto& Item : m_Items) {
+			for (const auto& sps : Item.m_sps) {
+				SyncPoint sp = { Item.m_rtStartTime + sps.rt - Item.m_rtIn, Item.m_SizeIn + sps.fp };
+				m_sps.push_back(sp);
 			}
 		}
 	}
 
-	return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+	return m_pOutputs.size() > 0 ? S_OK : E_FAIL;
 }
 
 STDMETHODIMP CMpegSplitterFilter::GetDuration(LONGLONG* pDuration)
@@ -1553,7 +1557,7 @@ bool CMpegSplitterFilter::DemuxLoop()
 	for (auto& pPacket : pPackets) {
 		auto& p = pPacket.second;
 		if (p && p->bSyncPoint && GetOutputPin(p->TrackNumber)) {
-			DeliverPacket(p);
+			DeliverPacket(std::move(p));
 		}
 	}
 	pPackets.clear();
@@ -1986,6 +1990,49 @@ STDMETHODIMP_(BOOL) CMpegSplitterFilter::GetSubEmptyPin()
 	return m_SubEmptyPin;
 }
 
+// IKeyFrameInfo
+
+STDMETHODIMP CMpegSplitterFilter::GetKeyFrameCount(UINT& nKFs)
+{
+	CheckPointer(m_pFile, E_UNEXPECTED);
+	nKFs = m_sps.size();
+	return S_OK;
+}
+
+STDMETHODIMP CMpegSplitterFilter::GetKeyFrames(const GUID* pFormat, REFERENCE_TIME* pKFs, UINT& nKFs)
+{
+	CheckPointer(pFormat, E_POINTER);
+	CheckPointer(pKFs, E_POINTER);
+	CheckPointer(m_pFile, E_UNEXPECTED);
+
+	if (*pFormat != TIME_FORMAT_MEDIA_TIME) {
+		return E_INVALIDARG;
+	}
+
+	for (nKFs = 0; nKFs < m_sps.size(); nKFs++) {
+		pKFs[nKFs] = m_sps[nKFs].rt;
+	}
+
+	return S_OK;
+}
+
+// IExFilterInfo
+
+STDMETHODIMP CMpegSplitterFilter::GetPropertyInt(LPCSTR field, int* value)
+{
+	CheckPointer(value, E_POINTER);
+
+	if (!strcmp(field, "VIDEO_PIXEL_FORMAT")) {
+		if (m_pFile && m_pFile->m_pix_fmt != -1) {
+			*value = m_pFile->m_pix_fmt;
+			return S_OK;
+		}
+		return E_ABORT;
+	}
+
+	return E_INVALIDARG;
+}
+
 //
 // CMpegSourceFilter
 //
@@ -1993,7 +2040,7 @@ STDMETHODIMP_(BOOL) CMpegSplitterFilter::GetSubEmptyPin()
 CMpegSourceFilter::CMpegSourceFilter(LPUNKNOWN pUnk, HRESULT* phr, const CLSID& clsid)
 	: CMpegSplitterFilter(pUnk, phr, clsid)
 {
-	m_pInput.Free();
+	m_pInput.reset();
 }
 
 //
@@ -2027,7 +2074,7 @@ HRESULT CMpegSplitterOutputPin::DeliverNewSegment(REFERENCE_TIME tStart, REFEREN
 	return __super::DeliverNewSegment(tStart, tStop, dRate);
 }
 
-HRESULT CMpegSplitterOutputPin::QueuePacket(CAutoPtr<CPacket> p)
+HRESULT CMpegSplitterOutputPin::QueuePacket(std::unique_ptr<CPacket> p)
 {
 	if (!ThreadExists()) {
 		return S_FALSE;
@@ -2082,7 +2129,7 @@ HRESULT CMpegSplitterOutputPin::QueuePacket(CAutoPtr<CPacket> p)
 		return m_hrDeliver;
 	}
 
-	return __super::QueuePacket(p);
+	return __super::QueuePacket(std::move(p));
 }
 
 STDMETHODIMP CMpegSplitterOutputPin::Connect(IPin* pReceivePin, const AM_MEDIA_TYPE* pmt)

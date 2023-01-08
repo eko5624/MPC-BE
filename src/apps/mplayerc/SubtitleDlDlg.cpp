@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -421,7 +421,7 @@ void CSubtitleDlDlg::OnOK()
 
 	for (const auto& sub : m_selsubs) {
 		CInternetSession is;
-		CStringA url = "http://" + s.strISDb + "/dl.php?";
+		CStringA url = "http://" + CStringA(s.strISDb) + "/dl.php?";
 		CStringA ticket = UrlEncode(m_pTA->ticket);
 		CStringA args, str;
 		args.Format("id=%d&ticket=%s", sub.id, ticket);
@@ -595,10 +595,10 @@ bool CSubtitleDlDlg::OpenUrl(CInternetSession& is, CString url, CStringA& str)
 	str.Empty();
 
 	try {
-		CAutoPtr<CStdioFile> f(is.OpenURL(url, 1, INTERNET_FLAG_TRANSFER_BINARY | INTERNET_FLAG_EXISTING_CONNECT));
+		std::unique_ptr<CStdioFile> f(is.OpenURL(url, 1, INTERNET_FLAG_TRANSFER_BINARY | INTERNET_FLAG_EXISTING_CONNECT));
 
 		char buff[1024];
-		for (int len; (len = f->Read(buff, sizeof(buff))) > 0; str += CStringA(buff, len));
+		for (int len; (len = f->Read(buff, sizeof(buff))) > 0; str.Append(buff, len));
 
 		f->Close(); // must close it because the destructor doesn't seem to do it and we will get an exception when "is" is destroying
 	} catch (CInternetException* ie) {

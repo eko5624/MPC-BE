@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -279,6 +279,7 @@ HRESULT CBaseVideoFilter::ReconnectOutput(int width, int height, bool bForce/* =
 					m_bSendMediaType = true;
 				} else {
 					DLog(L"    ReceiveConnection() failed (hr: %x); QueryAccept: %x", hr, hrQA);
+					return E_FAIL;
 				}
 
 				break;
@@ -291,7 +292,7 @@ HRESULT CBaseVideoFilter::ReconnectOutput(int width, int height, bool bForce/* =
 		m_aryout = m_ary;
 
 		// some renderers don't send this
-		if (m_nDecoderMode != MODE_DXVA2) {
+		if (m_nDecoderMode == MODE_SOFTWARE) {
 			NotifyEvent(EC_VIDEO_SIZE_CHANGED, MAKELPARAM(width, height), 0);
 		}
 

@@ -150,6 +150,12 @@
 : ;: 
 3D;
 3DType;
+5.1.2ch;
+5.1.4ch;
+5.1ch;
+608_Mode;
+7.1.2ch;
+7.1ch;
 About;Πληροφορίες
 About_Hint;Πως θα επικοινωνήσετε μαζί μου και θα βρείτε νεότερη έκδoση
 Accompaniment;Συνοδεία
@@ -180,6 +186,7 @@ Arranger;Arranger
 ArtDirector;ArtDirector
 AspectRatio;Λόγος εικόνας
 AssistantDirector;AssistantDirector
+AssociatedVideo_FrameRate;
 at;at
 At least one file;(Πρέπει να ανοίξετε τουλάχιστον ένα αρχείο)
 Audio;Ήχος
@@ -198,11 +205,15 @@ AudioRenderingIndication;
 AudioSceneInfoID;
 AudioTrackLayout;
 Author;Author
+Back4ToBack2;
+Balance_FrontBackListener;
+Balance_FrontBackOverheadFloor;
 BarCode;BarCode
 Basic;Βασική
 Basic_Note;Σημείωση : για περισσότερες πληροφορίες σχετικά με το αρχείο, επιλέξτε διαφορετική προβολή (Φύλλο, Δένδρο...)
 BedChannelConfiguration;
 BedChannelCount;
+BinauralRenderMode;
 BitDepth;
 BitDepth_Detected;
 BitDepth_Stored;
@@ -217,9 +228,11 @@ BitRate_Nominal;
 Bits-(Pixel*Frame);Bits/(Εικονοστοιχείο*Πλαίσιο)
 BufferSize;
 Cancel;Άκυρο
+CaptionServiceName;
 Channel(s);Κανάλι(α)
 ChannelCoded;
 ChannelConfiguration;
+ChannelFormat;
 ChannelLayout;
 ChannelMode;
 ChannelPositions;Θέσεις καναλιών
@@ -277,6 +290,7 @@ colour_range;
 Comment;Σχόλιο
 CommissionedBy;Commissioned by
 Compilation;
+ComplementaryObject;
 CompleteName;Πλήρες όνομα
 CompletionDate;
 ComplexityIndex;
@@ -287,9 +301,13 @@ Compression_Mode_Lossy;
 Compression_Ratio;
 Conductor;Conductor
 ConformanceCheck;
+ConformanceErrors;
+ConformanceInfos;
+ConformanceWarnings;
 ContactEmail;
 ContactTelephoneNumber;
 Container and general information;Container και γενικές πληροφορίες
+Content;
 ContentType;Είδος περιεχόμενου
 CoProducer;Συμπαραγωγός
 Copyright;Πνευματικά Δικαιώματα
@@ -304,6 +322,7 @@ Cover_Mime;
 Cover_Type;
 Cropped;
 Custom;Προσαρμοσμένη
+CustomDownmixTargets;
 Customize;Προσαρμόστε
 DarkMode;
 Date;Ημερομηνία
@@ -331,20 +350,28 @@ DisplayAspectRatio_CleanAperture;
 DisplayAspectRatio_Original;
 DistributedBy;Distributed by
 Distributor;
+Dolby_Atmos_Metadata;
 DolbyAtmos;
 Donate;Δωρεές
 DotsPerInch;
 Downmix;
+Downmix_5.1.x;
+Downmix_5to2;
 DrcSets_Count;
 DrcSets_Effects;
 Duration;
 Duration_End;
+Duration_End_Command;
 Duration_Start;
+Duration_Start_Command;
+Duration_Start2End;
+DynamicObject;
 DynamicRangeControl;
 Eac3DrcProfile;
 Edit;Επεξεργασία
 EditedBy;Τροποποιημένο από
 EditorialClassification;
+ElementaryStream;
 ElementCount;
 EMail;E-Mail
 Encoded_Application;Εφαρμογή εγγραφής
@@ -357,6 +384,10 @@ EPG_Positions;
 EpisodeTitleNumber;
 Error_File;Παρουσιάστηκε σφάλμα κατά το διάβασμα του αρχείου
 Error_File_Write;
+Events_PaintOn;
+Events_PopOn;
+Events_RollUp;
+Events_Total;
 ExecutiveProducer;Executive producer
 Exit;Έξοδος
 Exit_Hint;Κλείνει το πρόγραμμα
@@ -378,7 +409,11 @@ FileExtension;Επέκταση αρχείου
 FileName;Όνομα αρχείου
 FileNameExtension;
 FileSize;Μέγεθος αρχείου
+FirstDisplay_Delay_Frames;
+FirstDisplay_Type;
+FirstFrameOfAction;
 FlatPanelTv;
+FlowID;
 Folder;Φάκελος
 Folder (R);Φάκελος (R)
 Folder (R)_Hint;Επιλέξτε έναν φάκελο για εξέταση (με τους υποφακέλους αναδρομικά)
@@ -422,6 +457,7 @@ Format_Settings_Wrapping;
 Format_Tier;
 Format_Url;
 Format_Version;
+FormatDefinition;
 FpaManufacturer;
 FpaPass;
 FpaVersion;
@@ -662,6 +698,7 @@ ImageCount;Αριθμός των ροών εικόνας
 ImmersiveStereo;
 Info;
 Instruments;Όργανα
+IntegratedLoudness;
 IntegratedLoudness_Level;
 IntegratedLoudness_Speech;
 InteractivityEnabled;
@@ -891,15 +928,20 @@ LfeMixGain;
 Library;Muxing library
 Lifetime_Subscribe_Button;
 Lightness;
+Lines_Count;
+Lines_MaxCountPerEvent;
 LineUpStart;
 LinkedTo_Bed_Pos;
 LinkedTo_ChannelFormat_Pos;
+LinkedTo_ComplementaryObject_Pos;
 LinkedTo_Content_Pos;
 LinkedTo_Group_Pos;
 LinkedTo_Object_Pos;
 LinkedTo_PackFormat_Pos;
 LinkedTo_SignalGroup_Pos;
+LinkedTo_StreamFormat_Pos;
 LinkedTo_Substream_Pos;
+LinkedTo_TrackFormat_Pos;
 LinkedTo_TrackUID_Pos;
 List;
 LoRoCenterMixGain;
@@ -948,6 +990,9 @@ Menu_Hint;Περισσότερες πιθανότητες
 Menu_No;Χωρίς μενού
 MenuCount;Αριθμός των ροών μενού
 MenuID;
+Metadata_Format;
+Metadata_Format_Type;
+Metadata_MuxingMode;
 MixType;
 mn; min
 Mood;Mood
@@ -978,9 +1023,12 @@ NumberOfObjects;
 NumberOfPackFormats;
 NumberOfPresentations;
 NumberOfProgrammes;
+NumberOfStreamFormats;
 NumberOfSubstreams;
+NumberOfTrackFormats;
 NumberOfTrackUIDs;
 NumColors;
+Object;
 ObjectCount;
 OK;OK
 One output file per input file;Ένα αρχείο εξόδου για κάθε αρχείο εισόδου
@@ -1043,6 +1091,7 @@ OverallBitRate_Minimum;
 OverallBitRate_Mode;
 OverallBitRate_Nominal;
 PackageName;
+PackFormat;
 Part;Μέρος
 Part_Count;Συνολικός αριθμός
 PartNumber;
@@ -1085,6 +1134,7 @@ ProductionDesigner;ProductionDesigner
 ProductionNumber;
 ProductionStudio;ProductionStudio
 ProductPlacement;
+Programme;
 ProgrammeHasText;
 ProgrammeTextLanguage;
 ProgrammeTitle;
@@ -1121,6 +1171,8 @@ ScanType;
 ScanType_Original;
 ScanType_StoreMethod;
 ScreenplayBy;Screenplay by
+ScreenToCenter;
+ScreenToFront;
 Season;Season
 SecondaryAudioLanguage;
 see below;δείτε παρακάτω
@@ -1167,6 +1219,7 @@ StoreMethod_SeparatedFields_2;
 Stream;Ροή
 Stream_MoreInfo;Περισσότερες πληροφορίες σχετικά με την ροή
 StreamCount;Αριθμός των ροών αυτού του τύπου
+StreamFormat;
 StreamID;Stream ID
 streamIdentifier;
 StreamKind;Τύπος/Είδος Ροής
@@ -1224,23 +1277,49 @@ ThanksTo;Ευχαριστώ τους
 Thousands separator;Διαχωριστής χιλιάδων
 TimeCode;
 TimeCode_FirstFrame;
+TimeCode_LastFrame;
+TimeCode_MaxFrameNumber;
+TimeCode_MaxFrameNumber_Theory;
 TimeCode_Settings;
 TimeCode_Source;
-TimeCode_Striped;
+TimeCode_Stripped;
 TimeStamp;
 TimeZone;
 Title;Τίτλος
 Title_More;Τίτλος, περισσότερες πληροφορίες
+Top4ToTop2;
+TopBackToFront;
+TopBackToSide;
+TopFrontToBack;
+TopFrontToFront;
+TopFrontToSide;
 Total;Total
 TotalNumberOfParts;
 TotalProgrammeDuration;
 Track;Track name
 Track_Count;Track count
+TrackFormat;
+TrackIndex;
+TrackUID;
 transfer_characteristics;
 Translate_Reports;
 Translator;Μεταφραστής
+Transport;
 Tree;Δένδρο
 Tree & Text;Δένδρο & Κείμενο
+Trim_Center;
+Trim_Height;
+Trim_Surround;
+TrimMode;
+TrimMode0i;
+TrimMode1i;
+TrimMode2i;
+TrimMode3i;
+TrimMode4i;
+TrimMode5i;
+TrimMode6i;
+TrimMode7i;
+TrimMode8i;
 TruePeakLevel;
 TruePeakLevel_Album;
 Type;
@@ -1285,5 +1364,5 @@ Written_Location;Τοποθεσία καταγραφής
 WrittenBy;Γραμμένο από
 Yes;Ναι
 Your system;Το σύστημά σας
-ZZ_Automatic_Percent;59
-ZZ_AutomaticLanguage_Percent;66
+ZZ_Automatic_Percent;55
+ZZ_AutomaticLanguage_Percent;62

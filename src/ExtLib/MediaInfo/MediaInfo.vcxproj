@@ -38,43 +38,17 @@
     <Import Project="$(SolutionDir)src\common.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+  <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>.;ThirdParty/base64;ThirdParty/tinyxml2;ThirdParty/MD5;../ZenLib;../zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;MEDIAINFO_XML_YES;MEDIAINFO_MINIMAL_YES;MEDIAINFO_MPEGTS_DUPLICATE_NO;MEDIAINFO_DVDIF_ANALYZE_NO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>MediaInfo/PreComp.h</PrecompiledHeaderFile>
     </ClCompile>
     <Lib>
       <AdditionalOptions>/ignore:4221</AdditionalOptions>
     </Lib>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>.;ThirdParty/base64;ThirdParty/tinyxml2;ThirdParty/MD5;../ZenLib;../zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;MEDIAINFO_XML_YES;MEDIAINFO_MINIMAL_YES;MEDIAINFO_MPEGTS_DUPLICATE_NO;MEDIAINFO_DVDIF_ANALYZE_NO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <WarningLevel>TurnOffAllWarnings</WarningLevel>
-      <PrecompiledHeaderFile>MediaInfo/PreComp.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <Lib>
-      <AdditionalOptions>/ignore:4221</AdditionalOptions>
-    </Lib>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>.;ThirdParty/base64;ThirdParty/tinyxml2;ThirdParty/MD5;../ZenLib;../zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;MEDIAINFO_XML_YES;MEDIAINFO_MINIMAL_YES;MEDIAINFO_MPEGTS_DUPLICATE_NO;MEDIAINFO_DVDIF_ANALYZE_NO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <WarningLevel>TurnOffAllWarnings</WarningLevel>
-      <PrecompiledHeaderFile>MediaInfo/PreComp.h</PrecompiledHeaderFile>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>.;ThirdParty/base64;ThirdParty/tinyxml2;ThirdParty/MD5;../ZenLib;../zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;MEDIAINFO_XML_YES;MEDIAINFO_MINIMAL_YES;MEDIAINFO_MPEGTS_DUPLICATE_NO;MEDIAINFO_DVDIF_ANALYZE_NO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <WarningLevel>TurnOffAllWarnings</WarningLevel>
-      <PrecompiledHeaderFile>MediaInfo/PreComp.h</PrecompiledHeaderFile>
-    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="MediaInfo\Audio\File_Aac.h" />
@@ -147,6 +121,7 @@
     <ClInclude Include="MediaInfo\Multiple\File_DcpPkl.h" />
     <ClInclude Include="MediaInfo\Multiple\File_HdsF4m.h" />
     <ClInclude Include="MediaInfo\Multiple\File_MiXml.h" />
+    <ClInclude Include="MediaInfo\Multiple\File_Nsv.h" />
     <ClInclude Include="MediaInfo\Multiple\File_Pmp.h" />
     <ClInclude Include="MediaInfo\Multiple\File_Ptx.h" />
     <ClInclude Include="MediaInfo\Multiple\File_Vbi.h" />
@@ -423,6 +398,7 @@
     <ClCompile Include="MediaInfo\Multiple\File_DcpPkl.cpp" />
     <ClCompile Include="MediaInfo\Multiple\File_HdsF4m.cpp" />
     <ClCompile Include="MediaInfo\Multiple\File_MiXml.cpp" />
+    <ClCompile Include="MediaInfo\Multiple\File_Nsv.cpp" />
     <ClCompile Include="MediaInfo\Multiple\File_Pmp.cpp" />
     <ClCompile Include="MediaInfo\Multiple\File_Ptx.cpp" />
     <ClCompile Include="MediaInfo\Multiple\File_Vbi.cpp" />

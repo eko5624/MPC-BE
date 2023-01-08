@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -39,8 +39,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -247,13 +247,13 @@ HRESULT CAviSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 	bool fHasIndex = false;
 
-	for (size_t i = 0; !fHasIndex && i < m_pFile->m_strms.GetCount(); i++)
+	for (size_t i = 0; !fHasIndex && i < m_pFile->m_strms.size(); i++)
 		if (m_pFile->m_strms[i]->cs.size() > 0) {
 			fHasIndex = true;
 		}
 
-	for (size_t i = 0; i < m_pFile->m_strms.GetCount(); i++) {
-		CAviFile::strm_t* s = m_pFile->m_strms[i];
+	for (size_t i = 0; i < m_pFile->m_strms.size(); i++) {
+		CAviFile::strm_t* s = m_pFile->m_strms[i].get();
 
 		if (fHasIndex && s->cs.size() == 0) {
 			continue;
@@ -564,7 +564,7 @@ HRESULT CAviSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 		HRESULT hr;
 
-		CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CAviSplitterOutputPin(mts, name, this, this, &hr));
+		std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CAviSplitterOutputPin(mts, name, this, this, &hr));
 		AddOutputPin(i, pPinOut);
 	}
 
@@ -587,7 +587,7 @@ HRESULT CAviSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 	m_tFrame.resize(m_pFile->m_avih.dwStreams);
 
-	return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+	return m_pOutputs.size() > 0 ? S_OK : E_FAIL;
 }
 
 bool CAviSplitterFilter::DemuxInit()
@@ -635,7 +635,7 @@ HRESULT CAviSplitterFilter::ReIndex(__int64 end, UINT64& Size, DWORD TrackNumber
 			DWORD nTrackNumber = TRACKNUM(id);
 
 			if (nTrackNumber == TrackNumber) {
-				CAviFile::strm_t* s = m_pFile->m_strms[nTrackNumber];
+				CAviFile::strm_t* s = m_pFile->m_strms[nTrackNumber].get();
 
 				WORD type = TRACKTYPE(id);
 
@@ -705,7 +705,7 @@ void CAviSplitterFilter::DemuxSeek(REFERENCE_TIME rt)
 
 	if (rt > 0) {
 		for (DWORD track = 0; track < m_pFile->m_avih.dwStreams; track++) {
-			CAviFile::strm_t* s = m_pFile->m_strms[track];
+			CAviFile::strm_t* s = m_pFile->m_strms[track].get();
 
 			if (s->IsRawSubtitleStream() || s->cs.empty()) {
 				continue;
@@ -729,7 +729,7 @@ bool CAviSplitterFilter::DemuxLoop()
 		UINT64 minpos = 0;
 		REFERENCE_TIME minTime = INT64_MAX;
 		for (DWORD track = 0; track < m_pFile->m_avih.dwStreams; track++) {
-			CAviFile::strm_t* s = m_pFile->m_strms[track];
+			CAviFile::strm_t* s = m_pFile->m_strms[track].get();
 			DWORD f = m_tFrame[track];
 
 			if (f >= (DWORD)s->cs.size()) {
@@ -758,7 +758,7 @@ bool CAviSplitterFilter::DemuxLoop()
 		}
 
 		do {
-			CAviFile::strm_t* s = m_pFile->m_strms[curTrack];
+			CAviFile::strm_t* s = m_pFile->m_strms[curTrack].get();
 			DWORD f = m_tFrame[curTrack];
 
 			m_pFile->Seek(s->cs[f].filepos);
@@ -785,7 +785,7 @@ bool CAviSplitterFilter::DemuxLoop()
 				size = s->cs[f].orgsize;
 			}
 
-			CAutoPtr<CPacket> p(DNew CPacket());
+			std::unique_ptr<CPacket> p(DNew CPacket());
 
 			p->TrackNumber		= (DWORD)curTrack;
 			p->bSyncPoint		= (BOOL)s->cs[f].fKeyFrame;
@@ -805,7 +805,7 @@ bool CAviSplitterFilter::DemuxLoop()
 #endif
 			m_maxTimeStamp = std::max(m_maxTimeStamp, p->rtStart);
 
-			hr = DeliverPacket(p);
+			hr = DeliverPacket(std::move(p));
 
 			fDiscontinuity[curTrack] = false;
 		} while (0);
@@ -832,8 +832,7 @@ STDMETHODIMP CAviSplitterFilter::GetKeyFrameCount(UINT& nKFs)
 
 	nKFs = 0;
 
-	for (size_t i = 0; i < m_pFile->m_strms.GetCount(); i++) {
-		CAviFile::strm_t* s = m_pFile->m_strms[i];
+	for (const auto& s : m_pFile->m_strms) {
 		if (s->strh.fccType != FCC('vids')) {
 			continue;
 		}
@@ -867,8 +866,7 @@ STDMETHODIMP CAviSplitterFilter::GetKeyFrames(const GUID* pFormat, REFERENCE_TIM
 		return E_INVALIDARG;
 	}
 
-	for (size_t i = 0; i < m_pFile->m_strms.GetCount(); i++) {
-		CAviFile::strm_t* s = m_pFile->m_strms[i];
+	for (const auto& s : m_pFile->m_strms) {
 		if (s->strh.fccType != FCC('vids')) {
 			continue;
 		}
@@ -970,7 +968,7 @@ CAviSourceFilter::CAviSourceFilter(LPUNKNOWN pUnk, HRESULT* phr)
 	: CAviSplitterFilter(pUnk, phr)
 {
 	m_clsid = __uuidof(this);
-	m_pInput.Free();
+	m_pInput.reset();
 }
 
 //

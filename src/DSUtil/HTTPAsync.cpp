@@ -21,6 +21,8 @@
 #include "stdafx.h"
 #include "HTTPAsync.h"
 #include "Log.h"
+#include "text.h"
+#include <ExtLib/zlib/zlib.h>
 
 void CALLBACK CHTTPAsync::Callback(_In_ HINTERNET hInternet,
 								   __in_opt DWORD_PTR dwContext,
@@ -28,30 +30,34 @@ void CALLBACK CHTTPAsync::Callback(_In_ HINTERNET hInternet,
 								   __in_opt LPVOID lpvStatusInformation,
 								   __in DWORD dwStatusInformationLength)
 {
-	auto* pContext = (CHTTPAsync*)dwContext;
-	auto* pRes     = (INTERNET_ASYNC_RESULT*)lpvStatusInformation;
-	switch (pContext->m_context) {
+	if (!lpvStatusInformation) {
+		return;
+	}
+
+	auto pHTTPAsync   = reinterpret_cast<CHTTPAsync*>(dwContext);
+	auto pAsyncResult = reinterpret_cast<INTERNET_ASYNC_RESULT*>(lpvStatusInformation);
+
+	switch (pHTTPAsync->m_context) {
 		case Context::CONTEXT_CONNECT:
 			if (dwInternetStatus == INTERNET_STATUS_HANDLE_CREATED) {
-				pContext->m_hConnect = (HINTERNET)pRes->dwResult;
-				SetEvent(pContext->m_hConnectedEvent);
+				pHTTPAsync->m_hConnect = reinterpret_cast<HINTERNET>(pAsyncResult->dwResult);
+				SetEvent(pHTTPAsync->m_hConnectedEvent);
 			}
 			break;
 		case Context::CONTEXT_REQUEST:
 			{
 				switch (dwInternetStatus) {
 					case INTERNET_STATUS_HANDLE_CREATED:
-						{
-							pContext->m_hRequest = (HINTERNET)pRes->dwResult;
-							pContext->m_bRequestComplete = TRUE;
-							SetEvent(pContext->m_hRequestOpenedEvent);
-						}
+						pHTTPAsync->m_hRequest = reinterpret_cast<HINTERNET>(pAsyncResult->dwResult);
+						pHTTPAsync->m_bRequestComplete = TRUE;
+						SetEvent(pHTTPAsync->m_hRequestOpenedEvent);
 						break;
 					case INTERNET_STATUS_REQUEST_COMPLETE:
-						{
-							pContext->m_bRequestComplete = TRUE;
-							SetEvent(pContext->m_hRequestCompleteEvent);
-						}
+						pHTTPAsync->m_bRequestComplete = TRUE;
+						SetEvent(pHTTPAsync->m_hRequestCompleteEvent);
+						break;
+					case INTERNET_STATUS_REDIRECT:
+						pHTTPAsync->m_url_redirect_str.SetString(reinterpret_cast<LPCWSTR>(lpvStatusInformation), dwStatusInformationLength);
 						break;
 					}
 			}
@@ -198,7 +204,7 @@ HRESULT CHTTPAsync::Connect(LPCWSTR lpszURL, DWORD dwTimeOut/* = INFINITE*/, LPC
 	m_nPort   = urlParser.GetPortNumber();
 	m_nScheme = urlParser.GetScheme();
 
-	m_hInstance = InternetOpenW(L"MPCBE",
+	m_hInstance = InternetOpenW(http::userAgent.GetString(),
 							    INTERNET_OPEN_TYPE_PRECONFIG,
 							    nullptr,
 							    nullptr,
@@ -256,7 +262,10 @@ HRESULT CHTTPAsync::Connect(LPCWSTR lpszURL, DWORD dwTimeOut/* = INFINITE*/, LPC
 	DLog(L"CHTTPAsync::Connect() : return header:\n%s", m_header);
 #endif
 
-	m_contentType = QueryInfoStr(HTTP_QUERY_CONTENT_TYPE);
+	m_contentType = QueryInfoStr(HTTP_QUERY_CONTENT_TYPE).MakeLower();
+	m_contentEncoding = QueryInfoStr(HTTP_QUERY_CONTENT_ENCODING).MakeLower();
+
+	m_bIsCompressed = !m_contentEncoding.IsEmpty() && (StartsWith(m_contentEncoding, L"gzip") || StartsWith(m_contentEncoding, L"deflate"));
 
 	const CString queryInfo = QueryInfoStr(HTTP_QUERY_CONTENT_LENGTH);
 	if (!queryInfo.IsEmpty()) {
@@ -401,17 +410,82 @@ HRESULT CHTTPAsync::Read(PBYTE pBuffer, DWORD dwSizeToRead, LPDWORD dwSizeRead, 
 	return _dwSizeRead ? S_OK : S_FALSE;
 }
 
-CString CHTTPAsync::GetHeader() const
+constexpr size_t decompressBlockSize = 1024;
+bool CHTTPAsync::GetUncompressed(std::vector<BYTE>& buffer)
+{
+	if (!m_bIsCompressed) {
+		return false;
+	}
+
+	if (!m_lenght) {
+		return false;
+	}
+
+	buffer.clear();
+
+	int ret = {};
+	z_stream stream = {};
+	if ((ret = inflateInit2(&stream, 32 + 15)) != Z_OK) {
+		return false;
+	}
+
+	std::vector<BYTE> compressedData(m_lenght);
+	DWORD dwSizeRead = 0;
+	if (Read(compressedData.data(), m_lenght, &dwSizeRead) != S_OK) {
+		inflateEnd(&stream);
+		return false;
+	}
+
+	stream.next_in = compressedData.data();
+	stream.avail_in = static_cast<uInt>(compressedData.size());
+
+	size_t n = 0;
+	do {
+		buffer.resize(++n * decompressBlockSize);
+		auto dst = buffer.data();
+		stream.next_out = &dst[(n - 1) * decompressBlockSize];
+		stream.avail_out = decompressBlockSize;
+		if ((ret = inflate(&stream, Z_NO_FLUSH)) != Z_OK && ret != Z_STREAM_END) {
+			buffer.clear();
+			break;
+		}
+	} while (stream.avail_out == 0 && stream.avail_in != 0 && ret != Z_STREAM_END);
+
+	inflateEnd(&stream);
+
+	if (!buffer.empty()) {
+		buffer.resize(static_cast<size_t>(stream.total_out));
+	}
+
+	return !buffer.empty();
+}
+
+const CString& CHTTPAsync::GetHeader() const
 {
 	return m_header;
 }
 
-CString CHTTPAsync::GetContentType() const
+const CString& CHTTPAsync::GetContentType() const
 {
 	return m_contentType;
+}
+
+const CString& CHTTPAsync::GetContentEncoding() const
+{
+	return m_contentEncoding;
+}
+
+const bool CHTTPAsync::IsCompressed() const
+{
+	return m_bIsCompressed;
 }
 
 UINT64 CHTTPAsync::GetLenght() const
 {
 	return m_lenght;
+}
+
+const CString& CHTTPAsync::GetRedirectURL() const
+{
+	return m_url_redirect_str;
 }

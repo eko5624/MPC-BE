@@ -150,6 +150,12 @@
 : ;: 
 3D;3D
 3DType;Тип 3D
+5.1.2ch;
+5.1.4ch;
+5.1ch;
+608_Mode;
+7.1.2ch;
+7.1ch;
 About;О программе
 About_Hint;Как связаться со мной и найти последнюю версию программы
 Accompaniment;Сопровождение
@@ -180,6 +186,7 @@ Arranger;Аранжировщик
 ArtDirector;Арт-директор
 AspectRatio;Соотношение
 AssistantDirector;Помощник режиссёра
+AssociatedVideo_FrameRate;
 at;в
 At least one file;Необходимо открыть как минимум один файл
 Audio;Аудио
@@ -198,11 +205,15 @@ AudioRenderingIndication;
 AudioSceneInfoID;
 AudioTrackLayout;Макет аудиодорожки
 Author;Автор
+Back4ToBack2;
+Balance_FrontBackListener;
+Balance_FrontBackOverheadFloor;
 BarCode;Штрих-код
 Basic;Кратко
 Basic_Note;Примечание: для дополнительной информации выберите другую закладку (таблица, дерево,...)
 BedChannelConfiguration;
 BedChannelCount;
+BinauralRenderMode;
 BitDepth;Битовая глубина
 BitDepth_Detected;
 BitDepth_Stored;Сохранённая битовая глубина
@@ -217,9 +228,11 @@ BitRate_Nominal;Номинальный битрейт
 Bits-(Pixel*Frame);Бит/(Пиксели*Кадры)
 BufferSize;Размер буфера
 Cancel;Отмена
+CaptionServiceName;
 Channel(s);Каналы
 ChannelCoded;
 ChannelConfiguration;
+ChannelFormat;
 ChannelLayout;
 ChannelMode;
 ChannelPositions;Расположение каналов
@@ -277,6 +290,7 @@ colour_range;Цветовой диапазон
 Comment;Примечание
 CommissionedBy;Поручитель
 Compilation;Компиляция
+ComplementaryObject;
 CompleteName;Полное имя
 CompletionDate;Дата завершения
 ComplexityIndex;
@@ -287,9 +301,13 @@ Compression_Mode_Lossy;С потерями
 Compression_Ratio;Степень сжатия
 Conductor;Дирижёр
 ConformanceCheck;
+ConformanceErrors;
+ConformanceInfos;
+ConformanceWarnings;
 ContactEmail;Контактный почтовый адрес
 ContactTelephoneNumber;Контактный телефон
 Container and general information;Общая информация
+Content;
 ContentType;Тип содержимого
 CoProducer;Сопродюсер
 Copyright;Авторское право
@@ -304,6 +322,7 @@ Cover_Mime;MIME-тип обложки
 Cover_Type;Тип обложки
 Cropped;Размеры подрезки
 Custom;Выборочно
+CustomDownmixTargets;
 Customize;Настройка
 DarkMode;
 Date;Дата
@@ -331,20 +350,28 @@ DisplayAspectRatio_CleanAperture;Соотношение сторон диспл�
 DisplayAspectRatio_Original;Соотношение сторон в оригинале
 DistributedBy;Распространитель
 Distributor;Распространитель
+Dolby_Atmos_Metadata;
 DolbyAtmos;
 Donate;Сделать пожертвование
 DotsPerInch;Точек на дюйм
 Downmix;
+Downmix_5.1.x;
+Downmix_5to2;
 DrcSets_Count;
 DrcSets_Effects;
 Duration;Продолжительность
 Duration_End;Время окончания
+Duration_End_Command;
 Duration_Start;Время начала
+Duration_Start_Command;
+Duration_Start2End;
+DynamicObject;
 DynamicRangeControl;
 Eac3DrcProfile;
 Edit;Править
 EditedBy;Изменено
 EditorialClassification;
+ElementaryStream;
 ElementCount;
 EMail;Почта
 Encoded_Application;Программа кодирования
@@ -357,6 +384,10 @@ EPG_Positions;Позиции EPG (внутренние)
 EpisodeTitleNumber;Номер заголовка эпизода
 Error_File;Ошибка в файле
 Error_File_Write;
+Events_PaintOn;
+Events_PopOn;
+Events_RollUp;
+Events_Total;
 ExecutiveProducer;Исполнительный продюсер
 Exit;Выход
 Exit_Hint;Выход из программы
@@ -378,7 +409,11 @@ FileExtension;Расширение
 FileName;Имя файла
 FileNameExtension;
 FileSize;Размер файла
+FirstDisplay_Delay_Frames;
+FirstDisplay_Type;
+FirstFrameOfAction;
 FlatPanelTv;
+FlowID;
 Folder;Папка
 Folder (R);Папка (R)
 Folder (R)_Hint;Выберите папку для обработки (со всеми вложенными папками)
@@ -422,6 +457,7 @@ Format_Settings_Wrapping;Режим переноса
 Format_Tier;
 Format_Url;Ссылка на формат
 Format_Version;Версия формата
+FormatDefinition;
 FpaManufacturer;Производитель FPA
 FpaPass;Пароль FPA
 FpaVersion;Версия FPA
@@ -662,6 +698,7 @@ ImageCount;Количество потоков изображений
 ImmersiveStereo;
 Info;Информация
 Instruments;Инструменты
+IntegratedLoudness;
 IntegratedLoudness_Level;
 IntegratedLoudness_Speech;
 InteractivityEnabled;
@@ -891,15 +928,20 @@ LfeMixGain;
 Library;Библиотека смешивания
 Lifetime_Subscribe_Button;
 Lightness;Якрость
+Lines_Count;
+Lines_MaxCountPerEvent;
 LineUpStart;Начало построения
 LinkedTo_Bed_Pos;
 LinkedTo_ChannelFormat_Pos;
+LinkedTo_ComplementaryObject_Pos;
 LinkedTo_Content_Pos;
 LinkedTo_Group_Pos;
 LinkedTo_Object_Pos;
 LinkedTo_PackFormat_Pos;
 LinkedTo_SignalGroup_Pos;
+LinkedTo_StreamFormat_Pos;
 LinkedTo_Substream_Pos;
+LinkedTo_TrackFormat_Pos;
 LinkedTo_TrackUID_Pos;
 List;Список
 LoRoCenterMixGain;
@@ -948,6 +990,9 @@ Menu_Hint;Дополнительные возможности
 Menu_No;Нет меню
 MenuCount;Количество потоков меню
 MenuID;Идентификатор меню
+Metadata_Format;
+Metadata_Format_Type;
+Metadata_MuxingMode;
 MixType;
 mn; м.
 Mood;Настроение
@@ -978,9 +1023,12 @@ NumberOfObjects;
 NumberOfPackFormats;
 NumberOfPresentations;
 NumberOfProgrammes;
+NumberOfStreamFormats;
 NumberOfSubstreams;
+NumberOfTrackFormats;
 NumberOfTrackUIDs;
 NumColors;Количество цветов
+Object;
 ObjectCount;
 OK;OK
 One output file per input file;Новый файл для каждого исходного
@@ -1043,6 +1091,7 @@ OverallBitRate_Minimum;Минимальный общий битрейт
 OverallBitRate_Mode;Режим общего битрейта
 OverallBitRate_Nominal;Номинальный общий битрейт
 PackageName;
+PackFormat;
 Part;Часть
 Part_Count;Количество частей
 PartNumber;Номер части
@@ -1085,6 +1134,7 @@ ProductionDesigner;Художник-постановщик
 ProductionNumber;Номер постановки
 ProductionStudio;Студия-производитель
 ProductPlacement;Размещение постановки
+Programme;
 ProgrammeHasText;Текст в программе
 ProgrammeTextLanguage;Язык текста в программе
 ProgrammeTitle;Заголовок программы
@@ -1121,6 +1171,8 @@ ScanType;Тип развёртки
 ScanType_Original;Тип развёртки в оригинале
 ScanType_StoreMethod;Метод сохранения типа развёртки
 ScreenplayBy;Сценарист
+ScreenToCenter;
+ScreenToFront;
 Season;Сезон
 SecondaryAudioLanguage;Второй язык аудио
 see below;см. ниже
@@ -1167,6 +1219,7 @@ StoreMethod_SeparatedFields_2;Раздельные поля (2-ое поле в 
 Stream;Поток
 Stream_MoreInfo;Дополнительная информация о потоке
 StreamCount;Количество потоков такого типа
+StreamFormat;
 StreamID;Идентификатор потока
 streamIdentifier;
 StreamKind;Тип потока
@@ -1224,23 +1277,49 @@ ThanksTo;Благодарности
 Thousands separator;Разделитель тысяч
 TimeCode;Временной код
 TimeCode_FirstFrame;Временной код первого кадра
+TimeCode_LastFrame;
+TimeCode_MaxFrameNumber;
+TimeCode_MaxFrameNumber_Theory;
 TimeCode_Settings;Параметры временного кода
 TimeCode_Source;Оригинал временного кода
-TimeCode_Striped;Временной код, чередующийся
+TimeCode_Stripped;Временной код, чередующийся
 TimeStamp;Временная метка
 TimeZone;Часовой пояс
 Title;Заголовок
 Title_More;Заголовок, дополнительно
+Top4ToTop2;
+TopBackToFront;
+TopBackToSide;
+TopFrontToBack;
+TopFrontToFront;
+TopFrontToSide;
 Total;Всего
 TotalNumberOfParts;Общее количество частей
 TotalProgrammeDuration;Общая продолжительность программы
 Track;Трек
 Track_Count;Количество треков
+TrackFormat;
+TrackIndex;
+TrackUID;
 transfer_characteristics;Характеристики трансфера
 Translate_Reports;
 Translator;Переводчик
+Transport;
 Tree;Дерево
 Tree & Text;Дерево и текст
+Trim_Center;
+Trim_Height;
+Trim_Surround;
+TrimMode;
+TrimMode0i;
+TrimMode1i;
+TrimMode2i;
+TrimMode3i;
+TrimMode4i;
+TrimMode5i;
+TrimMode6i;
+TrimMode7i;
+TrimMode8i;
 TruePeakLevel;
 TruePeakLevel_Album;
 Type;Тип
@@ -1285,5 +1364,5 @@ Written_Location;Место записи
 WrittenBy;Запись произвёл
 Yes;Да
 Your system;Ваша система
-ZZ_Automatic_Percent;55
-ZZ_AutomaticLanguage_Percent;86
+ZZ_Automatic_Percent;52
+ZZ_AutomaticLanguage_Percent;81

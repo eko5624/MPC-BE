@@ -32,6 +32,7 @@ class File_DvDif : public File__Analyze
 public :
     //In
     int64u Frame_Count_Valid;
+    bool   FrameIsAlwaysComplete;
     int8u  AuxToAnalyze; //Only Aux must be parsed
     bool   IgnoreAudio;
 
@@ -60,6 +61,7 @@ protected :
 
     //Buffer - Global
     #ifdef MEDIAINFO_DVDIF_ANALYZE_YES
+    void Read_Buffer_Init();
     void Read_Buffer_Continue();
     #endif //MEDIAINFO_DVDIF_ANALYZE_YES
     void Read_Buffer_Unsynched();
@@ -222,6 +224,7 @@ protected :
     bool   REC_ST;
     bool   REC_END;
     bool   REC_IsValid;
+    std::vector<int8u> DirectionSpeed;
     struct dvdate
     {
         int8u  Days;
@@ -272,6 +275,7 @@ protected :
     dvtime Speed_TimeCode_Last;
     dvtime Speed_TimeCode_Current;
     dvtime Speed_TimeCode_Current_Theory;
+    dvtime Speed_TimeCode_Current_Theory2;
     Ztring Speed_TimeCodeZ_First;
     Ztring Speed_TimeCodeZ_Last;
     Ztring Speed_TimeCodeZ_Current;
@@ -283,6 +287,7 @@ protected :
     Ztring Speed_RecTimeZ_Last;
     Ztring Speed_RecTimeZ_Current;
     dvdate Speed_RecDate_Current;
+    dvdate Speed_RecDate_Current_Theory2;
     Ztring Speed_RecDateZ_First;
     Ztring Speed_RecDateZ_Last;
     Ztring Speed_RecDateZ_Current;

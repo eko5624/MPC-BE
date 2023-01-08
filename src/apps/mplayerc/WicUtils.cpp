@@ -1,5 +1,5 @@
 /*
- * (C) 2020-2022 see Authors.txt
+ * (C) 2020-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -175,6 +175,49 @@ HRESULT WicCheckComponent(const GUID guid)
 	return hr;
 }
 
+#if 0
+// Workaround when IWICImagingFactory::CreateDecoderFromStream fails with WINCODEC_ERR_PROPERTYUNEXPECTEDTYPE error for some JPEGs.
+HRESULT WicDecodeImageOle(IWICImagingFactory* pWICFactory, IWICBitmap** ppBitmap, const bool pma, IStream* pIStream)
+{
+	const WICPixelFormatGUID dstPixelFormat = pma ? GUID_WICPixelFormat32bppPBGRA : GUID_WICPixelFormat32bppBGRA;
+	CComPtr<IWICBitmap> pTempBitmap;
+
+	LPPICTURE pPicture = nullptr;
+	HRESULT hr = ::OleLoadPicture(pIStream, 0, TRUE, IID_IPicture, (LPVOID*)&pPicture);
+	if (SUCCEEDED(hr)) {
+		HBITMAP hBitmap = nullptr;
+		hr = pPicture->get_Handle((OLE_HANDLE*)&hBitmap);
+		if (SUCCEEDED(hr)) {
+			hr = pWICFactory->CreateBitmapFromHBITMAP(hBitmap, nullptr, WICBitmapIgnoreAlpha, &pTempBitmap);
+		}
+		pPicture->Release();
+	}
+
+	WICPixelFormatGUID pixelFormat = {};
+	if (SUCCEEDED(hr)) {
+		hr = pTempBitmap->GetPixelFormat(&pixelFormat);
+		if (SUCCEEDED(hr)) {
+			if (IsEqualGUID(pixelFormat, dstPixelFormat)) {
+				*ppBitmap = pTempBitmap.Detach();
+
+				return hr;
+			}
+		}
+	}
+
+	CComPtr<IWICBitmapSource> pBitmapSource;
+	if (SUCCEEDED(hr)) {
+		hr = WICConvertBitmapSource(dstPixelFormat, pTempBitmap, &pBitmapSource);
+	}
+
+	if (SUCCEEDED(hr)) {
+		hr = pWICFactory->CreateBitmapFromSource(pBitmapSource, WICBitmapCacheOnLoad, ppBitmap);
+	}
+
+	return hr;
+}
+#endif
+
 HRESULT WicDecodeImage(IWICImagingFactory* pWICFactory, IWICBitmap** ppBitmap, const bool pma, IWICBitmapDecoder* pDecoder)
 {
 	CComPtr<IWICBitmapFrameDecode> pFrameDecode;
@@ -220,9 +263,11 @@ HRESULT WicLoadImage(IWICBitmap** ppBitmap, const bool pma, const std::wstring_v
 		filename.data(),
 		nullptr,
 		GENERIC_READ,
-		WICDecodeMetadataCacheOnLoad,
+		// Specify WICDecodeMetadataCacheOnDemand or some JPEGs will fail to load with a WINCODEC_ERR_PROPERTYUNEXPECTEDTYPE error.
+		WICDecodeMetadataCacheOnDemand,
 		&pDecoder
 	);
+
 	if (SUCCEEDED(hr)) {
 		hr = WicDecodeImage(pWICFactory, ppBitmap, pma, pDecoder);
 	}
@@ -248,11 +293,13 @@ HRESULT WicLoadImage(IWICBitmap** ppBitmap, const bool pma, BYTE* input, const s
 	if (SUCCEEDED(hr)) {
 		hr = pStream->InitializeFromMemory(input, size);
 	}
+
 	if (SUCCEEDED(hr)) {
-		hr = pWICFactory->CreateDecoderFromStream(pStream, nullptr, WICDecodeMetadataCacheOnLoad, &pDecoder);
-	}
-	if (SUCCEEDED(hr)) {
-		hr = WicDecodeImage(pWICFactory, ppBitmap, pma, pDecoder);
+		// Specify WICDecodeMetadataCacheOnDemand or some JPEGs will fail to load with a WINCODEC_ERR_PROPERTYUNEXPECTEDTYPE error.
+		hr = pWICFactory->CreateDecoderFromStream(pStream, nullptr, WICDecodeMetadataCacheOnDemand, &pDecoder);
+		if (SUCCEEDED(hr)) {
+			hr = WicDecodeImage(pWICFactory, ppBitmap, pma, pDecoder);
+		}
 	}
 
 	return hr;
@@ -276,11 +323,13 @@ HRESULT WicLoadImage(IWICBitmap** ppBitmap, const bool pma, IStream* pIStream)
 	if (SUCCEEDED(hr)) {
 		hr = pStream->InitializeFromIStream(pIStream);
 	}
+
 	if (SUCCEEDED(hr)) {
-		hr = pWICFactory->CreateDecoderFromStream(pStream, nullptr, WICDecodeMetadataCacheOnLoad, &pDecoder);
-	}
-	if (SUCCEEDED(hr)) {
-		hr = WicDecodeImage(pWICFactory, ppBitmap, pma, pDecoder);
+		// Specify WICDecodeMetadataCacheOnDemand or some JPEGs will fail to load with a WINCODEC_ERR_PROPERTYUNEXPECTEDTYPE error
+		hr = pWICFactory->CreateDecoderFromStream(pStream, nullptr, WICDecodeMetadataCacheOnDemand, &pDecoder);
+		if (SUCCEEDED(hr)) {
+			hr = WicDecodeImage(pWICFactory, ppBitmap, pma, pDecoder);
+		}
 	}
 
 	return hr;
@@ -475,7 +524,7 @@ HRESULT WicSaveImage(
 	if (SUCCEEDED(hr)) {
 		if (containerFormat == GUID_ContainerFormatJpeg) {
 			PROPBAG2 option = {};
-			option.pstrName = L"ImageQuality";
+			option.pstrName = (LPOLESTR)L"ImageQuality";
 			VARIANT varValue;
 			VariantInit(&varValue);
 			varValue.vt = VT_R4;

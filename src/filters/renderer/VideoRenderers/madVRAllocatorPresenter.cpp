@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -22,7 +22,6 @@
 #include "madVRAllocatorPresenter.h"
 #include "SubPic/DX9SubPic.h"
 #include "SubPic/SubPicQueueImpl.h"
-#include "RenderersSettings.h"
 #include "Variables.h"
 #include <clsids.h>
 #include <mvrInterfaces.h>
@@ -35,10 +34,10 @@ using namespace DSObjects;
 //
 
 CmadVRAllocatorPresenter::CmadVRAllocatorPresenter(HWND hWnd, HRESULT& hr, CString &_Error)
-	: CSubPicAllocatorPresenterImpl(hWnd, hr, &_Error)
+	: CAllocatorPresenterImpl(hWnd, hr, &_Error)
 {
 	if (FAILED(hr)) {
-		_Error += L"ISubPicAllocatorPresenterImpl failed\n";
+		_Error += L"IAllocatorPresenterImpl failed\n";
 		return;
 	}
 
@@ -49,7 +48,7 @@ CmadVRAllocatorPresenter::~CmadVRAllocatorPresenter()
 {
 	// the order is important here
 	m_pSubPicQueue.Release();
-	m_pAllocator.Release();
+	m_pSubPicAllocator.Release();
 	m_pMVR.Release();
 }
 
@@ -73,24 +72,22 @@ HRESULT CmadVRAllocatorPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
 	if (!pD3DDev) {
 		// release all resources
 		m_pSubPicQueue.Release();
-		m_pAllocator.Release();
+		m_pSubPicAllocator.Release();
 		return S_OK;
 	}
-
-	CRenderersSettings& rs = GetRenderersSettings();
 
 	CSize screenSize;
 	MONITORINFO mi = { sizeof(MONITORINFO) };
 	if (GetMonitorInfoW(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &mi)) {
 		screenSize.SetSize(mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top);
 	}
-	InitMaxSubtitleTextureSize(rs.iSubpicMaxTexWidth, screenSize);
+	InitMaxSubtitleTextureSize(m_SubpicSets.iMaxTexWidth, screenSize);
 
-	if (m_pAllocator) {
-		m_pAllocator->ChangeDevice(pD3DDev);
+	if (m_pSubPicAllocator) {
+		m_pSubPicAllocator->ChangeDevice(pD3DDev);
 	} else {
-		m_pAllocator = DNew CDX9SubPicAllocator(pD3DDev, m_maxSubtitleTextureSize, true);
-		if (!m_pAllocator) {
+		m_pSubPicAllocator = DNew CDX9SubPicAllocator(pD3DDev, m_maxSubtitleTextureSize, true);
+		if (!m_pSubPicAllocator) {
 			return E_FAIL;
 		}
 	}
@@ -98,9 +95,9 @@ HRESULT CmadVRAllocatorPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
 	HRESULT hr = S_OK;
 	if (!m_pSubPicQueue) {
 		CAutoLock cAutoLock(this);
-		m_pSubPicQueue = rs.nSubpicCount > 0
-						 ? (ISubPicQueue*)DNew CSubPicQueue(rs.nSubpicCount, !rs.bSubpicAnimationWhenBuffering, rs.bSubpicAllowDrop, m_pAllocator, &hr)
-						 : (ISubPicQueue*)DNew CSubPicQueueNoThread(!rs.bSubpicAnimationWhenBuffering, m_pAllocator, &hr);
+		m_pSubPicQueue = m_SubpicSets.nCount > 0
+						 ? (ISubPicQueue*)DNew CSubPicQueue(m_SubpicSets.nCount, !m_SubpicSets.bAnimationWhenBuffering, m_SubpicSets.bAllowDrop, m_pSubPicAllocator, &hr)
+						 : (ISubPicQueue*)DNew CSubPicQueueNoThread(!m_SubpicSets.bAnimationWhenBuffering, m_pSubPicAllocator, &hr);
 	} else {
 		m_pSubPicQueue->Invalidate();
 	}
@@ -143,7 +140,7 @@ HRESULT CmadVRAllocatorPresenter::RenderEx3(REFERENCE_TIME rtStart,
 	return S_OK;
 }
 
-// ISubPicAllocatorPresenter3
+// IAllocatorPresenter
 
 STDMETHODIMP CmadVRAllocatorPresenter::CreateRenderer(IUnknown** ppRenderer)
 {
@@ -283,7 +280,7 @@ STDMETHODIMP CmadVRAllocatorPresenter::AddPixelShader(int target, LPCWSTR name, 
 	return hr;
 }
 
-// ISubPicAllocatorPresenter3
+// IAllocatorPresenter
 
 STDMETHODIMP_(bool) CmadVRAllocatorPresenter::IsRendering()
 {

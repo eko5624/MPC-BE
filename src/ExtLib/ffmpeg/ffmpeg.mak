@@ -5,6 +5,7 @@ SPEEX_DIR     = ../speex
 SOXR_DIR      = ../soxr
 DAV1_DIR      = ../dav1d
 FFNVCODEC_DIR = ../nv-codec-headers/include
+UAVS3D_DIR    = ../uavs3d/source/decoder
 
 ifeq ($(64BIT),yes)
 	PLATFORM = x64
@@ -30,7 +31,7 @@ TARGET_LIB        = $(TARGET_LIB_DIR)/ffmpeg.lib
 ARSCRIPT          = $(OBJ_DIR)script.ar
 
 # Compiler and yasm flags
-CFLAGS = -I. -I.. -I compat/atomics/win32 -I$(ZLIB_DIR) -I$(OPENJPEG_DIR) -I$(SPEEX_DIR) -I$(SOXR_DIR) -I$(DAV1_DIR) -I$(FFNVCODEC_DIR) \
+CFLAGS = -I. -I.. -I compat/atomics/win32 -I$(ZLIB_DIR) -I$(OPENJPEG_DIR) -I$(SPEEX_DIR) -I$(SOXR_DIR) -I$(DAV1_DIR) -I$(FFNVCODEC_DIR) -I$(UAVS3D_DIR) \
 	   -DHAVE_AV_CONFIG_H -D_ISOC99_SOURCE -D_XOPEN_SOURCE=600 \
 	   -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DOPJ_STATIC \
 	   -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 \
@@ -131,6 +132,7 @@ SRCS_LC = \
 	libavcodec/atrac3plus.c \
 	libavcodec/atrac3plusdec.c \
 	libavcodec/atrac3plusdsp.c \
+	libavcodec/atrac9dec.c \
 	libavcodec/atsc_a53.c \
 	libavcodec/audiodsp.c \
 	libavcodec/av1_frame_split_bsf.c \
@@ -142,6 +144,7 @@ SRCS_LC = \
 	libavcodec/avfft.c \
 	libavcodec/avpacket.c \
 	libavcodec/avpicture.c \
+	libavcodec/avs3_parser.c \
 	libavcodec/bgmc.c \
 	libavcodec/bink.c \
 	libavcodec/binkaudio.c \
@@ -213,6 +216,7 @@ SRCS_LC = \
 	libavcodec/dxva2_mpeg2.c \
 	libavcodec/dxva2_vc1.c \
 	libavcodec/dxva2_vp9.c \
+	libavcodec/dynamic_hdr_vivid.c \
 	libavcodec/dynamic_hdr10_plus.c \
 	libavcodec/eac3_data.c \
 	libavcodec/eac3dec.c \
@@ -231,15 +235,19 @@ SRCS_LC = \
 	libavcodec/ffv1dec.c \
 	libavcodec/fic.c \
 	libavcodec/flac.c \
+	libavcodec/flac_parser.c \
 	libavcodec/flacdata.c \
 	libavcodec/flacdec.c \
 	libavcodec/flacdsp.c \
 	libavcodec/flashsv.c \
+	libavcodec/float2half.c \
 	libavcodec/flvdec.c \
 	libavcodec/fmtconvert.c \
 	libavcodec/frame_thread_encoder.c \
 	libavcodec/fraps.c \
 	libavcodec/g2meet.c \
+	libavcodec/g726.c \
+	libavcodec/get_buffer.c \
 	libavcodec/golomb.c \
 	libavcodec/h263.c \
 	libavcodec/h263_parser.c \
@@ -268,6 +276,7 @@ SRCS_LC = \
 	libavcodec/h264qpel.c \
 	libavcodec/h2645_parse.c \
 	libavcodec/h274.c \
+	libavcodec/half2float.c \
 	libavcodec/hap.c \
 	libavcodec/hapdec.c \
 	libavcodec/hevc_cabac.c \
@@ -318,6 +327,7 @@ SRCS_LC = \
 	libavcodec/libdav1d.c \
 	libavcodec/libopenjpegdec.c \
 	libavcodec/libspeexdec.c \
+	libavcodec/libuavs3d.c \
 	libavcodec/lossless_audiodsp.c \
 	libavcodec/lossless_videodsp.c \
 	libavcodec/lsp.c \
@@ -358,6 +368,7 @@ SRCS_LC = \
 	libavcodec/mpeg4video.c \
 	libavcodec/mpeg4video_parser.c \
 	libavcodec/mpeg4videodec.c \
+	libavcodec/mpeg4videodsp.c \
 	libavcodec/mpeg4videoenc.c \
 	libavcodec/mpegaudio.c \
 	libavcodec/mpegaudio_parser.c \
@@ -379,7 +390,6 @@ SRCS_LC = \
 	libavcodec/mpegvideo_motion.c \
 	libavcodec/mpegvideo_parser.c \
 	libavcodec/mpegvideodata.c \
-	libavcodec/mpegvideodsp.c \
 	libavcodec/mpegvideoencdsp.c \
 	libavcodec/msmpeg4.c \
 	libavcodec/msmpeg4data.c \
@@ -408,13 +418,14 @@ SRCS_LC_B = \
 	libavcodec/nvdec_vc1.c \
 	libavcodec/nvdec_vp9.c \
 	libavcodec/options.c \
-	libavcodec/opus.c \
 	libavcodec/opus_celt.c \
+	libavcodec/opus_parse.c \
 	libavcodec/opus_parser.c \
 	libavcodec/opus_pvq.c \
 	libavcodec/opus_rc.c \
 	libavcodec/opus_silk.c \
 	libavcodec/opusdec.c \
+	libavcodec/opusdec_celt.c \
 	libavcodec/opusdsp.c \
 	libavcodec/opustab.c \
 	libavcodec/parser.c \
@@ -466,6 +477,7 @@ SRCS_LC_B = \
 	libavcodec/snow.c \
 	libavcodec/sp5xdec.c \
 	libavcodec/speedhq.c \
+	libavcodec/speedhqdec.c \
 	libavcodec/startcode.c \
 	libavcodec/svq1.c \
 	libavcodec/svq13.c \
@@ -502,7 +514,9 @@ SRCS_LC_B = \
 	libavcodec/vc1data.c \
 	libavcodec/vc1dec.c \
 	libavcodec/vc1dsp.c \
+	libavcodec/version.c \
 	libavcodec/videodsp.c \
+	libavcodec/vlc.c \
 	libavcodec/vmnc.c \
 	libavcodec/vorbis.c \
 	libavcodec/vorbis_data.c \
@@ -516,7 +530,6 @@ SRCS_LC_B = \
 	libavcodec/vp56.c \
 	libavcodec/vp56data.c \
 	libavcodec/vp56dsp.c \
-	libavcodec/vp56rac.c \
 	libavcodec/vp6.c \
 	libavcodec/vp6dsp.c \
 	libavcodec/vp8.c \
@@ -537,6 +550,7 @@ SRCS_LC_B = \
 	libavcodec/vp9mvs.c \
 	libavcodec/vp9prob.c \
 	libavcodec/vp9recon.c \
+	libavcodec/vpx_rac.c\
 	libavcodec/wavpack.c \
 	libavcodec/wavpackdata.c \
 	libavcodec/wma.c \
@@ -552,6 +566,7 @@ SRCS_LC_B = \
 	libavcodec/wmv2dsp.c \
 	libavcodec/xiph.c \
 	libavcodec/xvididct.c \
+	libavcodec/zlib_wrapper.c \
 	\
 	libavcodec/x86/aacpsdsp_init.c \
 	libavcodec/x86/ac3dsp_init.c \
@@ -588,9 +603,9 @@ SRCS_LC_B = \
 	libavcodec/x86/mdct15_init.c \
 	libavcodec/x86/me_cmp_init.c \
 	libavcodec/x86/mlpdsp_init.c \
+	libavcodec/x86/mpeg4videodsp.c \
 	libavcodec/x86/mpegaudiodsp.c \
 	libavcodec/x86/mpegvideo.c \
-	libavcodec/x86/mpegvideodsp.c \
 	libavcodec/x86/mpegvideoencdsp_init.c \
 	libavcodec/x86/opusdsp_init.c \
 	libavcodec/x86/pixblockdsp_init.c \
@@ -635,10 +650,12 @@ SRCS_LF = \
 	libavfilter/framequeue.c \
 	libavfilter/graphparser.c \
 	libavfilter/pthread.c \
+	libavfilter/version.c \
 	libavfilter/video.c
 
 SRCS_LU = \
 	libavutil/audio_fifo.c \
+	libavutil/avsscanf.c \
 	libavutil/avstring.c \
 	libavutil/bprint.c \
 	libavutil/buffer.c \
@@ -656,8 +673,11 @@ SRCS_LU = \
 	libavutil/film_grain_params.c \
 	libavutil/fixed_dsp.c \
 	libavutil/float_dsp.c \
+	libavutil/float2half.c \
 	libavutil/frame.c \
+	libavutil/half2float.c \
 	libavutil/hdr_dynamic_metadata.c \
+	libavutil/hdr_dynamic_vivid_metadata.c \
 	libavutil/hwcontext.c \
 	libavutil/hwcontext_cuda.c \
 	libavutil/hwcontext_d3d11va.c \
@@ -692,6 +712,7 @@ SRCS_LU = \
 	libavutil/tx_float.c \
 	libavutil/tx_int32.c \
 	libavutil/utils.c \
+	libavutil/version.c \
 	libavutil/video_enc_params.c \
 	\
 	libavutil/x86/cpu.c \
@@ -711,6 +732,7 @@ SRCS_LR = \
 	libswresample/soxr_resample.c \
 	libswresample/swresample.c \
 	libswresample/swresample_frame.c \
+	libswresample/version.c \
 	\
 	libswresample/x86/audio_convert_init.c \
 	libswresample/x86/rematrix_init.c \
@@ -719,6 +741,7 @@ SRCS_LR = \
 SRCS_LS = \
 	libswscale/alphablend.c \
 	libswscale/gamma.c \
+	libswscale/half2float.c \
 	libswscale/hscale.c \
 	libswscale/hscale_fast_bilinear.c \
 	libswscale/input.c \
@@ -729,6 +752,7 @@ SRCS_LS = \
 	libswscale/swscale.c \
 	libswscale/swscale_unscaled.c \
 	libswscale/utils.c \
+	libswscale/version.c \
 	libswscale/vscale.c \
 	libswscale/yuv2rgb.c \
 	\

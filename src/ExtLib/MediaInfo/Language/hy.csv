@@ -150,6 +150,12 @@
 : ;: 
 3D;
 3DType;
+5.1.2ch;
+5.1.4ch;
+5.1ch;
+608_Mode;
+7.1.2ch;
+7.1ch;
 About;Ծրագրի մասին
 About_Hint;Կապնվել ծրագրի հեղինակի հետ կամ բացել ծրագրի կայքը
 Accompaniment;Ուղեկցումը
@@ -180,6 +186,7 @@ Arranger;Կազմակերպիչը
 ArtDirector;ArtDirector
 AspectRatio;Հարաբերակցությունը
 AssistantDirector;Ռեժիսորի օգնականը
+AssociatedVideo_FrameRate;
 at;ընդ.
 At least one file;Ընտրեք որևէ ֆայլ
 Audio;Ձայնը
@@ -198,11 +205,15 @@ AudioRenderingIndication;
 AudioSceneInfoID;
 AudioTrackLayout;
 Author;Հեղինակը
+Back4ToBack2;
+Balance_FrontBackListener;
+Balance_FrontBackOverheadFloor;
 BarCode;Կոդը
 Basic;Կարճ
 Basic_Note;Ուշադր. լրացուցիչ տեղեկությունների համար ընտրեք այլ տարբերակ (աղյուսակ, ծառի տեսքով,...)
 BedChannelConfiguration;
 BedChannelCount;
+BinauralRenderMode;
 BitDepth;Բիթայնությունը
 BitDepth_Detected;
 BitDepth_Stored;
@@ -217,9 +228,11 @@ BitRate_Nominal;Նոմինալ բիթրեյթը
 Bits-(Pixel*Frame);Բիթ/(Փիքսել*Կադր)
 BufferSize;Պահոցի չափը
 Cancel;Մերժել
+CaptionServiceName;
 Channel(s);Ալիք(ներ)
 ChannelCoded;
 ChannelConfiguration;
+ChannelFormat;
 ChannelLayout;
 ChannelMode;
 ChannelPositions;Դիրքը
@@ -277,6 +290,7 @@ colour_range;
 Comment;Մեկնաբանություն
 CommissionedBy;Երաշխավորող
 Compilation;
+ComplementaryObject;
 CompleteName;Ամբողջական անունը
 CompletionDate;
 ComplexityIndex;
@@ -287,9 +301,13 @@ Compression_Mode_Lossy;Կորստով
 Compression_Ratio;Սեղման աստիճանը
 Conductor;Դիրիժորը
 ConformanceCheck;
+ConformanceErrors;
+ConformanceInfos;
+ConformanceWarnings;
 ContactEmail;
 ContactTelephoneNumber;
 Container and general information;Ընդհանուր տեղեկությունը
+Content;
 ContentType;Պարունակության տեսակը
 CoProducer;Համառեժիսոր
 Copyright;Հեղ. իրավունքը
@@ -304,6 +322,7 @@ Cover_Mime;Կազմի MIME տեսակ
 Cover_Type;Կազմի տեսակը
 Cropped;Կտրման չափերը
 Custom;Ընտրված
+CustomDownmixTargets;
 Customize;Կարգավորում
 DarkMode;
 Date;Ամսաթիվը
@@ -331,20 +350,28 @@ DisplayAspectRatio_CleanAperture;
 DisplayAspectRatio_Original;Կողմերի հարաբեր-ը օրիգինալում
 DistributedBy;Տարածողը
 Distributor;
+Dolby_Atmos_Metadata;
 DolbyAtmos;
 Donate;Օժանդակություն
 DotsPerInch;Կետեր դյույմի վրա
 Downmix;
+Downmix_5.1.x;
+Downmix_5to2;
 DrcSets_Count;
 DrcSets_Effects;
 Duration;Տևողությունը
 Duration_End;Ավարտվելու ժ-ը
+Duration_End_Command;
 Duration_Start;Սկսվելու ժ-ը
+Duration_Start_Command;
+Duration_Start2End;
+DynamicObject;
 DynamicRangeControl;
 Eac3DrcProfile;
 Edit;Փոփոխել
 EditedBy;Փոփոխվել է
 EditorialClassification;
+ElementaryStream;
 ElementCount;
 EMail;Փոստը
 Encoded_Application;Կոդավորող ծրագիրը
@@ -357,6 +384,10 @@ EPG_Positions;EPG-ի դիրքը (ներքին)
 EpisodeTitleNumber;
 Error_File;Սխալ ֆայլում
 Error_File_Write;
+Events_PaintOn;
+Events_PopOn;
+Events_RollUp;
+Events_Total;
 ExecutiveProducer;Ռեժիսորի օգնականը
 Exit;Ելք
 Exit_Hint;Ելք ծրագրից
@@ -378,7 +409,11 @@ FileExtension;Տեսակը
 FileName;Ֆայլի անունը
 FileNameExtension;
 FileSize;Ֆայլի չափը
+FirstDisplay_Delay_Frames;
+FirstDisplay_Type;
+FirstFrameOfAction;
 FlatPanelTv;
+FlowID;
 Folder;Թղթապանակը
 Folder (R);Թղթապանակը (R)
 Folder (R)_Hint;Ընտրեք թղթապանակը (բոլոր ենթաթղթապանակներով)
@@ -422,6 +457,7 @@ Format_Settings_Wrapping;
 Format_Tier;
 Format_Url;Տեսակի հղումը
 Format_Version;Տեսակի տարբերակը
+FormatDefinition;
 FpaManufacturer;
 FpaPass;
 FpaVersion;
@@ -662,6 +698,7 @@ ImageCount;Պատկերների հոսքերի քանակը
 ImmersiveStereo;
 Info;Տեղեկություն
 Instruments;Գործիքներ
+IntegratedLoudness;
 IntegratedLoudness_Level;
 IntegratedLoudness_Speech;
 InteractivityEnabled;
@@ -891,15 +928,20 @@ LfeMixGain;
 Library;Շտեմարանը
 Lifetime_Subscribe_Button;
 Lightness;Պայծառությունը
+Lines_Count;
+Lines_MaxCountPerEvent;
 LineUpStart;
 LinkedTo_Bed_Pos;
 LinkedTo_ChannelFormat_Pos;
+LinkedTo_ComplementaryObject_Pos;
 LinkedTo_Content_Pos;
 LinkedTo_Group_Pos;
 LinkedTo_Object_Pos;
 LinkedTo_PackFormat_Pos;
 LinkedTo_SignalGroup_Pos;
+LinkedTo_StreamFormat_Pos;
 LinkedTo_Substream_Pos;
+LinkedTo_TrackFormat_Pos;
 LinkedTo_TrackUID_Pos;
 List;Ցանկը
 LoRoCenterMixGain;
@@ -948,6 +990,9 @@ Menu_Hint;Լրացուցիչ հնարավորություններ
 Menu_No;Չկա Ընտրացանկ
 MenuCount;Ընտրացանկի հոսքերի ք-ը
 MenuID;Ընտրացանկի ID-ին
+Metadata_Format;
+Metadata_Format_Type;
+Metadata_MuxingMode;
 MixType;
 mn; ր.
 Mood;Կարգավորված
@@ -978,9 +1023,12 @@ NumberOfObjects;
 NumberOfPackFormats;
 NumberOfPresentations;
 NumberOfProgrammes;
+NumberOfStreamFormats;
 NumberOfSubstreams;
+NumberOfTrackFormats;
 NumberOfTrackUIDs;
 NumColors;Գույների քանակը
+Object;
 ObjectCount;
 OK;ԼԱՎ
 One output file per input file;Նոր ֆայլ յուրաքանչյուրի համար
@@ -1043,6 +1091,7 @@ OverallBitRate_Minimum;Նվազագույն ընդ. բիթրեյթը
 OverallBitRate_Mode;Բիթրեյթի ընդ. եղանակը
 OverallBitRate_Nominal;Բիթրեյթի պայմ. եղանակը
 PackageName;
+PackFormat;
 Part;Մաս
 Part_Count;Ժամերի ք-ը.
 PartNumber;
@@ -1085,6 +1134,7 @@ ProductionDesigner;Դիզայնի մշակողը
 ProductionNumber;
 ProductionStudio;Դիզայնի ստուդիան
 ProductPlacement;
+Programme;
 ProgrammeHasText;
 ProgrammeTextLanguage;
 ProgrammeTitle;
@@ -1121,6 +1171,8 @@ ScanType;Ստուգման տեսակը
 ScanType_Original;
 ScanType_StoreMethod;
 ScreenplayBy;Սցենարը՝
+ScreenToCenter;
+ScreenToFront;
 Season;Խաղաշրջանը
 SecondaryAudioLanguage;
 see below;նայեք ներքև
@@ -1167,6 +1219,7 @@ StoreMethod_SeparatedFields_2;
 Stream;Հոսքը
 Stream_MoreInfo;Լր. տեղեկություններ հոսքի մասին
 StreamCount;Այս տեսակի հոսքերի ք-ը
+StreamFormat;
 StreamID;Հոսքի ID-ին
 streamIdentifier;
 StreamKind;Հոսքի տեսակը
@@ -1224,23 +1277,49 @@ ThanksTo;Շնորհակալ ենք
 Thousands separator;Հազարյակի բաժանիչը
 TimeCode;
 TimeCode_FirstFrame;
+TimeCode_LastFrame;
+TimeCode_MaxFrameNumber;
+TimeCode_MaxFrameNumber_Theory;
 TimeCode_Settings;
 TimeCode_Source;
-TimeCode_Striped;
+TimeCode_Stripped;
 TimeStamp;
 TimeZone;Ժամային գոտին
 Title;Անունը
 Title_More;Անունը, լրացուցիչ
+Top4ToTop2;
+TopBackToFront;
+TopBackToSide;
+TopFrontToBack;
+TopFrontToFront;
+TopFrontToSide;
 Total;Ընդամենը
 TotalNumberOfParts;
 TotalProgrammeDuration;
 Track;Շավիղը
 Track_Count;Շավիղների ք-ը
+TrackFormat;
+TrackIndex;
+TrackUID;
 transfer_characteristics;Փոխանցման բնութագրումը
 Translate_Reports;
 Translator;Hrant Ohanyan
+Transport;
 Tree;Ծառի տեսքով
 Tree & Text;Ծառի տեսքով և տեքստ
+Trim_Center;
+Trim_Height;
+Trim_Surround;
+TrimMode;
+TrimMode0i;
+TrimMode1i;
+TrimMode2i;
+TrimMode3i;
+TrimMode4i;
+TrimMode5i;
+TrimMode6i;
+TrimMode7i;
+TrimMode8i;
 TruePeakLevel;
 TruePeakLevel_Album;
 Type;
@@ -1285,5 +1364,5 @@ Written_Location;Գրելու տեղը
 WrittenBy;Գրվել է՝
 Yes;Այո
 Your system;Ձեր համակարգը
-ZZ_Automatic_Percent;74
-ZZ_AutomaticLanguage_Percent;78
+ZZ_Automatic_Percent;70
+ZZ_AutomaticLanguage_Percent;74

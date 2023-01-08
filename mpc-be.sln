@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.0.31912.275
+VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 15.0.27130.2036
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Apps", "Apps", "{A21F07E6-A891-479C-98EA-EDB58CE4EFAB}"
 EndProject
@@ -93,7 +93,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDDAReader", "src\filters\r
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDXAReader", "src\filters\reader\CDXAReader\CDXAReader.vcxproj", "{4D3B4FF4-535A-4201-AB7D-9AEC1E737A95}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UDPReader", "src\filters\reader\UDPReader\UDPReader.vcxproj", "{3020FF9B-8202-488D-B137-11DECC510E6E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MPCStreamReader", "src\filters\reader\StreamReader\MPCStreamReader.vcxproj", "{3020FF9B-8202-488D-B137-11DECC510E6E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VTSReader", "src\filters\reader\VTSReader\VTSReader.vcxproj", "{664E726B-EEEE-403A-AC15-345D9C9E1375}"
 EndProject
@@ -126,8 +126,11 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MpaDecFilter", "src\filters\transform\MpaDecFilter\MpaDecFilter.vcxproj", "{4421516D-10A6-41C1-ADF3-099573BBB0C6}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MPCVideoDec", "src\filters\transform\MPCVideoDec\MPCVideoDec.vcxproj", "{58E36BF5-4A06-47E4-BD40-4CCEF8C634DF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA} = {1CDBE640-BB75-422C-B63A-8C70C4D48BEA}
+	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Mpeg2DecFilter", "src\filters\transform\Mpeg2DecFilter\Mpeg2DecFilter.vcxproj", "{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MpcDvdVideoDecoder", "src\filters\transform\DVDVideoDecoder\MpcDvdVideoDecoder.vcxproj", "{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lcms2", "src\ExtLib\lcms2\lcms2.vcxproj", "{ACF5C64B-78AA-4730-91A2-24F4910FBAD9}"
 EndProject
@@ -157,6 +160,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Include", "Include", "{EA36
 		include\IBufferInfo.h = include\IBufferInfo.h
 		include\IChapterInfo.h = include\IChapterInfo.h
 		include\ID3DFullscreenControl.h = include\ID3DFullscreenControl.h
+		include\IDSMResourceBag.h = include\IDSMResourceBag.h
 		include\IFilterVersion.h = include\IFilterVersion.h
 		include\IKeyFrameInfo.h = include\IKeyFrameInfo.h
 		include\IMediaSample3D.h = include\IMediaSample3D.h
@@ -194,6 +198,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "speex", "src\ExtLib\speex\speex.vcxproj", "{F4C233D1-297B-4B6B-BD63-A7D38F88AA83}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mfx_dispatch", "src\ExtLib\mfx_dispatch\mfx_dispatch.vcxproj", "{B86606FD-A72D-4AF3-8078-A9CDD3B08FDC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "uavs3d", "src\ExtLib\uavs3d\uavs3d.vcxproj", "{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -986,6 +992,7 @@ Global
 		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Debug Filter|Win32.ActiveCfg = Debug Filter|Win32
 		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Debug Filter|Win32.Build.0 = Debug Filter|Win32
 		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Debug Filter|x64.ActiveCfg = Debug Filter|x64
+		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Debug Filter|x64.Build.0 = Debug Filter|x64
 		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Debug|Win32.ActiveCfg = Debug|Win32
 		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Debug|Win32.Build.0 = Debug|Win32
 		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Debug|x64.ActiveCfg = Debug|x64
@@ -993,6 +1000,7 @@ Global
 		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Release Filter|Win32.ActiveCfg = Release Filter|Win32
 		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Release Filter|Win32.Build.0 = Release Filter|Win32
 		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Release Filter|x64.ActiveCfg = Release Filter|x64
+		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Release Filter|x64.Build.0 = Release Filter|x64
 		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Release|Win32.ActiveCfg = Release|Win32
 		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Release|Win32.Build.0 = Release|Win32
 		{305BAB2D-0D75-4FBC-8BCD-A2917392B48C}.Release|x64.ActiveCfg = Release|x64
@@ -1265,6 +1273,22 @@ Global
 		{B86606FD-A72D-4AF3-8078-A9CDD3B08FDC}.Release|Win32.Build.0 = Release|Win32
 		{B86606FD-A72D-4AF3-8078-A9CDD3B08FDC}.Release|x64.ActiveCfg = Release|x64
 		{B86606FD-A72D-4AF3-8078-A9CDD3B08FDC}.Release|x64.Build.0 = Release|x64
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Debug Filter|Win32.ActiveCfg = Debug|Win32
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Debug Filter|Win32.Build.0 = Debug|Win32
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Debug Filter|x64.ActiveCfg = Debug|x64
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Debug Filter|x64.Build.0 = Debug|x64
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Debug|Win32.ActiveCfg = Debug|Win32
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Debug|Win32.Build.0 = Debug|Win32
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Debug|x64.ActiveCfg = Debug|x64
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Debug|x64.Build.0 = Debug|x64
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Release Filter|Win32.ActiveCfg = Release|Win32
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Release Filter|Win32.Build.0 = Release|Win32
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Release Filter|x64.ActiveCfg = Release|x64
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Release Filter|x64.Build.0 = Release|x64
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Release|Win32.ActiveCfg = Release|Win32
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Release|Win32.Build.0 = Release|Win32
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Release|x64.ActiveCfg = Release|x64
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1348,6 +1372,7 @@ Global
 		{2DD13FCC-CB32-4610-B691-6CFC6A022483} = {D9A0529B-9EC4-4D30-9E05-A5D533739D95}
 		{F4C233D1-297B-4B6B-BD63-A7D38F88AA83} = {D9A0529B-9EC4-4D30-9E05-A5D533739D95}
 		{B86606FD-A72D-4AF3-8078-A9CDD3B08FDC} = {D9A0529B-9EC4-4D30-9E05-A5D533739D95}
+		{1CDBE640-BB75-422C-B63A-8C70C4D48BEA} = {D9A0529B-9EC4-4D30-9E05-A5D533739D95}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {078D97C7-7181-4DB4-90A5-9EC3801FD925}

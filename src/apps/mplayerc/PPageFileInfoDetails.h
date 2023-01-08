@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "SubPic/ISubPic.h"
+#include "filters/renderer/VideoRenderers/IAllocatorPresenter.h"
 #include <afxwin.h>
 
 
@@ -47,7 +47,7 @@ private:
 	void InitEncoding(IFilterGraph* pFG, IDvdInfo2* pDVDI);
 
 public:
-	CPPageFileInfoDetails(const CString& fn, IFilterGraph* pFG, ISubPicAllocatorPresenter3* pCAP, IDvdInfo2* pDVDI);
+	CPPageFileInfoDetails(const CString& fn, IFilterGraph* pFG, IAllocatorPresenter* pCAP, IDvdInfo2* pDVDI);
 	virtual ~CPPageFileInfoDetails();
 
 	enum { IDD = IDD_FILEPROPDETAILS };

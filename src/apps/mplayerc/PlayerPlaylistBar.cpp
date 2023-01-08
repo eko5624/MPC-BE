@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2022 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -321,7 +321,7 @@ static void StringToPaths(const CString& curentdir, const CString& str, std::vec
 		if (hFind == INVALID_HANDLE_VALUE) {
 			continue;
 		} else {
-			CPath parentdir = path + L"\\..";
+			CPath parentdir(path + L"\\..");
 			parentdir.Canonicalize();
 
 			do {
@@ -368,6 +368,9 @@ void CPlaylistItem::AutoLoadFiles()
 
 	CString BDLabel, empty;
 	AfxGetMainFrame()->MakeBDLabel(fn, empty, &BDLabel);
+	if (!BDLabel.IsEmpty()) {
+		FixFilename(BDLabel);
+	}
 
 	CAppSettings& s = AfxGetAppSettings();
 
@@ -878,7 +881,7 @@ void CPlayerPlaylistBar::ReloadTranslatableResources()
 
 void CPlayerPlaylistBar::ScaleFontInternal()
 {
-	NONCLIENTMETRICS ncm = { sizeof(NONCLIENTMETRICS) };
+	NONCLIENTMETRICSW ncm = { sizeof(NONCLIENTMETRICSW) };
 	VERIFY(SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0));
 
 	auto& lf = ncm.lfMessageFont;
@@ -1289,7 +1292,7 @@ void CPlayerPlaylistBar::ResolveLinkFiles(std::list<CString> &fns)
 		if (extension == L".lnk") {
 			CComPtr<IShellLinkW> pShellLink;
 			if (SUCCEEDED(pShellLink.CoCreateInstance(CLSID_ShellLink))) {
-				if (CComQIPtr<IPersistFile> pPersistFile = pShellLink) {
+				if (CComQIPtr<IPersistFile> pPersistFile = pShellLink.p) {
 					WCHAR buffer[MAX_PATH] = {};
 					if (SUCCEEDED(pPersistFile->Load(fn, STGM_READ))
 							// Possible recontruction of path.
@@ -1307,7 +1310,7 @@ void CPlayerPlaylistBar::ResolveLinkFiles(std::list<CString> &fns)
 		} else if (extension == L".url" || extension == L".website") {
 			CComPtr<IUniformResourceLocatorW> pUniformResourceLocator;
 			if (SUCCEEDED(pUniformResourceLocator.CoCreateInstance(CLSID_InternetShortcut))) {
-				if (CComQIPtr<IPersistFile> pPersistFile = pUniformResourceLocator) {
+				if (CComQIPtr<IPersistFile> pPersistFile = pUniformResourceLocator.p) {
 					WCHAR* buffer;
 					if (SUCCEEDED(pPersistFile->Load(fn, STGM_READ))
 							// Retrieve URL (foreign-allocated).
@@ -1406,23 +1409,23 @@ void CPlayerPlaylistBar::ParsePlayList(std::list<CString>& fns, CSubtitleItemLis
 	AddItem(fns, subs);
 }
 
-static CString CombinePath(CPath p, const CString& fn)
+static CString CombinePath(CPath base, const CString& relative)
 {
-	if (StartsWith(fn, L":\\", 1) || StartsWith(fn, L"\\")) {
-		return fn;
+	if (StartsWith(relative, L":\\", 1) || StartsWith(relative, L"\\")) {
+		return relative;
 	}
 
-	CUrlParser urlParser(fn.GetString());
+	CUrlParser urlParser(relative.GetString());
 	if (urlParser.IsValid()) {
-		return fn;
+		return relative;
 	}
 
-	p.Append(fn);
-	CString out(p);
-	if (out.Find(L"://")) {
-		out.Replace('\\', '/');
+	if (urlParser.Parse(base)) {
+		return CUrlParser::CombineUrl(base, relative);
 	}
-	return out;
+
+	base.Append(relative);
+	return base;
 }
 
 bool CPlayerPlaylistBar::ParseMPCPlayList(const CString& fn)
@@ -2007,17 +2010,8 @@ void CPlayerPlaylistBar::Remove(const std::vector<int>& items, const bool bDelet
 
 			CString filesToDelete;
 			for (const auto& fn : fns) {
-				filesToDelete.Append(fn);
-				filesToDelete.AppendChar(0);
+				FileOperationDelete(fn);
 			}
-			filesToDelete.AppendChar(0);
-
-			SHFILEOPSTRUCTW shfoDelete = {};
-			shfoDelete.hwnd = m_hWnd;
-			shfoDelete.wFunc = FO_DELETE;
-			shfoDelete.pFrom = filesToDelete;
-			shfoDelete.fFlags = FOF_NOCONFIRMATION | FOF_SILENT | FOF_ALLOWUNDO;
-			SHFileOperationW(&shfoDelete);
 
 			if (bWasPlaying) {
 				m_list.Invalidate();
@@ -2852,11 +2846,15 @@ void CPlayerPlaylistBar::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruc
 
 	pDC->SetTextColor(textcolor);
 
-	CString time = !pli.m_bInvalid ? m_list.GetItemText(nItem, COL_TIME) : L"Invalid";
-	CSize timesize(0, 0);
-	CPoint timept(rcItem.right, 0);
-	if (time.GetLength() > 0) {
-		timesize = pDC->GetTextExtent(time);
+	CString time;
+	if (pli.m_bInvalid) {
+		time = L"Invalid";
+	} else {
+		time = m_list.GetItemText(nItem, COL_TIME);
+	}
+
+	if (time.GetLength()) {
+		CSize timesize = pDC->GetTextExtent(time);
 		if ((3 + timesize.cx + 3) < rcItem.Width() / 2) {
 			CRect rc(rcItem);
 			rc.left = rc.right - (3 + timesize.cx + 3);
@@ -4849,7 +4847,11 @@ bool CPlayerPlaylistBar::TNavigate()
 					TParseFolder(path);
 					Refresh();
 
-					type == IT_PARENT ? TSelectFolder(oldPath) : EnsureVisible(curPlayList.GetHeadPosition());
+					if (type == IT_PARENT) {
+						TSelectFolder(oldPath);
+					} else {
+						EnsureVisible(curPlayList.GetHeadPosition());
+					}
 
 					return true;
 				}

@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -292,7 +292,7 @@ bool CWebServer::LoadPage(UINT resid, CStringA& str, CString path)
 
 void CWebServer::OnAccept(CWebServerSocket* pServer)
 {
-	CAutoPtr<CWebClientSocket> p(DNew CWebClientSocket(this, m_pMainFrame));
+	std::unique_ptr<CWebClientSocket> p(DNew CWebClientSocket(this, m_pMainFrame));
 	if (pServer->Accept(*p)) {
 		CString name;
 		UINT port;
@@ -301,17 +301,15 @@ void CWebServer::OnAccept(CWebServerSocket* pServer)
 			return;
 		}
 
-		m_clients.AddTail(p);
+		m_clients.emplace_back(std::move(p));
 	}
 }
 
 void CWebServer::OnClose(CWebClientSocket* pClient)
 {
-	POSITION pos = m_clients.GetHeadPosition();
-	while (pos) {
-		POSITION cur = pos;
-		if (m_clients.GetNext(pos) == pClient) {
-			m_clients.RemoveAt(cur);
+	for (auto it = m_clients.begin(); it != m_clients.end(); ++it) {
+		if ((*it).get() == pClient) {
+			m_clients.erase(it);
 			break;
 		}
 	}
@@ -320,7 +318,7 @@ void CWebServer::OnClose(CWebClientSocket* pClient)
 void CWebServer::OnRequest(CWebClientSocket* pClient, CStringA& hdr, CStringA& body)
 {
 	CPath p(pClient->m_path);
-	CStringA ext = p.GetExtension().MakeLower();
+	CStringA ext(p.GetExtension().MakeLower());
 	CStringA mime;
 	if (ext.IsEmpty()) {
 		mime = "text/html";
@@ -445,8 +443,8 @@ void CWebServer::OnRequest(CWebClientSocket* pClient, CStringA& hdr, CStringA& b
 		body.Replace("[controlspath]", "/controls.html");
 		body.Replace("[indexpath]", "/index.html");
 		body.Replace("[path]", CStringA(pClient->m_path));
-		body.Replace("[setposcommand]", MAKE_STR(CMD_SETPOS));
-		body.Replace("[setvolumecommand]", MAKE_STR(CMD_SETVOLUME));
+		body.Replace("[setposcommand]", _CRT_STRINGIZE(CMD_SETPOS));
+		body.Replace("[setvolumecommand]", _CRT_STRINGIZE(CMD_SETVOLUME));
 		body.Replace("[wmcname]", "wm_command");
 	}
 

@@ -41,9 +41,6 @@
     <ClCompile Include="PixelShaderCompiler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RenderersSettings.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -83,6 +80,9 @@
     <ClCompile Include="D3DUtil\D3D9Font.cpp">
       <Filter>D3DUtil</Filter>
     </ClCompile>
+    <ClCompile Include="AllocatorPresenterImpl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AllocatorCommon.h">
@@ -109,13 +109,7 @@
     <ClInclude Include="PixelShaderCompiler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderersSettings.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SyncAllocatorPresenter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SyncRenderer.h">
@@ -174,6 +168,12 @@
     </ClInclude>
     <ClInclude Include="Include\d3dumddi.h">
       <Filter>Header Files\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="IAllocatorPresenter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AllocatorPresenterImpl.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

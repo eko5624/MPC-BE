@@ -67,14 +67,6 @@
 #define IDS_RS_LIMITWINDOWPROPORTIONS		L"LimitWindowProportions"
 #define IDS_RS_SNAPTODESKTOPEDGES			L"SnapToDesktopEdges"
 
-// Video
-#define IDS_R_VIDEO							L"Video"
-#define IDS_RS_COLOR_BRIGHTNESS				L"ColorBrightness"
-#define IDS_RS_COLOR_CONTRAST				L"ColorContrast"
-#define IDS_RS_COLOR_HUE					L"ColorHue"
-#define IDS_RS_COLOR_SATURATION				L"ColorSaturation"
-// the rest of the Video settings are in RenderersSettings.cpp
-
 // Audio
 #define IDS_R_AUDIO							L"Audio"
 #define IDS_RS_VOLUME						L"Volume"
@@ -144,6 +136,8 @@
 #define IDS_RS_ACESTREAM_ADDRESS			L"AceStreamAddress"
 #define IDS_RS_TORRSERVER_ADDRESS			L"TorrServerAddress"
 
+#define IDS_RS_USER_AGENT					L"UserAgent"
+
 // Capture
 #define IDS_R_CAPTURE						L"Capture"
 #define IDS_RS_DEFAULT_CAPTURE				L"DefaultCapture"
@@ -205,6 +199,7 @@
 #define IDS_RS_TOOLBARCOLORFACE				L"ToolbarColorFace"
 #define IDS_RS_TOOLBARCOLOROUTLINE			L"ToolbarColorOutline"
 #define IDS_RS_DARKMENU						L"DarkMenu"
+#define IDS_RS_DARKTITLE					L"DarkTitle"
 
 // FullScreen
 #define IDS_RS_LAUNCHFULLSCREEN				L"LaunchFullScreen"
@@ -328,6 +323,7 @@
 #define IDS_RS_WINMEDIACONTROLS				L"WinMediaControls"
 #define IDS_RS_SMARTSEEK					L"UseSmartSeek"
 #define IDS_RS_SMARTSEEK_SIZE				L"SmartSeekSize"
+#define IDS_RS_SMARTSEEK_VIDEORENDERER		L"SmartSeekVideoRenderer"
 #define IDS_RS_CHAPTER_MARKER				L"ChapterMarker"
 #define IDS_RS_FILENAMEONSEEKBAR			L"FileNameOnSeekBar"
 

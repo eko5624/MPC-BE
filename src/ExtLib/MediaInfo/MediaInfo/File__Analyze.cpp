@@ -2086,7 +2086,7 @@ bool File__Analyze::Synchro_Manage_Test()
         {
             if (Status[IsFinished])
                 Finish(); //Finish
-            if (!IsSub && File_Offset_FirstSynched==(int64u)-1 && Buffer_TotalBytes+Buffer_Offset>=Buffer_TotalBytes_FirstSynched_Max)
+            if (!IsSub && File_Offset_FirstSynched==(int64u)-1 && Buffer_TotalBytes+Buffer_Offset>=Buffer_TotalBytes_LastSynched+Buffer_TotalBytes_FirstSynched_Max)
                 Reject();
             return false; //Wait for more data
         }
@@ -2179,6 +2179,7 @@ bool File__Analyze::FileHeader_Manage()
         #if MEDIAINFO_TRACE
         Element[Element_Level].TraceNode.Init();
         #endif //MEDIAINFO_TRACE
+        Element_Offset=0;
         return false;
     }
 
@@ -2914,8 +2915,12 @@ void File__Analyze::Trusted_IsNot (const char* Reason)
 void File__Analyze::Trusted_IsNot ()
 #endif //MEDIAINFO_TRACE
 {
-    Element_Offset=Element_Size;
-    BS->Attach(NULL, 0);
+    if (BS && (BS->Offset_Get() || BS->Remain()))
+        BS->Skip(BS->Remain());
+    else if (BT && (BT->Offset_Get() || BT->Remain()))
+        BS->Skip(BT->Remain());
+    else
+        Element_Offset=Element_Size;
 
     if (!Element[Element_Level].UnTrusted)
     {
@@ -3698,9 +3703,6 @@ void File__Analyze::Event_Prepare(struct MediaInfo_Event_Generic* Event, int32u 
 void File__Analyze::Demux (const int8u* Buffer, size_t Buffer_Size, contenttype Content_Type, const int8u* xx, size_t xxx)
 {
     if (!(Config_Demux&Demux_Level))
-        return;
-
-    if (!Buffer_Size)
         return;
 
     #if MEDIAINFO_DEMUX && MEDIAINFO_SEEK

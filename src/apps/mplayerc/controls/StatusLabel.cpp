@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -94,7 +94,7 @@ void CStatusLabel::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 		dc.SetBkColor(0);
 	}
 
-	UINT format = DT_VCENTER | DT_SINGLELINE;
+	UINT format = DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX;
 	if (m_fAddEllipses) {
 		format |= DT_END_ELLIPSIS;
 	}

@@ -1,5 +1,5 @@
 /*
- * (C) 2012-2021 see Authors.txt
+ * (C) 2012-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -30,19 +30,6 @@ CID3Tag::CID3Tag(BYTE major/* = 0*/, BYTE flags/* = 0*/)
 	: m_major(major)
 	, m_flags(flags)
 {
-}
-
-CID3Tag::~CID3Tag()
-{
-	Clear();
-}
-
-void CID3Tag::Clear()
-{
-	for (auto& item : TagItems) {
-		SAFE_DELETE(item);
-	}
-	TagItems.clear();
 }
 
 // text encoding:
@@ -176,50 +163,48 @@ static LPCWSTR picture_types[] = {
 	L"Publisher(Studio) logo"
 };
 
-void CID3Tag::ReadTag(const DWORD tag, CGolombBuffer& gbData, DWORD &size, CID3TagItem** item)
+pID3TagItem CID3Tag::ReadTag(const DWORD tag, CGolombBuffer& gbData, DWORD &size)
 {
 	BYTE encoding = (BYTE)gbData.BitRead(8);
 	size--;
 
 	if (tag == 'APIC' || tag == '\0PIC') {
-		WCHAR mime[64] = {};
-		size_t mime_len = 0;
 
-		while (size-- && mime_len < std::size(mime) && (mime[mime_len++] = gbData.BitRead(8)) != 0);
-
-		if (mime_len == std::size(mime)) {
-			gbData.SkipBytes(size);
-			size = 0;
-			return;
+		CString mime;
+		if (tag == '\0PIC') {
+			mime.AppendChar((wchar_t)gbData.BitRead(8));
+			mime.AppendChar((wchar_t)gbData.BitRead(8));
+			mime.AppendChar((wchar_t)gbData.BitRead(8));
+			size -= 3;
+		}
+		else {
+			mime = ReadField(gbData, size, encoding);
 		}
 
 		BYTE pict_type = (BYTE)gbData.BitRead(8);
 		size--;
 		CString pictStr(L"cover");
-		if (pict_type < sizeof(picture_types)) {
+		if (pict_type < std::size(picture_types)) {
 			pictStr = picture_types[pict_type];
 		}
 
-		if (tag == 'APIC') {
-			CString Desc = ReadField(gbData, size, encoding);
-			UNREFERENCED_PARAMETER(Desc);
-		}
+		CString Desc = ReadField(gbData, size, encoding);
+		UNREFERENCED_PARAMETER(Desc);
 
-		CString mimeStr(mime);
 		CString mimeStrLower(mime); mimeStrLower.MakeLower();
 		if (mimeStrLower == L"jpg") {
-			mimeStr = L"image/jpeg";
+			mime = L"image/jpeg";
 		} else if (mimeStrLower == L"png") {
-			mimeStr = L"image/png";
+			mime = L"image/png";
 		} else if (!StartsWith(mimeStrLower, L"image/")) {
-			mimeStr.Format(L"image/%s", mime);
+			mime.Format(L"image/%s", mime);
 		}
 
 		std::vector<BYTE> data;
 		data.resize(size);
 		gbData.ReadBuffer(data.data(), size);
 
-		*item = DNew CID3TagItem(tag, data, mimeStr, pictStr);
+		return std::make_unique<CID3TagItem>(tag, std::move(data), mime, pictStr);
 	} else {
 		if (tag == 'COMM' || tag == '\0ULT' || tag == 'USLT') {
 			ReadLang(gbData, size);
@@ -244,9 +229,11 @@ void CID3Tag::ReadTag(const DWORD tag, CGolombBuffer& gbData, DWORD &size, CID3T
 		}
 
 		if (!text.IsEmpty()) {
-			*item = DNew CID3TagItem(tag, text);
+			return std::make_unique<CID3TagItem>(tag, text);
 		}
 	}
+
+	return {};
 }
 
 void CID3Tag::ReadChapter(CGolombBuffer& gbData, DWORD &size)
@@ -282,15 +269,13 @@ void CID3Tag::ReadChapter(CGolombBuffer& gbData, DWORD &size)
 		size -= len;
 
 		if (((char*)&tag)[3] == 'T') {
-			CID3TagItem* item = nullptr;
-			ReadTag(tag, gbData, len, &item);
+			auto item = ReadTag(tag, gbData, len);
 			if (item && item->GetType() == ID3Type::ID3_TYPE_STRING) {
 				if (chapterName.IsEmpty()) {
 					chapterName = item->GetValue();
 				} else {
 					chapterName += L" / " + item->GetValue();
 				}
-				delete item;
 			}
 		}
 	}
@@ -368,10 +353,8 @@ BOOL CID3Tag::ReadTagsV2(BYTE *buf, size_t len)
 			const int save_pos = gb.GetPos();
 
 			gb.Seek(pos);
-			while (!gb.IsEOF() && !gb.BitRead(8, true)) {
-				gb.SkipBytes(1);
+			while (pos < gb.GetSize() && !gb.BitRead(8)) {
 				pos++;
-				size++;
 			}
 
 			gb.Seek(save_pos);
@@ -427,11 +410,9 @@ BOOL CID3Tag::ReadTagsV2(BYTE *buf, size_t len)
 				|| tag == '\0TT2'
 				|| tag == '\0PIC' || tag == 'APIC'
 				|| tag == '\0ULT' || tag == 'USLT') {
-			CID3TagItem* item = nullptr;
-			ReadTag(tag, gbData, size, &item);
-
+			auto item = ReadTag(tag, gbData, size);
 			if (item) {
-				TagItems.emplace_back(item);
+				TagItems.emplace_back(std::move(item));
 			}
 		} else if (tag == 'CHAP') {
 			ReadChapter(gbData, size);
@@ -584,7 +565,7 @@ BOOL CID3Tag::ReadTagsV1(BYTE *buf, size_t len)
 // additional functions
 void SetID3TagProperties(IBaseFilter* pBF, const CID3Tag* pID3tag)
 {
-	if (!pID3tag || pID3tag->Tags.empty()) {
+	if (!pID3tag || (pID3tag->Tags.empty() && pID3tag->TagItems.empty())) {
 		return;
 	}
 

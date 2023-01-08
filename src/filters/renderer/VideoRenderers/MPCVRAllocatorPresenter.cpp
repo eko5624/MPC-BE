@@ -1,5 +1,5 @@
 /*
- * (C) 2019-2021 see Authors.txt
+ * (C) 2019-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,8 +21,8 @@
 #include "stdafx.h"
 #include "MPCVRAllocatorPresenter.h"
 #include "SubPic/DX9SubPic.h"
+#include "SubPic/DX11SubPic.h"
 #include "SubPic/SubPicQueueImpl.h"
-#include "RenderersSettings.h"
 #include "Variables.h"
 #include <clsids.h>
 #include "IPinHook.h"
@@ -35,10 +35,10 @@ using namespace DSObjects;
 //
 
 CMPCVRAllocatorPresenter::CMPCVRAllocatorPresenter(HWND hWnd, HRESULT& hr, CString &_Error)
-	: CSubPicAllocatorPresenterImpl(hWnd, hr, &_Error)
+	: CAllocatorPresenterImpl(hWnd, hr, &_Error)
 {
 	if (FAILED(hr)) {
-		_Error += L"ISubPicAllocatorPresenterImpl failed\n";
+		_Error += L"IAllocatorPresenterImpl failed\n";
 		return;
 	}
 
@@ -49,7 +49,7 @@ CMPCVRAllocatorPresenter::~CMPCVRAllocatorPresenter()
 {
 	// the order is important here
 	m_pSubPicQueue.Release();
-	m_pAllocator.Release();
+	m_pSubPicAllocator.Release();
 	m_pMPCVR.Release();
 }
 
@@ -65,6 +65,7 @@ STDMETHODIMP CMPCVRAllocatorPresenter::NonDelegatingQueryInterface(REFIID riid, 
 		   QI(ISubRenderCallback2)
 		   QI(ISubRenderCallback3)
 		   QI(ISubRenderCallback4)
+		   QI(ISubRender11Callback)
 		   __super::NonDelegatingQueryInterface(riid, ppv);
 }
 
@@ -73,24 +74,22 @@ HRESULT CMPCVRAllocatorPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
 	if (!pD3DDev) {
 		// release all resources
 		m_pSubPicQueue.Release();
-		m_pAllocator.Release();
+		m_pSubPicAllocator.Release();
 		return S_OK;
 	}
-
-	CRenderersSettings& rs = GetRenderersSettings();
 
 	CSize screenSize;
 	MONITORINFO mi = { sizeof(MONITORINFO) };
 	if (GetMonitorInfoW(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &mi)) {
 		screenSize.SetSize(mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top);
 	}
-	InitMaxSubtitleTextureSize(rs.iSubpicMaxTexWidth, screenSize);
+	InitMaxSubtitleTextureSize(m_SubpicSets.iMaxTexWidth, screenSize);
 
-	if (m_pAllocator) {
-		m_pAllocator->ChangeDevice(pD3DDev);
+	if (m_pSubPicAllocator) {
+		m_pSubPicAllocator->ChangeDevice(pD3DDev);
 	} else {
-		m_pAllocator = DNew CDX9SubPicAllocator(pD3DDev, m_maxSubtitleTextureSize, true);
-		if (!m_pAllocator) {
+		m_pSubPicAllocator = DNew CDX9SubPicAllocator(pD3DDev, m_maxSubtitleTextureSize, true);
+		if (!m_pSubPicAllocator) {
 			return E_FAIL;
 		}
 	}
@@ -98,9 +97,9 @@ HRESULT CMPCVRAllocatorPresenter::SetDevice(IDirect3DDevice9* pD3DDev)
 	HRESULT hr = S_OK;
 	if (!m_pSubPicQueue) {
 		CAutoLock cAutoLock(this);
-		m_pSubPicQueue = rs.nSubpicCount > 0
-						 ? (ISubPicQueue*)DNew CSubPicQueue(rs.nSubpicCount, !rs.bSubpicAnimationWhenBuffering, rs.bSubpicAllowDrop, m_pAllocator, &hr)
-						 : (ISubPicQueue*)DNew CSubPicQueueNoThread(!rs.bSubpicAnimationWhenBuffering, m_pAllocator, &hr);
+		m_pSubPicQueue = m_SubpicSets.nCount > 0
+						 ? (ISubPicQueue*)DNew CSubPicQueue(m_SubpicSets.nCount, !m_SubpicSets.bAnimationWhenBuffering, m_SubpicSets.bAllowDrop, m_pSubPicAllocator, &hr)
+						 : (ISubPicQueue*)DNew CSubPicQueueNoThread(!m_SubpicSets.bAnimationWhenBuffering, m_pSubPicAllocator, &hr);
 	} else {
 		m_pSubPicQueue->Invalidate();
 	}
@@ -141,7 +140,66 @@ HRESULT CMPCVRAllocatorPresenter::RenderEx3(REFERENCE_TIME rtStart,
 	return AlphaBltSubPic(viewportRect, croppedVideoRect, xOffsetInPixels);
 }
 
-// ISubPicAllocatorPresenter3
+// ISubRender11Callback
+
+HRESULT CMPCVRAllocatorPresenter::SetDevice11(ID3D11Device* pD3DDev)
+{
+	if (!pD3DDev) {
+		// release all resources
+		m_pSubPicQueue.Release();
+		m_pSubPicAllocator.Release();
+		return S_OK;
+	}
+
+	CSize screenSize;
+	MONITORINFO mi = { sizeof(MONITORINFO) };
+	if (GetMonitorInfoW(MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST), &mi)) {
+		screenSize.SetSize(mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top);
+	}
+	InitMaxSubtitleTextureSize(m_SubpicSets.iMaxTexWidth, screenSize);
+
+	if (m_pSubPicAllocator) {
+		m_pSubPicAllocator->ChangeDevice(pD3DDev);
+	}
+	else {
+		m_pSubPicAllocator = DNew CDX11SubPicAllocator(pD3DDev, m_maxSubtitleTextureSize);
+		if (!m_pSubPicAllocator) {
+			return E_FAIL;
+		}
+	}
+
+	HRESULT hr = S_OK;
+	if (!m_pSubPicQueue) {
+		CAutoLock cAutoLock(this);
+		m_pSubPicQueue = m_SubpicSets.nCount > 0
+			? (ISubPicQueue*)DNew CSubPicQueue(m_SubpicSets.nCount, !m_SubpicSets.bAnimationWhenBuffering, m_SubpicSets.bAllowDrop, m_pSubPicAllocator, &hr)
+			: (ISubPicQueue*)DNew CSubPicQueueNoThread(!m_SubpicSets.bAnimationWhenBuffering, m_pSubPicAllocator, &hr);
+	}
+	else {
+		m_pSubPicQueue->Invalidate();
+	}
+
+	if (SUCCEEDED(hr) && m_pSubPicQueue && m_pSubPicProvider) {
+		m_pSubPicQueue->SetSubPicProvider(m_pSubPicProvider);
+	}
+
+	return hr;
+}
+
+HRESULT CMPCVRAllocatorPresenter::Render11(
+	REFERENCE_TIME rtStart,
+	REFERENCE_TIME rtStop,
+	REFERENCE_TIME atpf,
+	RECT croppedVideoRect,
+	RECT originalVideoRect,
+	RECT viewportRect,
+	const double videoStretchFactor,
+	int xOffsetInPixels, DWORD flags)
+{
+	return RenderEx3(rtStart, rtStop, atpf, croppedVideoRect, originalVideoRect, viewportRect, videoStretchFactor, xOffsetInPixels, flags);
+}
+
+// IAllocatorPresenter
 
 STDMETHODIMP CMPCVRAllocatorPresenter::CreateRenderer(IUnknown** ppRenderer)
 {
@@ -156,14 +214,15 @@ STDMETHODIMP CMPCVRAllocatorPresenter::CreateRenderer(IUnknown** ppRenderer)
 	if (CComQIPtr<ISubRender> pSR = m_pMPCVR.p) {
 		VERIFY(SUCCEEDED(pSR->SetCallback(this)));
 	}
+	if (CComQIPtr<ISubRender11> pSR11 = m_pMPCVR.p) {
+		VERIFY(SUCCEEDED(pSR11->SetCallback11(this)));
+	}
 
 	(*ppRenderer = (IUnknown*)(INonDelegatingUnknown*)(this))->AddRef();
 
 	if (CComQIPtr<IExFilterConfig> pIExFilterConfig = m_pMPCVR.p) {
-		CRenderersSettings& rs = GetRenderersSettings();
-
 		hr = pIExFilterConfig->SetBool("lessRedraws", true);
-		hr = pIExFilterConfig->SetBool("d3dFullscreenControl", rs.bMPCVRFullscreenControl);
+		hr = pIExFilterConfig->SetBool("d3dFullscreenControl", m_bMPCVRFullscreenControl);
 	}
 
 	CComQIPtr<IBaseFilter> pBF(m_pMPCVR);
@@ -387,4 +446,21 @@ STDMETHODIMP_(bool) CMPCVRAllocatorPresenter::IsRendering()
 	}
 
 	return false;
+}
+
+STDMETHODIMP_(void) CMPCVRAllocatorPresenter::SetStereo3DSettings(Stereo3DSettings* pStereo3DSets)
+{
+	if (pStereo3DSets) {
+		m_Stereo3DSets = *pStereo3DSets;
+		if (CComQIPtr<IExFilterConfig> pIExFilterConfig = m_pMPCVR.p) {
+			pIExFilterConfig->SetInt("stereo3dTransform", m_Stereo3DSets.iTransform);
+		}
+	}
+}
+
+STDMETHODIMP_(void) CMPCVRAllocatorPresenter::SetExtraSettings(ExtraRendererSettings* pExtraSets)
+{
+	if (pExtraSets && !m_pMPCVR) {
+		m_bMPCVRFullscreenControl = pExtraSets->bMPCVRFullscreenControl;
+	}
 }

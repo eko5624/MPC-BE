@@ -16,9 +16,7 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#if VER < EncodeVer(5,5,8)
-  #error A more recent version of Inno Setup 5 is required to compile this script (5.5.8 or newer)
-#elif VER >= EncodeVer(6,0,0) && VER < EncodeVer(6,1,0)
+#if VER < EncodeVer(6,1,0)
   #error A more recent version of Inno Setup 6 is required to compile this script (6.1.0 or newer)
 #endif
 #ifndef UNICODE
@@ -27,14 +25,10 @@
 
 ; Requirements:
 ; Inno Setup Unicode: http://www.jrsoftware.org/isdl.php
-; IDP: Download plugin for Inno Setup : https://bitbucket.org/mitrich_k/inno-download-plugin/downloads
-#if VER < EncodeVer(6,1,0)
-  #include <idp.iss>
-#endif
 
-; If you want to compile the 64-bit version define "x64build" (uncomment the define below or use build.bat)
+; If you want to compile the 32-bit version define "Win32Build" (uncomment the define below or use build.bat)
 #define localize
-; #define x64Build
+;#define Win32Build
 
 ; Don't forget to update the DirectX SDK number in "include\Version.h" (not updated so often)
 
@@ -43,11 +37,14 @@
 #define ISPP_INVOKED
 #include "..\include\Version.h"
 
+#define app_name         "MPC-BE"
 #define copyright_year   str(MPC_YEAR_COMMENTS)
-#define app_name         str(MPC_WND_CLASS_NAME)
 #define app_url          str(MPC_VERSION_COMMENTS)
-#define app_version      str(MPC_VERSION_MAJOR) + "." + str(MPC_VERSION_MINOR) + "." + str(MPC_VERSION_PATCH)
-#define app_version_svn  str(MPC_VERSION_MAJOR) + "." + str(MPC_VERSION_MINOR) + "." + str(MPC_VERSION_PATCH) + "." + str(MPC_VERSION_REV)
+#if MPC_VERSION_STATUS == 1 && MPC_VERSION_REV == 0
+  #define app_version    str(MPC_VERSION_MAJOR) + "." + str(MPC_VERSION_MINOR) + "." + str(MPC_VERSION_PATCH)
+#else
+  #define app_version    str(MPC_VERSION_MAJOR) + "." + str(MPC_VERSION_MINOR) + "." + str(MPC_VERSION_PATCH) + "." + str(MPC_VERSION_REV)
+#endif  
 #define quick_launch     "{userappdata}\Microsoft\Internet Explorer\Quick Launch"
 
 #define bin_dir        = "..\_bin"
@@ -55,53 +52,60 @@
 #define bindir_x64 = bin_dir + "\mpc-be_x64"
 #define bindir_x86 = bin_dir + "\mpc-be_x86"
 
-#ifdef x64Build
-  #define bindir       = bin_dir + "\mpc-be_x64"
-  #define mpcbe_exe    = "mpc-be64.exe"
-  #define mpcbe_ini    = "mpc-be64.ini"
-  #define mpcbe_reg    = "mpc-be64"
-  #define dxdir        = "DirectX\x64"
-  #define BeveledLabel = app_name + " x64 " + app_version_svn
-  #define Description  = app_name + " x64 " + app_version
-  #define msdk_dll     = "libmfxsw64.dll"
-  #define msdk_dll_zip = "libmfxsw64.dll.zip"
-  #define VisualElementsManifest = "VisualElements\mpc-be64.VisualElementsManifest.xml"
-#else
+#ifdef Win32Build
   #define bindir       = bin_dir + "\mpc-be_x86"
   #define mpcbe_exe    = "mpc-be.exe"
   #define mpcbe_ini    = "mpc-be.ini"
-  #define mpcbe_reg    = "mpc-be"
   #define dxdir        = "DirectX\x86"
-  #define BeveledLabel = app_name + " " + app_version_svn
+  #define BeveledLabel = app_name + " " + app_version
   #define Description  = app_name + " " + app_version
-  #define msdk_dll     = "libmfxsw32.dll"
-  #define msdk_dll_zip = "libmfxsw32.dll.zip"
   #define VisualElementsManifest = "VisualElements\mpc-be.VisualElementsManifest.xml"
+  #define intel_msdk_dll = "libmfxsw32.dll"
+  #define intel_msdk_zip = "libmfxsw32.dll.zip"
+  #define intel_msdk_zip_sha1 = "b31b6a26dac9b7b7d88b11b1846f7693c5ff616d"
+  #define mpcvr_ax     = "MpcVideoRenderer.ax"
+#else
+  #define bindir       = bin_dir + "\mpc-be_x64"
+  #define mpcbe_exe    = "mpc-be64.exe"
+  #define mpcbe_ini    = "mpc-be64.ini"
+  #define dxdir        = "DirectX\x64"
+  #define BeveledLabel = app_name + " x64 " + app_version
+  #define Description  = app_name + " x64 " + app_version
+  #define VisualElementsManifest = "VisualElements\mpc-be64.VisualElementsManifest.xml"
+  #define intel_msdk_dll = "libmfxsw64.dll"
+  #define intel_msdk_zip = "libmfxsw64.dll.zip"
+  #define intel_msdk_zip_sha1 = "70fed38c0def17fef6a11d4fba27254b0cc3ccf5"
+  #define mpcvr_ax     = "MpcVideoRenderer64.ax"
 #endif
+#define intel_msdk_url = "http://mpc-be.org/Intel_MSDK/" + intel_msdk_zip
+#define mpcvr_desc     = "MPC Video Renderer 0.6.3"
+#define mpcvr_zip      = "MpcVideoRenderer-0.6.3.1956.zip"
+#define mpcvr_zip_sha1 = "8a1db9b8d37fc068bdc8c70de878cb6901239fed"
+#define mpcvr_url      = "https://github.com/Aleksoid1978/VideoRenderer/releases/download/0.6.3/" + mpcvr_zip
 
 [Setup]
-#ifdef x64Build
-AppId={{FE09AF6D-78B2-4093-B012-FCDAF78693CE}
-DefaultGroupName={#app_name} x64
-OutputBaseFilename={#app_name}.{#app_version_svn}.x64
-UninstallDisplayName={#app_name} x64 {#app_version_svn}
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64 ia64
-AppName={#app_name} x64
-AppVerName={#app_name} x64 {#app_version_svn}
-VersionInfoDescription={#app_name} x64 Setup
-VersionInfoProductName={#app_name} x64
-#else
+#ifdef Win32Build
 AppId={{903D098F-DD50-4342-AD23-DA868FCA3126}
 DefaultGroupName={#app_name}
-OutputBaseFilename={#app_name}.{#app_version_svn}.x86
-UninstallDisplayName={#app_name} {#app_version_svn}
+OutputBaseFilename={#app_name}.{#app_version}.x86
+UninstallDisplayName={#app_name} {#app_version}
 AppName={#app_name}
-AppVerName={#app_name} {#app_version_svn}
+AppVerName={#app_name} {#app_version}
 VersionInfoDescription={#app_name} Setup
 VersionInfoProductName={#app_name}
+#else
+AppId={{FE09AF6D-78B2-4093-B012-FCDAF78693CE}
+DefaultGroupName={#app_name} x64
+OutputBaseFilename={#app_name}.{#app_version}.x64
+UninstallDisplayName={#app_name} x64 {#app_version}
+ArchitecturesAllowed=x64 arm64
+ArchitecturesInstallIn64BitMode=x64 arm64
+AppName={#app_name} x64
+AppVerName={#app_name} x64 {#app_version}
+VersionInfoDescription={#app_name} x64 Setup
+VersionInfoProductName={#app_name} x64
 #endif
-AppVersion={#app_version_svn}
+AppVersion={#app_version}
 AppPublisher={#app_name} Team
 AppPublisherURL={#app_url}
 AppSupportURL={#app_url}
@@ -110,10 +114,10 @@ AppContact={#app_url}
 AppCopyright=Copyright © {#copyright_year} all contributors, see Authors.txt
 VersionInfoCompany={#app_name} Team
 VersionInfoCopyright=Copyright © {#copyright_year}, {#app_name} Team
-VersionInfoProductVersion={#app_version_svn}
-VersionInfoProductTextVersion={#app_version_svn}
-VersionInfoTextVersion={#app_version_svn}
-VersionInfoVersion={#app_version_svn}
+VersionInfoProductVersion={#app_version}
+VersionInfoProductTextVersion={#app_version}
+VersionInfoTextVersion={#app_version}
+VersionInfoVersion={#app_version}
 UninstallDisplayIcon={app}\{#mpcbe_exe}
 DefaultDirName={code:GetInstallFolder}
 LicenseFile=..\docs\COPYING.txt
@@ -130,7 +134,7 @@ ShowTasksTreeLines=yes
 DisableDirPage=auto
 DisableProgramGroupPage=auto
 MinVersion=6.0.6000
-AppMutex={#MPC_WND_CLASS_NAME}
+AppMutex={#app_name}
 ChangesAssociations=true
 #ifdef Sign
 SignTool=OpenSourceSign
@@ -140,33 +144,6 @@ SignTool=OpenSourceSign
 Name: en; MessagesFile: compiler:Default.isl
 
 #ifdef localize
-#if VER < EncodeVer(6,0,0)
-Name: br; MessagesFile: compiler:Languages\BrazilianPortuguese.isl
-Name: by; MessagesFile: Languages\Belarusian.isl
-Name: ca; MessagesFile: compiler:Languages\Catalan.isl
-Name: cz; MessagesFile: compiler:Languages\Czech.isl
-Name: de; MessagesFile: compiler:Languages\German.isl
-Name: el; MessagesFile: compiler:Languages\Greek.isl
-Name: es; MessagesFile: compiler:Languages\Spanish.isl
-Name: eu; MessagesFile: Languages\Basque.isl
-Name: fr; MessagesFile: compiler:Languages\French.isl
-Name: he; MessagesFile: compiler:Languages\Hebrew.isl
-Name: hu; MessagesFile: compiler:Languages\Hungarian.isl
-Name: hy; MessagesFile: compiler:Languages\Armenian.islu
-Name: it; MessagesFile: compiler:Languages\Italian.isl
-Name: ja; MessagesFile: compiler:Languages\Japanese.isl
-Name: kr; MessagesFile: Languages\Korean.isl
-Name: nl; MessagesFile: compiler:Languages\Dutch.isl
-Name: pl; MessagesFile: compiler:Languages\Polish.isl
-Name: ro; MessagesFile: Languages\Romanian.isl
-Name: ru; MessagesFile: compiler:Languages\Russian.isl
-Name: sc; MessagesFile: Languages\ChineseSimplified.islu
-Name: sv; MessagesFile: Languages\Swedish.isl
-Name: sk; MessagesFile: Languages\Slovak.isl
-Name: tc; MessagesFile: Languages\ChineseTraditional.islu
-Name: tr; MessagesFile: compiler:Languages\Turkish.isl
-Name: ua; MessagesFile: compiler:Languages\Ukrainian.isl
-#else
 Name: br; MessagesFile: compiler:Languages\BrazilianPortuguese.isl
 Name: by; MessagesFile: Languages\Belarusian.isl
 Name: ca; MessagesFile: compiler:Languages\Catalan.isl
@@ -177,6 +154,7 @@ Name: es; MessagesFile: compiler:Languages\Spanish.isl
 Name: eu; MessagesFile: Languages\Basque.isl
 Name: fr; MessagesFile: compiler:Languages\French.isl
 Name: he; MessagesFile: compiler:Languages\Hebrew.isl
+Name: hr; MessagesFile: Languages\Croatian.isl
 Name: hu; MessagesFile: Languages\Hungarian.isl
 Name: hy; MessagesFile: compiler:Languages\Armenian.isl
 Name: it; MessagesFile: compiler:Languages\Italian.isl
@@ -186,32 +164,16 @@ Name: nl; MessagesFile: compiler:Languages\Dutch.isl
 Name: pl; MessagesFile: compiler:Languages\Polish.isl
 Name: ro; MessagesFile: Languages\Romanian.isl
 Name: ru; MessagesFile: compiler:Languages\Russian.isl
-Name: sc; MessagesFile: Languages\ChineseSimplified.islu
+Name: sc; MessagesFile: Languages\ChineseSimplified.isl
 Name: sv; MessagesFile: Languages\Swedish.isl
 Name: sk; MessagesFile: compiler:Languages\Slovak.isl
-Name: tc; MessagesFile: Languages\ChineseTraditional.islu
+Name: tc; MessagesFile: Languages\ChineseTraditional.isl
 Name: tr; MessagesFile: compiler:Languages\Turkish.isl
 Name: ua; MessagesFile: compiler:Languages\Ukrainian.isl
-#endif
 #endif
 
 ; Include installer's custom messages
 #include "custom_messages.iss"
-
-#if VER < EncodeVer(6,1,0)
-  #ifdef localize
-    #include <idplang\czech.iss>
-    #include <idplang\default.iss>
-    #include <idplang\french.iss>
-    #include <idplang\german.iss>
-    #include <idplang\hungarian.iss>
-    #include <idplang\italian.iss>
-    #include <idplang\polish.iss>
-    #include <idplang\russian.iss>
-    #include <idplang\slovak.iss>
-    #include <idplang\spanish.iss>
-  #endif
-#endif
 
 [Messages]
 BeveledLabel = {#BeveledLabel}
@@ -226,14 +188,13 @@ Name: "mpciconlib";    Description: "{cm:comp_mpciconlib}";     Types: default c
 #ifdef localize
 Name: "mpcresources";  Description: "{cm:comp_mpcresources}";   Types: default custom; Flags: disablenouninstallwarning
 #endif
-Name: "mpcberegvid";   Description: "{cm:AssociationVideo}";    Types: custom;         Flags: disablenouninstallwarning;
-Name: "mpcberegaud";   Description: "{cm:AssociationAudio}";    Types: custom;         Flags: disablenouninstallwarning;
-Name: "mpcberegpl";    Description: "{cm:AssociationPlaylist}"; Types: custom;         Flags: disablenouninstallwarning;
 Name: "mpcbeshellext"; Description: "{cm:comp_mpcbeshellext}";  Types: custom;         Flags: disablenouninstallwarning;
-#ifdef x64Build
-Name: "intel_msdk";    Description: "{cm:comp_intel_msdk}";     Types: custom;         Flags: disablenouninstallwarning; ExtraDiskSpaceRequired: 8186280;
-#else
+#ifdef Win32Build
 Name: "intel_msdk";    Description: "{cm:comp_intel_msdk}";     Types: custom;         Flags: disablenouninstallwarning; ExtraDiskSpaceRequired: 7183272;
+Name: "mpcvr";         Description: "{#mpcvr_desc}";            Types: custom;         Flags: disablenouninstallwarning; ExtraDiskSpaceRequired: 831152; 
+#else
+Name: "intel_msdk";    Description: "{cm:comp_intel_msdk}";     Types: custom;         Flags: disablenouninstallwarning; ExtraDiskSpaceRequired: 8186280;
+Name: "mpcvr";         Description: "{#mpcvr_desc}";            Types: custom;         Flags: disablenouninstallwarning; ExtraDiskSpaceRequired: 913072; 
 #endif
 
 [Tasks]
@@ -271,18 +232,18 @@ Source: "VisualElements\*.png";            DestDir: "{app}";                    
 Source: "{#VisualElementsManifest}";       DestDir: "{app}";                             Flags: ignoreversion; Components: main
 
 [Icons]
-#ifdef x64Build
-Name: {group}\{#app_name} x64;                       Filename: {app}\{#mpcbe_exe};      Comment: {#app_name} {#app_version} x64;        WorkingDir: {app}; IconFilename: {app}\{#mpcbe_exe}; IconIndex: 0
-Name: {commondesktop}\{#app_name} x64;               Filename: {app}\{#mpcbe_exe};      Comment: {#app_name} {#app_version} x64;        WorkingDir: {app}; IconFilename: {app}\{#mpcbe_exe}; IconIndex: 0; Tasks: desktopicon\common
-Name: {userdesktop}\{#app_name} x64;                 Filename: {app}\{#mpcbe_exe};      Comment: {#app_name} {#app_version} x64;        WorkingDir: {app}; IconFilename: {app}\{#mpcbe_exe}; IconIndex: 0; Tasks: desktopicon\user
-Name: {#quick_launch}\{#app_name} x64;               Filename: {app}\{#mpcbe_exe};      Comment: {#app_name} {#app_version} x64;        WorkingDir: {app}; IconFilename: {app}\{#mpcbe_exe}; IconIndex: 0; Tasks: quicklaunchicon
-Name: {group}\{cm:UninstallProgram,{#app_name} x64}; Filename: {uninstallexe};          Comment: {cm:UninstallProgram,{#app_name} x64}; WorkingDir: {app}
-#else
+#ifdef Win32Build
 Name: {group}\{#app_name};                           Filename: {app}\{#mpcbe_exe};      Comment: {#app_name} {#app_version};            WorkingDir: {app}; IconFilename: {app}\{#mpcbe_exe}; IconIndex: 0
 Name: {commondesktop}\{#app_name};                   Filename: {app}\{#mpcbe_exe};      Comment: {#app_name} {#app_version};            WorkingDir: {app}; IconFilename: {app}\{#mpcbe_exe}; IconIndex: 0; Tasks: desktopicon\common
 Name: {userdesktop}\{#app_name};                     Filename: {app}\{#mpcbe_exe};      Comment: {#app_name} {#app_version};            WorkingDir: {app}; IconFilename: {app}\{#mpcbe_exe}; IconIndex: 0; Tasks: desktopicon\user
 Name: {#quick_launch}\{#app_name};                   Filename: {app}\{#mpcbe_exe};      Comment: {#app_name} {#app_version};            WorkingDir: {app}; IconFilename: {app}\{#mpcbe_exe}; IconIndex: 0; Tasks: quicklaunchicon
 Name: {group}\{cm:UninstallProgram,{#app_name}};     Filename: {uninstallexe};          Comment: {cm:UninstallProgram,{#app_name}};     WorkingDir: {app}
+#else
+Name: {group}\{#app_name} x64;                       Filename: {app}\{#mpcbe_exe};      Comment: {#app_name} {#app_version} x64;        WorkingDir: {app}; IconFilename: {app}\{#mpcbe_exe}; IconIndex: 0
+Name: {commondesktop}\{#app_name} x64;               Filename: {app}\{#mpcbe_exe};      Comment: {#app_name} {#app_version} x64;        WorkingDir: {app}; IconFilename: {app}\{#mpcbe_exe}; IconIndex: 0; Tasks: desktopicon\common
+Name: {userdesktop}\{#app_name} x64;                 Filename: {app}\{#mpcbe_exe};      Comment: {#app_name} {#app_version} x64;        WorkingDir: {app}; IconFilename: {app}\{#mpcbe_exe}; IconIndex: 0; Tasks: desktopicon\user
+Name: {#quick_launch}\{#app_name} x64;               Filename: {app}\{#mpcbe_exe};      Comment: {#app_name} {#app_version} x64;        WorkingDir: {app}; IconFilename: {app}\{#mpcbe_exe}; IconIndex: 0; Tasks: quicklaunchicon
+Name: {group}\{cm:UninstallProgram,{#app_name} x64}; Filename: {uninstallexe};          Comment: {cm:UninstallProgram,{#app_name} x64}; WorkingDir: {app}
 #endif
 Name: {group}\Changelog;                             Filename: {app}\Changelog.txt;     Comment: {cm:ViewChangelog};                    WorkingDir: {app}
 Name: {group}\ChangelogRus;                          Filename: {app}\Changelog.Rus.txt; Comment: {cm:ViewChangelog};                    WorkingDir: {app}
@@ -294,9 +255,9 @@ Filename: "{app}\Changelog.txt";     WorkingDir: "{app}"; Flags: nowait postinst
 Filename: "{app}\Changelog.Rus.txt"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent unchecked shellexec; Description: "{cm:ViewChangelog}"; Languages: ru
 
 [InstallDelete]
-Type: files; Name: "{userdesktop}\{#app_name}.lnk";   Check: not IsTaskSelected('desktopicon\user')   and IsUpgrade()
-Type: files; Name: "{commondesktop}\{#app_name}.lnk"; Check: not IsTaskSelected('desktopicon\common') and IsUpgrade()
-Type: files; Name: "{#quick_launch}\{#app_name}.lnk"; OnlyBelowVersion: 0,6.1; Check: not IsTaskSelected('quicklaunchicon') and IsUpgrade()
+Type: files; Name: "{userdesktop}\{#app_name}.lnk";   Check: not WizardIsTaskSelected('desktopicon\user')   and IsUpgrade()
+Type: files; Name: "{commondesktop}\{#app_name}.lnk"; Check: not WizardIsTaskSelected('desktopicon\common') and IsUpgrade()
+Type: files; Name: "{#quick_launch}\{#app_name}.lnk"; OnlyBelowVersion: 0,6.1; Check: not WizardIsTaskSelected('quicklaunchicon') and IsUpgrade()
 Type: files; Name: "{app}\AUTHORS";                   Check: IsUpgrade()
 Type: files; Name: "{app}\ChangeLog";                 Check: IsUpgrade()
 Type: files; Name: "{app}\ChangeLogRus";              Check: IsUpgrade()
@@ -309,7 +270,7 @@ Type: files; Name: "{app}\mpcresources.??.dll"
 #endif
 
 [UninstallDelete]
-Type: files; Name: {app}\{#msdk_dll}
+Type: files; Name: {app}\{#intel_msdk_dll}
 
 ;[UninstallRun]
 ;Filename: "{app}\{#mpcbe_exe}"; Parameters: "/unregall"; WorkingDir: "{app}"; Flags: runhidden
@@ -334,11 +295,14 @@ const
 
 function LoadLibraryEx(lpFileName: String; hFile: THandle; dwFlags: DWORD): THandle; external 'LoadLibraryExW@kernel32.dll stdcall';
 function LoadString(hInstance: THandle; uID: SmallInt; var lpBuffer: Char; nBufferMax: Integer): Integer; external 'LoadStringW@user32.dll stdcall';
+function SetFileAttributes(lpFileName: String; dwFileAttributes: Cardinal): Integer; external 'SetFileAttributesW@kernel32.dll stdcall';
 
-#if VER >= EncodeVer(6,1,0)
 var
+  TasksList: TNewCheckListBox;
   DownloadPage: TDownloadWizardPage;
-#endif
+
+  path_intel_msdk: String;
+  path_mpcvr: String;
 
 // thank for code to "El Sanchez" from forum.oszone.net
 procedure PinToTaskbar(Filename: String; IsPin: Boolean);
@@ -402,26 +366,36 @@ begin
   Log('PinToTaskbar done.');
 end;
 
-procedure Unzip(ZipFile, TargetFolder: String); 
+procedure Unzip(ZipPath, FileName, TargetPath: String); 
 var
-  ShellObj, SrcFile, DestFolder: Variant;
+  ShellObj, ZipFile, Item, TargetFolder: Variant;
+  str: String;
 begin
-  if FileExists(ZipFile) then
+  if FileExists(ZipPath) then
   begin
-    Log('Start unziping ' + ZipFile);
+    Log('Start unziping ' + ZipPath);
     try
       ShellObj := CreateOleObject('Shell.Application');
-      SrcFile := ShellObj.NameSpace(ZipFile);
-      DestFolder := ShellObj.NameSpace(TargetFolder);
-      DestFolder.CopyHere(SrcFile.Items, SHCONTCH_NOPROGRESSBOX or SHCONTCH_RESPONDYESTOALL);
+      ZipFile := ShellObj.NameSpace(ZipPath);
+      ForceDirectories(TargetPath);
+      TargetFolder := ShellObj.NameSpace(TargetPath);
+      if Length(FileName)>0 then
+      begin
+        Item := ZipFile.ParseName(FileName);
+        TargetFolder.CopyHere(Item, SHCONTCH_NOPROGRESSBOX or SHCONTCH_RESPONDYESTOALL);
+      end
+      else
+        TargetFolder.CopyHere(ZipFile.Items, SHCONTCH_NOPROGRESSBOX or SHCONTCH_RESPONDYESTOALL);
     except
       Log('ERROR: unziping failed');
-      MsgBox('Unable to extract ' + ZipFile, mbError, MB_OK);
+      str := 'Unable to extract ' + ZipPath;
+      if Length(FileName)>0 then str := str + '\' + FileName;
+      MsgBox(str, mbError, MB_OK);
       Exit;
     end;
     Log('Unzip done.');
   end else
-    Log('ERROR: File ' + ZipFile + ' not found');
+    Log('ERROR: File ' + ZipPath + ' not found');
 end;
 
 function GetInstallFolder(Default: String): String;
@@ -436,10 +410,10 @@ begin
 
   if (Result = '') or not DirExists(Result) then
   begin
-    #ifdef x64Build
-    Result := ExpandConstant('{pf}\{#app_name} x64');
-    #else
+    #ifdef Win32Build
     Result := ExpandConstant('{pf}\{#app_name}');
+    #else
+    Result := ExpandConstant('{pf}\{#app_name} x64');
     #endif
   end;
 end;
@@ -489,6 +463,11 @@ begin
     Result := False;
 end;
 
+function GetCustomTask(TaskIndex: Integer): Boolean;
+begin 
+  Result := TasksList.Checked[TaskIndex];
+end;
+
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   // Hide the License page
@@ -513,70 +492,120 @@ begin
   Log('CleanUpSettingsAndFiles done.');
 end;
 
+procedure CurPageChanged(CurPageID: Integer); 
+  begin 
+  if CurPageID = wpReady then 
+  begin 
+  if GetCustomTask(0) then 
+      WizardForm.ReadyMemo.Lines.Add(ExpandConstant('      {cm:AssociationVideo}'));
+	if GetCustomTask(1) then 
+      WizardForm.ReadyMemo.Lines.Add(ExpandConstant('      {cm:AssociationAudio}')); 
+	if GetCustomTask(2) then 
+      WizardForm.ReadyMemo.Lines.Add(ExpandConstant('      {cm:AssociationPlaylist}')); 
+  end; 
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   sLanguage: String;
   sRegParams: String;
   resCode: integer;
+  checksum: String;
 begin
   if CurStep = ssPostInstall then
   begin
-     if IsTaskSelected('pintotaskbar') then
+     if WizardIsTaskSelected('pintotaskbar') then
       PinToTaskbar(ExpandConstant('{app}\{#mpcbe_exe}'), True);
 
-    if IsTaskSelected('reset_settings') then
+    if WizardIsTaskSelected('reset_settings') then
       CleanUpSettingsAndFiles();
 
     sLanguage := ExpandConstant('{cm:langcode}');
     RegWriteStringValue(HKLM, 'SOFTWARE\{#app_name}', 'ExePath', ExpandConstant('{app}\{#mpcbe_exe}'));
 
-    if IsComponentSelected('mpcresources') and FileExists(ExpandConstant('{app}\{#mpcbe_ini}')) then
+    if WizardIsComponentSelected('mpcresources') and FileExists(ExpandConstant('{app}\{#mpcbe_ini}')) then
       SetIniString('Settings', 'Language', sLanguage, ExpandConstant('{app}\{#mpcbe_ini}'))
     else
       RegWriteStringValue(HKCU, 'Software\{#app_name}\Settings', 'Language', sLanguage);
 
-    if IsComponentSelected('mpcberegvid') or IsComponentSelected('mpcberegaud') or IsComponentSelected('mpcberegpl') then
+    if GetCustomTask(0) or GetCustomTask(1) or GetCustomTask(2) then
     begin
-      if IsComponentSelected('mpcberegvid') then
+      if GetCustomTask(0) then
         sRegParams := sRegParams + ' /regvid';
-      if IsComponentSelected('mpcberegaud') then 
+      if GetCustomTask(1) then 
         sRegParams := sRegParams + ' /regaud';
-      if IsComponentSelected('mpcberegpl') then
+      if GetCustomTask(2) then
         sRegParams := sRegParams + ' /regpl';
       Exec(ExpandConstant('{app}\{#mpcbe_exe}'), sRegParams, ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, resCode);
     end;
 
-    if IsComponentSelected('intel_msdk') then
-      Unzip(ExpandConstant('{tmp}\{#msdk_dll_zip}'), ExpandConstant('{app}'));
+    if WizardIsComponentSelected('intel_msdk') and (Length(path_intel_msdk)>0) then
+    begin
+      checksum := GetSHA1OfFile(path_intel_msdk);
+      if checksum = '{#intel_msdk_zip_sha1}' then
+        Unzip(path_intel_msdk, '{#intel_msdk_dll}', ExpandConstant('{app}'))
+      else
+        SuppressibleMsgBox('Non-original {#intel_msdk_dll} !', mbError, MB_OK, IDOK);
+    end;
+
+    if WizardIsComponentSelected('mpcvr') and (Length(path_mpcvr)>0) then
+    begin
+      checksum := GetSHA1OfFile(path_mpcvr);
+      if checksum = '{#mpcvr_zip_sha1}' then
+      begin
+        Unzip(path_mpcvr, '{#mpcvr_ax}', ExpandConstant('{app}\Filters'));
+        RegisterServer(Is64BitInstallMode, ExpandConstant('{app}\Filters\{#mpcvr_ax}'), False);
+      end
+      else
+        SuppressibleMsgBox('Non-original {#mpcvr_zip} !', mbError, MB_OK, IDOK);
+    end;
   end;
 end;
 
-procedure CurPageChanged(CurPageID: Integer);
-begin
-  if CurPageID = wpReady then
-  begin
-#if VER < EncodeVer(6,1,0)
-    idpClearFiles;
-    if IsComponentSelected('intel_msdk') then
-      idpAddFile('http://mpc-be.org/Intel_MSDK/{#msdk_dll_zip}', ExpandConstant('{tmp}\{#msdk_dll_zip}'));
-#endif
-  end;
-end;
-
-#if VER >= EncodeVer(6,1,0)
 function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  need_dl_intel_msdk: Boolean;
+  need_dl_mpcvr: Boolean;
+  new_path: String;
 begin
   if CurPageID = wpReady then
   begin
+    need_dl_intel_msdk := WizardIsComponentSelected('intel_msdk') and (Length(path_intel_msdk)=0);
+    need_dl_mpcvr := WizardIsComponentSelected('mpcvr') and (Length(path_mpcvr)=0);
+
     DownloadPage.Clear;
-    if IsComponentSelected('intel_msdk') then begin
-      DownloadPage.Add('http://mpc-be.org/Intel_MSDK/{#msdk_dll_zip}', '{#msdk_dll_zip}', '');
+    if need_dl_intel_msdk or need_dl_mpcvr then
+    begin
+      if need_dl_intel_msdk then
+        DownloadPage.Add('{#intel_msdk_url}', '{#intel_msdk_zip}', '');
+      if need_dl_mpcvr then
+        DownloadPage.Add('{#mpcvr_url}', '{#mpcvr_zip}', '');
       DownloadPage.Show;
       try
         try
           DownloadPage.Download;
+          if need_dl_intel_msdk then
+          begin
+            path_intel_msdk := ExpandConstant('{tmp}\{#intel_msdk_zip}');
+            new_path := ExpandConstant('{src}\{#intel_msdk_zip}');
+            if RenameFile(path_intel_msdk, new_path) then
+            begin
+              SetFileAttributes(new_path, FILE_ATTRIBUTE_READONLY);
+              path_intel_msdk := new_path;
+            end;
+          end;
+          if need_dl_mpcvr then
+          begin
+            path_mpcvr := ExpandConstant('{tmp}\{#mpcvr_zip}');
+            new_path := ExpandConstant('{src}\{#mpcvr_zip}');
+            if RenameFile(path_mpcvr, new_path) then
+            begin
+              SetFileAttributes(new_path, FILE_ATTRIBUTE_READONLY);
+              path_mpcvr := new_path;
+            end;
+          end;
         except
-          SuppressibleMsgBox(AddPeriod(GetExceptionMessage), mbCriticalError, MB_OK, IDOK);
+          SuppressibleMsgBox(AddPeriod(GetExceptionMessage), mbError, MB_OK, IDOK);
         end;
       finally
         DownloadPage.Hide;
@@ -586,7 +615,6 @@ begin
 
   Result := True;
 end;
-#endif
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
@@ -660,37 +688,57 @@ end;
 procedure InitializeWizard();
 Var
   DeltaY : Integer;
-  Page: TWizardPage;
+  Idx : Integer;
+  Path : String;
+  CustomSelectTasksPage: TWizardPage;
 begin
-#if VER < EncodeVer(6,0,0)
-  DeltaY := ScaleY(10);
-#endif
   DeltaY := ScaleY(1);
 
-#if VER < EncodeVer(6,0,0)
-  WizardForm.Height := WizardForm.Height + DeltaY;
-  WizardForm.NextButton.Top := WizardForm.NextButton.Top + DeltaY;
-  WizardForm.BackButton.Top := WizardForm.BackButton.Top + DeltaY;
-  WizardForm.CancelButton.Top := WizardForm.CancelButton.Top + DeltaY;
-#endif
   WizardForm.ComponentsList.Height := WizardForm.ComponentsList.Height + DeltaY;
-#if VER < EncodeVer(6,0,0)
-  WizardForm.OuterNotebook.Height := WizardForm.OuterNotebook.Height + DeltaY;
-  WizardForm.InnerNotebook.Height := WizardForm.InnerNotebook.Height + DeltaY;
-  WizardForm.Bevel.Top := WizardForm.Bevel.Top + DeltaY;
-  WizardForm.BeveledLabel.Top := WizardForm.BeveledLabel.Top + DeltaY;
-  WizardForm.ComponentsDiskSpaceLabel.Top := WizardForm.ComponentsDiskSpaceLabel.Top + DeltaY;
-#endif
 
-#ifdef localize
-  WizardForm.ComponentsList.Checked[7] := False;
-#else
-  WizardForm.ComponentsList.Checked[6] := False;
-#endif
+  Idx := WizardForm.ComponentsList.Items.IndexOf(ExpandConstant('{cm:comp_intel_msdk}'));
+  WizardForm.ComponentsList.Checked[Idx] := False;
+  Path := ExpandConstant('{src}\{#intel_msdk_zip}');
+  if FileExists(Path) then
+  begin
+    WizardForm.ComponentsList.ItemCaption[Idx] := WizardForm.ComponentsList.ItemCaption[Idx] + ExpandConstant(' ({cm:ComponentAlreadyDownloaded})');
+    path_intel_msdk := Path;
+  end
+  else
+  begin
+    WizardForm.ComponentsList.ItemCaption[Idx] := WizardForm.ComponentsList.ItemCaption[Idx] + ExpandConstant(' ({cm:ComponentWillBeDownloaded})');
+  end;
 
-#if VER < EncodeVer(6,1,0)
-  idpDownloadAfter(wpReady);
-#else
+  Idx := WizardForm.ComponentsList.Items.IndexOf('{#mpcvr_desc}');
+  WizardForm.ComponentsList.Checked[Idx] := False;
+  Path := ExpandConstant('{src}\{#mpcvr_zip}');
+  if FileExists(Path) then
+  begin
+    WizardForm.ComponentsList.ItemCaption[Idx] := WizardForm.ComponentsList.ItemCaption[Idx] + ExpandConstant(' ({cm:ComponentAlreadyDownloaded})');
+    path_mpcvr := Path;
+  end
+  else
+  begin
+    WizardForm.ComponentsList.ItemCaption[Idx] := WizardForm.ComponentsList.ItemCaption[Idx] + ExpandConstant(' ({cm:ComponentWillBeDownloaded})');
+  end;
+
+  CustomSelectTasksPage := CreateCustomPage(wpSelectTasks, SetupMessage(msgWizardSelectTasks), SetupMessage(msgSelectTasksDesc));
+  TasksList := TNewCheckListBox.Create(WizardForm);
+  TasksList.Left := WizardForm.TasksList.Left; 
+  TasksList.Top := WizardForm.SelectTasksLabel.Top; 
+  TasksList.Width := WizardForm.TasksList.Width; 
+  TasksList.Height := WizardForm.TasksList.Top + WizardForm.TasksList.Height - WizardForm.SelectTasksLabel.Top; 
+  TasksList.BorderStyle := WizardForm.TasksList.BorderStyle;
+  TasksList.Color := WizardForm.TasksList.Color;
+  TasksList.ShowLines := WizardForm.TasksList.ShowLines;
+  TasksList.MinItemHeight := WizardForm.TasksList.MinItemHeight;
+  TasksList.ParentColor := WizardForm.TasksList.ParentColor;
+  TasksList.WantTabs := WizardForm.TasksList.WantTabs;
+  TasksList.Parent := CustomSelectTasksPage.Surface;
+
+  TasksList.AddCheckBox(ExpandConstant('{cm:AssociationVideo}'),    '', 0, False, True, False, True, nil);
+  TasksList.AddCheckBox(ExpandConstant('{cm:AssociationAudio}'),    '', 0, False, True, False, True, nil);
+  TasksList.AddCheckBox(ExpandConstant('{cm:AssociationPlaylist}'), '', 0, False, True, False, True, nil);
+
   DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), nil);
-#endif
 end;

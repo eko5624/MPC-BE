@@ -1,7 +1,7 @@
 ﻿BEGIN DIALOGEX IDD_ABOUTBOX LINES 26
 3		"Über MPC-BE"
 7		"MPC-BE"
-8		"Copyright © 2002-2022 MPC-BE Team, siehe Authors.txt Datei"
+8		"Copyright © 2002-2023 MPC-BE Team, siehe Authors.txt Datei"
 10		"Version:"
 11		"MPC-BE Compiler:"
 12		"FFmpeg Compiler:"
@@ -290,7 +290,7 @@ BEGIN DIALOGEX IDD_PPAGEFULLSCREEN LINES 34
 32		"Ursprüngliche Bildschirmauflösung bei Programmende wiederherstellen"
 END
 
-BEGIN DIALOGEX IDD_PPAGEINTERFACE LINES 51
+BEGIN DIALOGEX IDD_PPAGEINTERFACE LINES 53
 6		"Dunkles Theme aktivieren"
 7		"Helligkeit:"
 9		"Farbe des Lautstärkestellers:"
@@ -303,23 +303,24 @@ BEGIN DIALOGEX IDD_PPAGEINTERFACE LINES 51
 16		"G:"
 17		"B:"
 21		"Dunkles Menü aktivieren"
-23		"Zeit-Tooltip anzeigen:"
-25		"Vorschau bei der Suche anzeigen"
-26		"Größe bezogen auf Bildschirmbreite:"
-29		"Kapitelmarker in der Suchleiste anzeigen"
-30		"Flybar aktivieren"
-31		"Schriftgröße der Wiedergabeliste:"
-34		"OSD"
-35		"Schrift:"
-38		"F"
-39		"Hintergrund:"
-40		"G1"
-41		"G2"
-42		"Transparent:"
-44		"Rahmengröße:"
-47		"Schatten"
-48		"Anti-Aliasing"
-49		"Windows-Taskbarfunktionen verwenden (ab Windows 7)"
+22		"Dunkle Titelleiste aktivieren (Windows 11)"
+24		"Zeit-Tooltip anzeigen:"
+26		"Vorschau bei der Suche anzeigen"
+27		"Größe bezogen auf Bildschirmbreite:"
+31		"Kapitelmarker in der Suchleiste anzeigen"
+32		"Flybar aktivieren"
+33		"Schriftgröße der Wiedergabeliste:"
+36		"OSD"
+37		"Schrift:"
+40		"F"
+41		"Hintergrund:"
+42		"G1"
+43		"G2"
+44		"Transparent:"
+46		"Rahmengröße:"
+49		"Schatten"
+50		"Anti-Aliasing"
+51		"Windows-Taskbarfunktionen verwenden (ab Windows 7)"
 END
 
 BEGIN DIALOGEX IDD_PPAGEINTERNALFILTERS LINES 22
@@ -587,7 +588,7 @@ BEGIN DIALOGEX IDD_PPAGEWINDOWSIZE LINES 28
 27		"An Desktoprand andocken"
 END
 
-BEGIN DIALOGEX IDD_PPAGEYOUTUBE LINES 24
+BEGIN DIALOGEX IDD_PPAGEYOUTUBE LINES 27
 5		"YouTube"
 6		"Integrierten Webseiten-Parser verwenden"
 7		"Bevorzugtes Format:"
@@ -600,6 +601,7 @@ BEGIN DIALOGEX IDD_PPAGEYOUTUBE LINES 24
 19		"Maximale Bildrate oder Bitrate wählen"
 20		"AceStream Adresse:"
 22		"MatriX (TorrServer) Adresse:"
+25		"User Agent:"
 END
 
 BEGIN DIALOGEX IDD_SAVEIMAGEDIALOGTEMPL LINES 9
@@ -1965,6 +1967,9 @@ STRING IDS_SUB_POS_RESTORE		"Untertitelposition wiederherstellen"
 STRING IDS_SUB_POS_RIGHT		"Untertitelposition nach rechts verschieben"
 STRING IDS_SUB_POS_UP		"Untertitelposition nach oben verschieben"
 STRING IDS_SUB_SAVE_EXTERNAL_STYLE_FILE		"Benutzerdefinierten Stil speichern"
+STRING IDS_SUB_SIZE		"Untertiteltextgröße: %d"
+STRING IDS_SUB_SIZE_DEC		"Untertiteltextgröße verringern"
+STRING IDS_SUB_SIZE_INC		"Untertiteltextgröße erhöhen"
 STRING IDS_SUB_USE_INTERNAL		"Interner Untertitelrenderer"
 STRING IDS_SURROUND_LEVEL		"Surround Pegel (%+.1f dB)"
 STRING IDS_TEXTBAR_FILENANE		"Dateiname (alt. Titel o. URL)"
@@ -1999,12 +2004,10 @@ STRING IDS_TOP_FRONT_LEFT		"Oben Vorne Links"
 STRING IDS_TOP_FRONT_RIGHT		"Oben Vorne Rechts"
 STRING IDS_TOUCH_WINDOW_FROM_INSIDE		"Fenster von innen berühren"
 STRING IDS_TOUCH_WINDOW_FROM_OUTSIDE		"Fenster von außen berühren"
+STRING IDS_TRA_DVD_VIDEO		"Basiert auf libmpeg2"
 STRING IDS_TRA_FFMPEG		"Basiert auf FFmpeg, http://ffmpeg.org/"
 STRING IDS_TRA_INTEL_MSDK		"Basiert auf Intel Media SDK, benötigt externe Bibliothek (libmfxsw32.dll/libmfxsw64.dll)"
-STRING IDS_TRA_MPEG2		"Basiert auf libmpeg2"
 STRING IDS_TRA_PS2AUD		"Decodiert die Audiostreams von PSS-Dateien"
-STRING IDS_TRA_RA		"Benötigt RealAudio-Decoder dlls, oder FFmpeg (http://ffmpeg.org/)"
-STRING IDS_TRA_RV		"Benötigt RealVideo-Decoder dlls, oder FFmpeg (http://ffmpeg.org/)"
 STRING IDS_UNDETERMINED		"Unbestimmt"
 STRING IDS_UNKNOWN_SWITCH		"Unbekannte Option(en) in der Befehlszeile gefunden: \n\n"
 STRING IDS_UPDATE_CLOSE		"&Schließen"

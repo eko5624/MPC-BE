@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -37,6 +37,7 @@ class __declspec(uuid("DC257063-045F-4BE2-BD5B-E12279C464F0"))
 	, public IAMStreamSelect
 	, public ISpecifyPropertyPages2
 	, public IMpegSplitterFilter
+	, public CExFilterInfoImpl
 {
 	REFERENCE_TIME	m_rtStartOffset;
 	REFERENCE_TIME	m_rtSeekOffset;
@@ -55,7 +56,7 @@ class __declspec(uuid("DC257063-045F-4BE2-BD5B-E12279C464F0"))
 
 	BYTE m_MVC_Base_View_R_flag = 0;
 
-	std::map<DWORD, CAutoPtr<CPacket>> pPackets;
+	std::map<DWORD, std::unique_ptr<CPacket>> pPackets;
 
 	bool m_bIsBD;
 	WORD m_tlxCurrentPage = 0;
@@ -67,11 +68,13 @@ class __declspec(uuid("DC257063-045F-4BE2-BD5B-E12279C464F0"))
 	int m_AC3CoreOnly;
 	CCritSec m_csProps;
 
-	std::deque<CAutoPtr<CPacket>> m_MVCExtensionQueue;
-	std::deque<CAutoPtr<CPacket>> m_MVCBaseQueue;
+	std::deque<std::unique_ptr<CPacket>> m_MVCExtensionQueue;
+	std::deque<std::unique_ptr<CPacket>> m_MVCBaseQueue;
 	BOOL  m_bUseMVCExtension          = FALSE;
 	DWORD m_dwMasterH264TrackNumber   = DWORD_MAX;
 	DWORD m_dwMVCExtensionTrackNumber = DWORD_MAX;
+
+	std::vector<SyncPoint> m_sps;
 
 	HRESULT CreateOutputs(IAsyncReader* pAsyncReader);
 	void	ReadClipInfo(LPCOLESTR pszFileName);
@@ -84,7 +87,7 @@ class __declspec(uuid("DC257063-045F-4BE2-BD5B-E12279C464F0"))
 	bool BuildPlaylist(LPCWSTR pszFileName, CHdmvClipInfo::CPlaylist& files, BOOL bReadMVCExtension = TRUE);
 	bool BuildChapters(LPCWSTR pszFileName, CHdmvClipInfo::CPlaylist& PlaylistItems, CHdmvClipInfo::CPlaylistChapter& Items);
 
-	HRESULT DeliverPacket(CAutoPtr<CPacket> p);
+	HRESULT DeliverPacket(std::unique_ptr<CPacket> p);
 
 	template<typename T>
 	HRESULT HandleMPEGPacket(const DWORD TrackNumber, const __int64 nBytes, const T& h, const REFERENCE_TIME rtStartOffset, const BOOL bStreamUsePTS, const UINT32 Flag = 0);
@@ -146,6 +149,13 @@ public:
 
 	STDMETHODIMP SetSubEmptyPin(BOOL nValue);
 	STDMETHODIMP_(BOOL) GetSubEmptyPin();
+
+	// IKeyFrameInfo
+	STDMETHODIMP_(HRESULT) GetKeyFrameCount(UINT& nKFs);
+	STDMETHODIMP_(HRESULT) GetKeyFrames(const GUID* pFormat, REFERENCE_TIME* pKFs, UINT& nKFs);
+
+	// IExFilterInfo
+	STDMETHODIMP GetPropertyInt(LPCSTR field, int* value) override;
 };
 
 class __declspec(uuid("1365BE7A-C86A-473C-9A41-C0A6E82C9FA3"))
@@ -165,7 +175,7 @@ public:
 
 	HRESULT CheckMediaType(const CMediaType* pmt);
 	HRESULT DeliverNewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate);
-	HRESULT QueuePacket(CAutoPtr<CPacket> p);
+	HRESULT QueuePacket(std::unique_ptr<CPacket> p);
 
 	STDMETHODIMP Connect(IPin* pReceivePin, const AM_MEDIA_TYPE* pmt);
 };

@@ -1,5 +1,5 @@
 /*
- * (C) 2013-2021 see Authors.txt
+ * (C) 2013-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -22,6 +22,8 @@
 #include <afxinet.h>
 #include "DSUtil/SysVersion.h"
 #include "UpdateChecker.h"
+
+#include "Version.h"
 
 // UpdateChecker
 
@@ -131,11 +133,14 @@ UpdateCheckerDlg::UpdateCheckerDlg(Update_Status updateStatus, Version UpdateVer
 		m_text.LoadString(IDS_UPDATE_ERROR);
 		break;
 	case UPDATER_NO_NEW_VERSION:
-		VersionStr.Format(L"%s (build %d)", MPC_VERSION_WSTR, MPC_VERSION_REV);
+		VersionStr.SetString(MPC_VERSION_WSTR);
 		m_text.Format(IDS_USING_NEWER_VERSION, VersionStr);
 		break;
 	case UPDATER_NEW_VERSION_IS_AVAILABLE:
-		VersionStr.Format(L"%u.%u.%u (build %u)", UpdateVersion.major, UpdateVersion.minor, UpdateVersion.patch, UpdateVersion.revision);
+		VersionStr.Format(L"%u.%u.%u", UpdateVersion.major, UpdateVersion.minor, UpdateVersion.patch);
+		if (UpdateVersion.revision) {
+			VersionStr.AppendFormat(L".%u", UpdateVersion.revision);
+		}
 		m_text.Format(IDS_NEW_UPDATE_AVAILABLE, VersionStr);
 		m_latestURL = UpdateURL;
 		break;

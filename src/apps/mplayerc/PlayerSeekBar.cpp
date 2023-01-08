@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2022 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -499,13 +499,13 @@ void CPlayerSeekBar::OnPaint()
 
 				if (bEnabled) {
 					r.DeflateRect(1, 1, 1, 2);
-					CPen white(PS_INSIDEFRAME, 1, white);
-					CPen* old = pThumb->SelectObject(&white);
+					CPen whitePen(PS_INSIDEFRAME, 1, white);
+					CPen* oldPen = pThumb->SelectObject(&whitePen);
 					pThumb->MoveTo(r.left, r.top);
 					pThumb->LineTo(r.right, r.top);
 					pThumb->MoveTo(r.left, r.bottom);
 					pThumb->LineTo(r.right, r.bottom);
-					pThumb->SelectObject(old);
+					pThumb->SelectObject(oldPen);
 					pThumb->SetPixel(r.CenterPoint().x, r.top, 0);
 					pThumb->SetPixel(r.CenterPoint().x, r.bottom, 0);
 				}
@@ -991,10 +991,18 @@ void CPlayerSeekBar::UpdateToolTipText()
 
 void CPlayerSeekBar::OnMButtonDown(UINT nFlags, CPoint point)
 {
+	bool needShow = m_pMainFrame->TogglePreview();
+
 	if (m_pMainFrame->m_wndPreView.IsWindowVisible()) {
-		m_pMainFrame->PreviewWindowHide();
-		AfxGetAppSettings().fSmartSeek = !AfxGetAppSettings().fSmartSeek;
-		OnMouseMove(nFlags,point);
+		if (!needShow) {
+			m_pMainFrame->PreviewWindowHide();
+			OnMouseMove(nFlags, point);
+		}
+	}
+	else {
+		if (needShow) {
+			PreviewWindowShow();
+		}
 	}
 }
 

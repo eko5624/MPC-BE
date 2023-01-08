@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -41,7 +41,7 @@ CPPageFileInfoClip::CPPageFileInfoClip(const CString& fn, IFilterGraph* pFG)
 	auto pFrame = AfxGetMainFrame();
 
 	BeginEnumFilters(pFG, pEF, pBF) {
-		if (CComQIPtr<IPropertyBag> pPB = pBF) {
+		if (CComQIPtr<IPropertyBag> pPB = pBF.p) {
 			if (!pFrame->CheckMainFilter(pBF)) {
 				continue;
 			}
@@ -60,16 +60,12 @@ CPPageFileInfoClip::CPPageFileInfoClip(const CString& fn, IFilterGraph* pFG)
 			}
 		}
 
-		if (CComQIPtr<IAMMediaContent, &IID_IAMMediaContent> pAMMC = pBF) {
+		if (CComQIPtr<IAMMediaContent, &IID_IAMMediaContent> pAMMC = pBF.p) {
 			if (!pFrame->CheckMainFilter(pBF)) {
 				continue;
 			}
 
 			CComBSTR bstr;
-			if (SUCCEEDED(pAMMC->get_Title(&bstr)) && bstr.Length()) {
-				m_clip = bstr.m_str;
-				bstr.Empty();
-			}
 			if (SUCCEEDED(pAMMC->get_AuthorName(&bstr)) && bstr.Length()) {
 				m_author = bstr.m_str;
 				bstr.Empty();
@@ -86,6 +82,11 @@ CPPageFileInfoClip::CPPageFileInfoClip(const CString& fn, IFilterGraph* pFG)
 				m_descText = bstr.m_str;
 				m_descText.Replace(L";", L"\r\n");
 				bstr.Empty();
+			}
+			if (SUCCEEDED(pAMMC->get_Title(&bstr)) && bstr.Length()) {
+				m_clip = bstr.m_str;
+				bstr.Empty();
+				break;
 			}
 		}
 	}
@@ -133,7 +134,6 @@ void CPPageFileInfoClip::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT7, m_desc);
 }
 
-#define SETPAGEFOCUS WM_APP+252 // arbitrary number, can be changed if necessary
 BEGIN_MESSAGE_MAP(CPPageFileInfoClip, CPropertyPage)
 	ON_WM_SIZE()
 	ON_MESSAGE(SETPAGEFOCUS, OnSetPageFocus)

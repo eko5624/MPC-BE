@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,16 @@
 
 #include "stdafx.h"
 #include "CoordGeom.h"
-#include <cmath>
+
+static inline bool IsZero(float d)
+{
+	return std::abs(d) < std::numeric_limits<float>::epsilon();
+}
+
+static inline float Sgn(float d)
+{
+	return IsZero(d) ? 0 : (d) > 0 ? 1 : -1;
+}
 
 //
 // Vector

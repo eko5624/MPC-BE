@@ -146,8 +146,10 @@ private:
 	DWORD									m_dwSYNC2;
 
 	CMediaType								m_pCurrentMediaType;
+	DXVA2_ExtendedFormat					m_inputDxvaExtFormat = {};
 
 	BOOL									m_bDecodingStart;
+	BOOL									m_bDecoderAcceptFormat = FALSE;
 
 	BOOL									m_bHighBitdepth;
 
@@ -248,6 +250,7 @@ public:
 	HRESULT			SetMediaType(PIN_DIRECTION direction, const CMediaType *pmt);
 	HRESULT			CheckInputType(const CMediaType* mtIn);
 	HRESULT			CheckTransform(const CMediaType* mtIn, const CMediaType* mtOut);
+	void			GetOutputSize(int& w, int& h, int& arx, int& ary) override;
 	HRESULT			Transform(IMediaSample* pIn);
 	HRESULT			CompleteConnect(PIN_DIRECTION direction, IPin *pReceivePin);
 	HRESULT			DecideBufferSize(IMemAllocator* pAllocator, ALLOCATOR_PROPERTIES* pProperties);
@@ -311,10 +314,9 @@ public:
 	// === common functions
 	BOOL						IsSupportedDecoderConfig(const D3DFORMAT& nD3DFormat, const DXVA2_ConfigPictureDecode& config, bool& bIsPrefered);
 	BOOL						IsSupportedDecoderMode(const GUID& decoderGUID);
-	int							PictWidth();
-	int							PictHeight();
+	void						GetPictSize(int& width, int& height);
 
-	DXVA2_ExtendedFormat		GetDXVA2ExtendedFormat(AVCodecContext *ctx, AVFrame *frame);
+	DXVA2_ExtendedFormat		GetDXVA2ExtendedFormat(const AVCodecContext *ctx, const AVFrame *frame);
 
 	inline bool					UseDXVA2() const { return m_nDecoderMode == MODE_DXVA2; }
 	inline bool					UseD3D11() const { return m_nDecoderMode == MODE_D3D11; }

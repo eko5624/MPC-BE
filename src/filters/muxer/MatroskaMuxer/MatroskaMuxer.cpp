@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -34,8 +34,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesOut[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-	{L"Input", FALSE, FALSE, FALSE, TRUE, &CLSID_NULL, nullptr, 0, nullptr},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut), sudPinTypesOut}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, TRUE, &CLSID_NULL, nullptr, 0, nullptr},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut), sudPinTypesOut}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -78,7 +78,7 @@ CMatroskaMuxerFilter::CMatroskaMuxerFilter(LPUNKNOWN pUnk, HRESULT* phr)
 		*phr = S_OK;
 	}
 
-	m_pOutput.Attach(DNew CMatroskaMuxerOutputPin(L"CMatroskaMuxerOutputPin", this, this, phr));
+	m_pOutput.reset(DNew CMatroskaMuxerOutputPin(L"CMatroskaMuxerOutputPin", this, this, phr));
 
 	AddInput();
 
@@ -107,10 +107,9 @@ UINT CMatroskaMuxerFilter::GetTrackNumber(const CBasePin* pPin)
 {
 	UINT nTrackNumber = 0;
 
-	POSITION pos = m_pInputs.GetHeadPosition();
-	while (pos) {
+	for (const auto& pInput : m_pInputs) {
 		nTrackNumber++;
-		if (m_pInputs.GetNext(pos) == pPin) {
+		if (pInput.get() == pPin) {
 			return nTrackNumber;
 		}
 	}
@@ -120,39 +119,37 @@ UINT CMatroskaMuxerFilter::GetTrackNumber(const CBasePin* pPin)
 
 void CMatroskaMuxerFilter::AddInput()
 {
-	POSITION pos = m_pInputs.GetHeadPosition();
-	while (pos) {
-		CBasePin* pPin = m_pInputs.GetNext(pos);
+	for (const auto& pPin : m_pInputs) {
 		if (!pPin->IsConnected()) {
 			return;
 		}
 	}
 
 	CStringW name;
-	name.Format(L"Track %u", m_pInputs.GetCount() + 1);
+	name.Format(L"Track %u", m_pInputs.size() + 1);
 
 	HRESULT hr;
-	CAutoPtr<CMatroskaMuxerInputPin> pPin(DNew CMatroskaMuxerInputPin(name, this, this, &hr));
-	m_pInputs.AddTail(pPin);
+	m_pInputs.emplace_back(DNew CMatroskaMuxerInputPin(name, this, this, &hr));
 }
 
 int CMatroskaMuxerFilter::GetPinCount()
 {
-	return (int)m_pInputs.GetCount() + (m_pOutput ? 1 : 0);
+	return (int)m_pInputs.size() + (m_pOutput ? 1 : 0);
 }
 
 CBasePin* CMatroskaMuxerFilter::GetPin(int n)
 {
 	CAutoLock cAutoLock(this);
 
-	if (n >= 0 && n < (int)m_pInputs.GetCount()) {
-		if (POSITION pos = m_pInputs.FindIndex(n)) {
-			return m_pInputs.GetAt(pos);
-		}
+	if (n >= 0 && n < (int)m_pInputs.size()) {
+		auto it = m_pInputs.begin();
+		std::advance(it, n);
+
+		return (*it).get();
 	}
 
-	if (n == (int)m_pInputs.GetCount() && m_pOutput) {
-		return m_pOutput;
+	if (n == (int)m_pInputs.size() && m_pOutput) {
+		return m_pOutput.get();
 	}
 
 	return nullptr;
@@ -269,9 +266,8 @@ STDMETHODIMP CMatroskaMuxerFilter::GetDuration(LONGLONG* pDuration)
 {
 	CheckPointer(pDuration, E_POINTER);
 	*pDuration = 0;
-	POSITION pos = m_pInputs.GetHeadPosition();
-	while (pos) {
-		REFERENCE_TIME rt = m_pInputs.GetNext(pos)->m_rtDur;
+	for (const auto& pInput : m_pInputs) {
+		REFERENCE_TIME rt = pInput->m_rtDur;
 		if (rt > *pDuration) {
 			*pDuration = rt;
 		}
@@ -407,14 +403,14 @@ DWORD CMatroskaMuxerFilter::ThreadProc()
 	// Meta Seek
 
 	Seek seek;
-	CAutoPtr<SeekHead> sh;
+	std::unique_ptr<SeekHead> sh;
 
 	// Segment Info
 
-	sh.Attach(DNew SeekHead());
+	sh.reset(DNew SeekHead());
 	sh->ID.Set(0x1549A966);
 	sh->Position.Set(GetStreamPosition(pStream) - segpos);
-	seek.SeekHeads.AddTail(sh);
+	seek.SeekHeads.emplace_back(std::move(sh));
 
 	ULONGLONG infopos = GetStreamPosition(pStream);
 	Info info;
@@ -427,22 +423,22 @@ DWORD CMatroskaMuxerFilter::ThreadProc()
 
 	// Tracks
 
-	sh.Attach(DNew SeekHead());
+	sh.reset(DNew SeekHead());
 	sh->ID.Set(0x1654AE6B);
 	sh->Position.Set(GetStreamPosition(pStream) - segpos);
-	seek.SeekHeads.AddTail(sh);
+	seek.SeekHeads.emplace_back(std::move(sh));
 
 	UINT64 TrackNumber = 0;
 	/*
 		CNode<Track> Tracks;
-		CAutoPtr<Track> pT(DNew Track());
+		std::unique_ptr<Track> pT(DNew Track());
 		POSITION pos = m_pInputs.GetHeadPosition();
 		for (int i = 1; pos; i++)
 		{
 			CMatroskaMuxerInputPin* pPin = m_pInputs.GetNext(pos);
 			if (!pPin->IsConnected()) continue;
 
-			CAutoPtr<TrackEntry> pTE(DNew TrackEntry());
+			std::unique_ptr<TrackEntry> pTE(DNew TrackEntry());
 			*pTE = *pPin->GetTrackEntry();
 			if (TrackNumber == 0 && pTE->TrackType == TrackEntry::TypeVideo)
 				TrackNumber = pTE->TrackNumber;
@@ -465,11 +461,9 @@ DWORD CMatroskaMuxerFilter::ThreadProc()
 
 	std::list<CMatroskaMuxerInputPin*> pActivePins;
 
-	POSITION pos = m_pInputs.GetHeadPosition();
-	while (pos) {
-		CMatroskaMuxerInputPin* pPin = m_pInputs.GetNext(pos);
+	for (const auto& pPin : m_pInputs) {
 		if (pPin->IsConnected()) {
-			pActivePins.push_back(pPin);
+			pActivePins.push_back(pPin.get());
 		}
 	}
 
@@ -507,7 +501,7 @@ DWORD CMatroskaMuxerFilter::ThreadProc()
 
 						CAutoLock cAutoLock(&pTmp->m_csQueue);
 
-						if (pTmp->m_blocks.IsEmpty() && pTmp->m_fEndOfStreamReceived) {
+						if (pTmp->m_blocks.empty() && pTmp->m_fEndOfStreamReceived) {
 							pActivePins.erase(it++);
 							continue;
 						} else {
@@ -518,13 +512,13 @@ DWORD CMatroskaMuxerFilter::ThreadProc()
 							nPinsNeeded++;
 						}
 
-						if (!pTmp->m_blocks.IsEmpty()) {
+						if (!pTmp->m_blocks.empty()) {
 							if (pTmp->GetTrackEntry()->TrackType != TrackEntry::TypeSubtitle) {
 								nPinsGotSomething++;
 							}
 
-							if (!pTmp->m_blocks.IsEmpty()) {
-								REFERENCE_TIME rt = pTmp->m_blocks.GetHead()->Block.TimeCode;
+							if (!pTmp->m_blocks.empty()) {
+								REFERENCE_TIME rt = pTmp->m_blocks.front()->Block.TimeCode;
 								if (rt < rtMin) {
 									rtMin = rt;
 									pPin = pTmp;
@@ -544,18 +538,18 @@ DWORD CMatroskaMuxerFilter::ThreadProc()
 
 					if (!fTracksWritten) {
 						CNode<Track> Tracks;
-						CAutoPtr<Track> pT(DNew Track());
+						std::unique_ptr<Track> pT(DNew Track());
 
 						for (const auto& pActivePin : pActivePins) {
-							CAutoPtr<TrackEntry> pTE(DNew TrackEntry());
+							std::unique_ptr<TrackEntry> pTE(DNew TrackEntry());
 							*pTE = *pActivePin->GetTrackEntry();
 							if (TrackNumber == 0 && pTE->TrackType == TrackEntry::TypeVideo) {
 								TrackNumber = pTE->TrackNumber;
 							}
-							pT->TrackEntries.AddTail(pTE);
+							pT->TrackEntries.emplace_back(std::move(pTE));
 						}
 
-						Tracks.AddTail(pT);
+						Tracks.emplace_back(std::move(pT));
 						Tracks.Write(pStream);
 
 						if (TrackNumber == 0) {
@@ -567,11 +561,12 @@ DWORD CMatroskaMuxerFilter::ThreadProc()
 
 					ASSERT(pPin);
 
-					CAutoPtr<BlockGroup> b;
+					std::unique_ptr<BlockGroup> b;
 
 					{
 						CAutoLock cAutoLock(&pPin->m_csQueue);
-						b.Attach(pPin->m_blocks.RemoveHead().Detach());
+						b = std::move(pPin->m_blocks.front());
+						pPin->m_blocks.pop_front();
 					}
 
 					if (b) {
@@ -598,17 +593,17 @@ DWORD CMatroskaMuxerFilter::ThreadProc()
 						}
 
 						while ((INT64)(c.TimeCode + MAXCLUSTERTIME) < b->Block.TimeCode) {
-							if (!c.BlockGroups.IsEmpty()) {
-								sh.Attach(DNew SeekHead());
+							if (!c.BlockGroups.empty()) {
+								sh.reset(DNew SeekHead());
 								sh->ID.Set(c.GetID()/*0x1F43B675*/);
 								sh->Position.Set(GetStreamPosition(pStream) - segpos);
-								seek.SeekHeads.AddTail(sh);
+								seek.SeekHeads.emplace_back(std::move(sh));
 
 								c.Write(pStream); // TODO: write blocks
 							}
 
 							c.TimeCode.Set(c.TimeCode + MAXCLUSTERTIME);
-							c.BlockGroups.RemoveAll();
+							c.BlockGroups.clear();
 							nBlocksInCueTrack = 0;
 						}
 
@@ -619,16 +614,16 @@ DWORD CMatroskaMuxerFilter::ThreadProc()
 						if (b->ReferenceBlock == 0 && b->Block.TrackNumber == TrackNumber) {
 							ULONGLONG clusterpos = GetStreamPosition(pStream) - segpos;
 							if (lastcueclusterpos != clusterpos || lastcuetimecode + 1000 < b->Block.TimeCode) {
-								CAutoPtr<CueTrackPosition> ctp(DNew CueTrackPosition());
+								std::unique_ptr<CueTrackPosition> ctp(DNew CueTrackPosition());
 								ctp->CueTrack.Set(b->Block.TrackNumber);
 								ctp->CueClusterPosition.Set(clusterpos);
-								if (!c.BlockGroups.IsEmpty()) {
+								if (!c.BlockGroups.empty()) {
 									ctp->CueBlockNumber.Set(nBlocksInCueTrack);
 								}
-								CAutoPtr<CuePoint> cp(DNew CuePoint());
+								std::unique_ptr<CuePoint> cp(DNew CuePoint());
 								cp->CueTime.Set(b->Block.TimeCode);
-								cp->CueTrackPositions.AddTail(ctp);
-								cue.CuePoints.AddTail(cp);
+								cp->CueTrackPositions.emplace_back(std::move(ctp));
+								cue.CuePoints.emplace_back(std::move(cp));
 								lastcueclusterpos = clusterpos;
 								lastcuetimecode = b->Block.TimeCode;
 							}
@@ -639,24 +634,24 @@ DWORD CMatroskaMuxerFilter::ThreadProc()
 						m_rtCurrent = b->Block.TimeCode * 10000;
 
 						b->Block.TimeCode -= c.TimeCode;
-						c.BlockGroups.AddTail(b);
+						c.BlockGroups.emplace_back(std::move(b));
 					}
 				}
 
-				if (!c.BlockGroups.IsEmpty()) {
-					sh.Attach(DNew SeekHead());
+				if (!c.BlockGroups.empty()) {
+					sh.reset(DNew SeekHead());
 					sh->ID.Set(c.GetID()/*0x1F43B675*/);
 					sh->Position.Set(GetStreamPosition(pStream) - segpos);
-					seek.SeekHeads.AddTail(sh);
+					seek.SeekHeads.emplace_back(std::move(sh));
 
 					c.Write(pStream);
 				}
 
-				if (!cue.CuePoints.IsEmpty()) {
-					sh.Attach(DNew SeekHead());
+				if (!cue.CuePoints.empty()) {
+					sh.reset(DNew SeekHead());
 					sh->ID.Set(cue.GetID()/*0x1C53BB6B*/);
 					sh->Position.Set(GetStreamPosition(pStream) - segpos);
-					seek.SeekHeads.AddTail(sh);
+					seek.SeekHeads.emplace_back(std::move(sh));
 
 					cue.Write(pStream);
 				}
@@ -664,10 +659,10 @@ DWORD CMatroskaMuxerFilter::ThreadProc()
 				{
 					Tags tags;
 
-					sh.Attach(DNew SeekHead());
+					sh.reset(DNew SeekHead());
 					sh->ID.Set(tags.GetID());
 					sh->Position.Set(GetStreamPosition(pStream) - segpos);
-					seek.SeekHeads.AddTail(sh);
+					seek.SeekHeads.emplace_back(std::move(sh));
 
 					tags.Write(pStream);
 				}
@@ -763,7 +758,7 @@ HRESULT CMatroskaMuxerInputPin::BreakConnect()
 		return hr;
 	}
 
-	m_pTE.Free();
+	m_pTE.reset();
 
 	return hr;
 }
@@ -782,8 +777,7 @@ HRESULT CMatroskaMuxerInputPin::CompleteConnect(IPin* pPin)
 		pMS->GetDuration(&m_rtDur);
 	}
 
-	m_pTE.Free();
-	m_pTE.Attach(DNew TrackEntry());
+	m_pTE.reset(DNew TrackEntry());
 
 	m_pTE->TrackUID.Set(rand());
 	m_pTE->MinCache.Set(1);
@@ -1168,8 +1162,8 @@ HRESULT CMatroskaMuxerInputPin::Inactive()
 {
 	m_fActive = false;
 	CAutoLock cAutoLock(&m_csQueue);
-	m_blocks.RemoveAll();
-	m_pVorbisHdrs.RemoveAll();
+	m_blocks.clear();
+	m_pVorbisHdrs.clear();
 	return __super::Inactive();
 }
 
@@ -1201,7 +1195,7 @@ STDMETHODIMP CMatroskaMuxerInputPin::Receive(IMediaSample* pSample)
 	while (m_fActive) {
 		{
 			CAutoLock cAutoLock2(&m_csQueue);
-			if (m_blocks.GetCount() < MAXBLOCKS) {
+			if (m_blocks.size() < MAXBLOCKS) {
 				break;
 			}
 		}
@@ -1246,13 +1240,13 @@ STDMETHODIMP CMatroskaMuxerInputPin::Receive(IMediaSample* pSample)
 		  pSample->IsPreroll() == S_OK ? 1 : 0,
 		  pSample->IsSyncPoint() == S_OK ? 1 : 0);
 
-	if (m_mt.subtype == MEDIASUBTYPE_Vorbis && m_pVorbisHdrs.GetCount() < 3) {
-		CAutoPtr<CBinary> data(DNew CBinary(0));
+	if (m_mt.subtype == MEDIASUBTYPE_Vorbis && m_pVorbisHdrs.size() < 3) {
+		std::unique_ptr<CBinary> data(DNew CBinary(0));
 		data->resize(inputLen);
 		memcpy(data->data(), pData, inputLen);
-		m_pVorbisHdrs.Add(data);
+		m_pVorbisHdrs.emplace_back(std::move(data));
 
-		if (m_pVorbisHdrs.GetCount() == 3) {
+		if (m_pVorbisHdrs.size() == 3) {
 			int len = 1;
 			for (size_t i = 0; i < 2; i++) {
 				len += (int)m_pVorbisHdrs[i]->size() / 255 + 1;
@@ -1286,7 +1280,7 @@ STDMETHODIMP CMatroskaMuxerInputPin::Receive(IMediaSample* pSample)
 		pSample->SetSyncPoint(TRUE);    // HACK: some capture filters don't set this
 	}
 
-	CAutoPtr<BlockGroup> b(DNew BlockGroup());
+	std::unique_ptr<BlockGroup> b(DNew BlockGroup());
 	/*
 			// TODO: test this with a longer capture (pcm, mp3)
 			if (S_OK == pSample->IsSyncPoint() && rtStart < m_rtLastStart)
@@ -1310,13 +1304,13 @@ STDMETHODIMP CMatroskaMuxerInputPin::Receive(IMediaSample* pSample)
 		b->BlockDuration.Set((rtStop - rtStart + 5000) / 10000);
 	}
 
-	CAutoPtr<CBinary> data(DNew CBinary(0));
+	std::unique_ptr<CBinary> data(DNew CBinary(0));
 	data->resize(inputLen);
 	memcpy(data->data(), pData, inputLen);
-	b->Block.BlockData.AddTail(data);
+	b->Block.BlockData.emplace_back(std::move(data));
 
 	CAutoLock cAutoLock2(&m_csQueue);
-	m_blocks.AddTail(b); // TODO: lacing for audio
+	m_blocks.emplace_back(std::move(b)); // TODO: lacing for audio
 
 	m_rtLastStart = rtStart;
 	m_rtLastStop = rtStop;

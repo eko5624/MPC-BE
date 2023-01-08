@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -37,7 +37,7 @@ struct CFormatElem
 };
 
 template<class T>
-class CFormat : public CAutoPtrArray<CFormatElem<T> >
+class CFormat : public std::vector<std::unique_ptr<CFormatElem<T>>>
 {
 public:
 	CString name;
@@ -46,22 +46,22 @@ public:
 };
 
 template<class T>
-class CFormatArray : public CAutoPtrArray<CFormat<T> >
+class CFormatArray : public std::vector<std::unique_ptr<CFormat<T>>>
 {
 public:
 	virtual ~CFormatArray() {}
 
 	CFormat<T>* Find(CString name, bool fCreate = false) {
-		for (size_t i = 0; i < GetCount(); ++i) {
-			if (GetAt(i)->name == name) {
-				return GetAt(i);
+		for (const auto& pf : *this) {
+			if (pf->name == name) {
+				return pf.get();
 			}
 		}
 
 		if (fCreate) {
-			CAutoPtr<CFormat<T>> pf(DNew CFormat<T>(name));
-			CFormat<T>* tmp = pf;
-			Add(pf);
+			std::unique_ptr<CFormat<T>> pf(DNew CFormat<T>(name));
+			CFormat<T>* tmp = pf.get();
+			this->emplace_back(std::move(pf));
 			return tmp;
 		}
 
@@ -73,13 +73,11 @@ public:
 			return false;
 		}
 
-		for (size_t i = 0; i < GetCount(); ++i) {
-			CFormat<T>* pf = GetAt(i);
-			for (size_t j = 0; j < pf->GetCount(); ++j) {
-				CFormatElem<T>* pfe = pf->GetAt(j);
+		for (const auto& pf : *this) {
+			for (const auto& pfe : *pf) {
 				if (pfe->mt.majortype == pmt->majortype && pfe->mt.subtype == pmt->subtype) {
 					if (ppf) {
-						*ppf = pf;
+						*ppf = pf.get();
 					}
 					return true;
 				}
@@ -94,16 +92,14 @@ public:
 			return false;
 		}
 
-		for (size_t i = 0; i < GetCount(); ++i) {
-			CFormat<T>* pf = GetAt(i);
-			for (size_t j = 0; j < pf->GetCount(); ++j) {
-				CFormatElem<T>* pfe = pf->GetAt(j);
+		for (const auto& pf : *this) {
+			for (const auto& pfe : *pf) {
 				if ((!pmt || pfe->mt == *pmt) && (!pcaps || !memcmp(pcaps, &pfe->caps, sizeof(T)))) {
 					if (ppf) {
-						*ppf = pf;
+						*ppf = pf.get();
 					}
 					if (ppfe) {
-						*ppfe = pfe;
+						*ppfe = pfe.get();
 					}
 					return true;
 				}
@@ -130,10 +126,10 @@ public:
 			return false;
 		}
 
-		CAutoPtr<CFormatElem<T> > pfe(DNew CFormatElem<T>());
+		std::unique_ptr<CFormatElem<T>> pfe(DNew CFormatElem<T>());
 		pfe->mt = *pmt;
 		pfe->caps = caps;
-		pf->Add(pfe);
+		pf->emplace_back(std::move(pfe));
 
 		return true;
 	}

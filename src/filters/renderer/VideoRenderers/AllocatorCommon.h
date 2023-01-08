@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -22,10 +22,9 @@
 #pragma once
 
 #include <d3d9.h>
-#include "SubPic/ISubPic.h"
+#include "IAllocatorPresenter.h"
 
-HRESULT CreateAP9(const CLSID& clsid, HWND hWnd, bool bFullscreen, ISubPicAllocatorPresenter3** ppAP);
-HRESULT CreateEVR(const CLSID& clsid, HWND hWnd, bool bFullscreen, ISubPicAllocatorPresenter3** ppAP);
+HRESULT CreateAllocatorPresenter(const CLSID& clsid, HWND hWnd, bool bFullscreen, IAllocatorPresenter** ppAP);
 
 CString GetWindowsErrorMessage(HRESULT _Error, HMODULE _Module);
 const wchar_t* D3DFormatToString(D3DFORMAT format);

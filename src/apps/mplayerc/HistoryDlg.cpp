@@ -1,5 +1,5 @@
 /*
- * (C) 2021 see Authors.txt
+ * (C) 2021-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -100,8 +100,47 @@ void CHistoryDlg::SetupList()
 	m_list.RedrawWindow();
 }
 
+void CHistoryDlg::RemoveFromJumpList(const std::list<SessionInfo>& sessions)
+{
+	CComPtr<IApplicationDestinations> pDests;
+	HRESULT hr = pDests.CoCreateInstance(CLSID_ApplicationDestinations, nullptr, CLSCTX_INPROC_SERVER);
+	if (hr == S_OK) {
+		CComPtr<IApplicationDocumentLists> pDocLists;
+		hr = pDocLists.CoCreateInstance(CLSID_ApplicationDocumentLists, nullptr, CLSCTX_INPROC_SERVER);
+		if (hr == S_OK) {
+			CComPtr<IObjectArray> pItems;
+			hr = pDocLists->GetList(ADLT_RECENT, 0, IID_PPV_ARGS(&pItems));
+			if (hr == S_OK) {
+				UINT cObjects = 0;
+				hr = pItems->GetCount(&cObjects);
+				if (hr == S_OK) {
+					for (UINT i = 0; i < cObjects; i++) {
+						CComPtr<IShellItem> pShellItem;
+						hr = pItems->GetAt(i, IID_PPV_ARGS(&pShellItem));
+						if (hr == S_OK) {
+							LPWSTR pszName = nullptr;
+							hr = pShellItem->GetDisplayName(SIGDN_FILESYSPATH, &pszName);
+							if (hr == S_OK) {
+								for (auto& ses : sessions) {
+									if (ses.Path.CompareNoCase(pszName) == 0) {
+										pDests->RemoveDestination(pShellItem);
+										break;
+									}
+								}
+								CoTaskMemFree(pszName);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 void CHistoryDlg::RemoveSelected()
 {
+	auto& historyFile = AfxGetMyApp()->m_HistoryFile;
+
 	std::list<SessionInfo> selSessions;
 
 	POSITION pos = m_list.GetFirstSelectedItemPosition();
@@ -116,9 +155,18 @@ void CHistoryDlg::RemoveSelected()
 	}
 
 	if (selSessions.size()) {
-		if (AfxGetMyApp()->m_HistoryFile.DeleteSessions(selSessions)) {
-			AfxGetMyApp()->m_HistoryFile.GetRecentSessions(m_recentSessions, INT_MAX);
+		if (historyFile.DeleteSessions(selSessions)) {
+			RemoveFromJumpList(selSessions);
+			historyFile.GetRecentSessions(m_recentSessions, INT_MAX);
 			SetupList();
+
+			auto& strLastOpenFile = AfxGetAppSettings().strLastOpenFile;
+			for (auto& ses : selSessions) {
+				if (ses.Path.CompareNoCase(strLastOpenFile) == 0) {
+					strLastOpenFile.Empty();
+					break;
+				}
+			}
 		}
 	}
 }
@@ -146,9 +194,15 @@ int CHistoryDlg::RemoveMissingFiles()
 
 	if (missingFiles.size()) {
 		if (historyFile.DeleteSessions(missingFiles)) {
+			RemoveFromJumpList(missingFiles);
 			count = missingFiles.size();
 			historyFile.GetRecentSessions(m_recentSessions, INT_MAX);
 			SetupList();
+
+			auto& strLastOpenFile = AfxGetAppSettings().strLastOpenFile;
+			if (!::PathFileExistsW(strLastOpenFile)) {
+				strLastOpenFile.Empty();
+			}
 		}
 	}
 
@@ -159,8 +213,15 @@ void CHistoryDlg::ClearHistory()
 {
 	if (IDYES == AfxMessageBox(ResStr(IDS_RECENT_FILES_QUESTION), MB_ICONQUESTION | MB_YESNO)) {
 		if (AfxGetMyApp()->m_HistoryFile.Clear()) {
+			CComPtr<IApplicationDestinations> pDests;
+			HRESULT hr = pDests.CoCreateInstance(CLSID_ApplicationDestinations, nullptr, CLSCTX_INPROC_SERVER);
+			if (SUCCEEDED(hr)) {
+				hr = pDests->RemoveAllDestinations();
+			}
 			m_recentSessions.clear();
 			SetupList();
+
+			AfxGetAppSettings().strLastOpenFile.Empty();
 		}
 	}
 }
@@ -247,7 +308,7 @@ void CHistoryDlg::OnTimer(UINT_PTR nIDEvent)
 void CHistoryDlg::OnChangeFilterEdit()
 {
 	KillTimer(m_nFilterTimerID);
-	m_nFilterTimerID = SetTimer(2, 100, NULL);
+	m_nFilterTimerID = SetTimer(2, 100, nullptr);
 }
 
 void CHistoryDlg::OnBnClickedMenu()

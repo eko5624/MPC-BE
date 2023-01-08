@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -51,8 +51,9 @@ CMpaSplitterFile::~CMpaSplitterFile()
 #define MPA_HEADER_SIZE  4
 #define ADTS_HEADER_SIZE 9
 
-#define MOVE_TO_MPA_START_CODE(b, e) while(b <= e - MPA_HEADER_SIZE  && ((GETU16(b) & MPA_SYNCWORD) != MPA_SYNCWORD)) b++;
-#define MOVE_TO_AAC_START_CODE(b, e) while(b <= e - ADTS_HEADER_SIZE && ((GETU16(b) & AAC_ADTS_SYNCWORD) != AAC_ADTS_SYNCWORD)) b++;
+#define MOVE_TO_MPA_START_CODE(b, e)      while(b <= e - MPA_HEADER_SIZE  && ((GETU16(b) & MPA_SYNCWORD) != MPA_SYNCWORD)) b++;
+#define MOVE_TO_AAC_START_CODE(b, e)      while(b <= e - ADTS_HEADER_SIZE && ((GETU16(b) & AAC_ADTS_SYNCWORD) != AAC_ADTS_SYNCWORD)) b++;
+#define MOVE_TO_AAC_LATM_START_CODE(b, e) while(b <= e - 7 && ((GETU16(b) & 0xE0FF) != 0xE056)) b++;
 
 #define FRAMES_FLAG 0x0001
 
@@ -81,7 +82,7 @@ HRESULT CMpaSplitterFile::Init()
 
 	Seek(0);
 
-	if (BitRead(24, true) == 'ID3') {
+	while (BitRead(24, true) == 'ID3') {
 		BitRead(24);
 
 		BYTE major = (BYTE)BitRead(8);
@@ -97,18 +98,20 @@ HRESULT CMpaSplitterFile::Init()
 
 		// TODO: read extended header
 		if (major <= 4) {
-
 			BYTE* buf = DNew BYTE[size];
 			ByteRead(buf, size);
 
-			m_pID3Tag = DNew CID3Tag(major, flags);
+			if (!m_pID3Tag) {
+				m_pID3Tag = DNew CID3Tag(major, flags);
+			}
+
 			m_pID3Tag->ReadTagsV2(buf, size);
-			delete [] buf;
+			delete[] buf;
 		}
 
 		Seek(m_startpos);
-		for (int i = 0; i < (1 << 20) && m_startpos < endpos && BitRead(8, true) == 0; i++) {
-			BitRead(8), m_startpos++;
+		for (int i = 0; i < (1 << 20) && m_startpos < endpos && !BitRead(8); i++) {
+			m_startpos++;
 		}
 	}
 
@@ -250,6 +253,49 @@ HRESULT CMpaSplitterFile::Init()
 				m_mode = mode::none;
 			}
 		}
+
+		if (m_mode == mode::none) {
+			BYTE* start = buffer.get();
+			const BYTE* end = start + size;
+			while (m_mode != mode::latm) {
+				MOVE_TO_AAC_LATM_START_CODE(start, end);
+				if (start < end - 7) {
+					startpos = m_startpos + (start - buffer.get());
+					int frame_size = ParseAACLatmHeader(start, end - start);
+					if (frame_size == 0) {
+						start++;
+						continue;
+					}
+					if (start + frame_size + 7 > end) {
+						break;
+					}
+
+					BYTE* start2 = start + frame_size;
+					while (start2 + 7 <= end && valid_cnt < 10) {
+						frame_size = ParseAACLatmHeader(start2, end - start2);
+						if (frame_size == 0) {
+							valid_cnt = 0;
+							m_mode = mode::none;
+							start++;
+							break;
+						}
+
+						valid_cnt++;
+						m_mode = mode::latm;
+						if (start2 + frame_size >= end) {
+							break;
+						}
+
+						start2 += frame_size;
+					}
+				} else {
+					break;
+				}
+			}
+			if (valid_cnt < 3) {
+				m_mode = mode::none;
+			}
+		}
 	}
 
 	if (m_mode == mode::none) {
@@ -262,8 +308,10 @@ HRESULT CMpaSplitterFile::Init()
 
 	if (m_mode == mode::mpa) {
 		Read(m_mpahdr, MPA_HEADER_SIZE, &m_mt, true);
-	} else {
+	} else if (m_mode == mode::mp4a) {
 		Read(m_aachdr, ADTS_HEADER_SIZE + 64, &m_mt, false);
+	} else {
+		Read(m_latmhdr, 32, &m_mt);
 	}
 
 	if (m_mode == mode::mpa) {
@@ -301,6 +349,8 @@ HRESULT CMpaSplitterFile::Init()
 		m_coefficient = 10000000.0 * (GetLength() - m_startpos) * m_mpahdr.FrameSamples / m_mpahdr.Samplerate;
 	} else if (m_mode == mode::mp4a) {
 		m_coefficient = 10000000.0 * (GetLength() - m_startpos) * m_aachdr.FrameSamples / m_aachdr.Samplerate;
+	} else if (m_mode == mode::latm) {
+		m_coefficient = 10000000.0 * (GetLength() - m_startpos) * m_latmhdr.FrameSamples / m_latmhdr.samplerate;
 	}
 
 	int FrameSize;
@@ -350,8 +400,8 @@ bool CMpaSplitterFile::Sync(int& FrameSize, REFERENCE_TIME& rtDuration, int limi
 				}
 				AdjustDuration(h.FrameSize);
 
-				FrameSize	= h.FrameSize;
-				rtDuration	= h.rtDuration;
+				FrameSize  = h.FrameSize;
+				rtDuration = h.rtDuration;
 
 				memcpy(&m_mpahdr, &h, sizeof(mpahdr));
 
@@ -370,8 +420,25 @@ bool CMpaSplitterFile::Sync(int& FrameSize, REFERENCE_TIME& rtDuration, int limi
 					AdjustDuration(h.FrameSize);
 					Seek(GetPos() + (h.fcrc ? 7 : 9));
 
-					FrameSize	= h.FrameSize;
-					rtDuration	= h.rtDuration;
+					FrameSize  = h.FrameSize;
+					rtDuration = h.rtDuration;
+
+					return true;
+				}
+			} else {
+				break;
+			}
+		}
+	} else if (m_mode == mode::latm) {
+		while (GetPos() <= endpos - 7) {
+			latm_aachdr h;
+
+			if (Read(h, (int)(endpos - GetPos()))) {
+				if (m_latmhdr == h) {
+					AdjustDuration(h.FrameSize);
+
+					FrameSize  = h.FrameSize;
+					rtDuration = h.rtDuration;
 
 					return true;
 				}
@@ -391,11 +458,11 @@ void CMpaSplitterFile::AdjustDuration(int framesize)
 	}
 
 	if (!m_bIsVBR) {
-		int rValue;
-		if (!m_pos2fsize.Lookup(GetPos(), rValue)) {
+		auto it = m_pos2fsize.find(GetPos());
+		if (it == m_pos2fsize.end()) {
 			m_procsize += framesize;
-			m_pos2fsize.SetAt(GetPos(), framesize);
-			m_rtDuration = m_coefficient * m_pos2fsize.GetCount() / m_procsize;
+			m_pos2fsize.emplace(GetPos(), framesize);
+			m_rtDuration = m_coefficient * m_pos2fsize.size() / m_procsize;
 		}
 	}
 }

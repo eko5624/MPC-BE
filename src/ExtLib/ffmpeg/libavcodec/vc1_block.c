@@ -68,6 +68,13 @@ static inline void init_block_index(VC1Context *v)
     }
 }
 
+static inline void update_block_index(MpegEncContext *s)
+{
+    /* VC1 is always 420 except when using AV_CODEC_FLAG_GRAY
+     * (or a HWAccel). Shall we inline this value? */
+    ff_update_block_index(s, 8, 0, s->chroma_x_shift);
+}
+
 /** @} */ //Bitplane group
 
 static void vc1_put_blocks_clamped(VC1Context *v, int put_signed)
@@ -2570,7 +2577,7 @@ static void vc1_decode_i_blocks(VC1Context *v)
         s->mb_x = 0;
         init_block_index(v);
         for (; s->mb_x < v->end_mb_x; s->mb_x++) {
-            ff_update_block_index(s);
+            update_block_index(s);
             s->bdsp.clear_blocks(v->block[v->cur_blk_idx][0]);
             mb_pos = s->mb_x + s->mb_y * s->mb_width;
             s->current_picture.mb_type[mb_pos]                     = MB_TYPE_INTRA;
@@ -2633,15 +2640,9 @@ static void vc1_decode_i_blocks(VC1Context *v)
             v->left_blk_idx = (v->left_blk_idx + 1) % (v->end_mb_x + 2);
             v->cur_blk_idx = (v->cur_blk_idx + 1) % (v->end_mb_x + 2);
         }
-        if (!v->s.loop_filter)
-            ff_mpeg_draw_horiz_band(s, s->mb_y * 16, 16);
-        else if (s->mb_y)
-            ff_mpeg_draw_horiz_band(s, (s->mb_y - 1) * 16, 16);
 
         s->first_slice_line = 0;
     }
-    if (v->s.loop_filter)
-        ff_mpeg_draw_horiz_band(s, (s->end_mb_y - 1) * 16, 16);
 
     /* This is intentionally mb_height and not end_mb_y - unlike in advanced
      * profile, these only differ are when decoding MSS2 rectangles. */
@@ -2705,7 +2706,7 @@ static int vc1_decode_i_blocks_adv(VC1Context *v)
         init_block_index(v);
         for (;s->mb_x < s->mb_width; s->mb_x++) {
             mquant = v->pq;
-            ff_update_block_index(s);
+            update_block_index(s);
             s->bdsp.clear_blocks(v->block[v->cur_blk_idx][0]);
             mb_pos = s->mb_x + s->mb_y * s->mb_stride;
             s->current_picture.mb_type[mb_pos + v->mb_off]                         = MB_TYPE_INTRA;
@@ -2779,15 +2780,9 @@ static int vc1_decode_i_blocks_adv(VC1Context *v)
             inc_blk_idx(v->left_blk_idx);
             inc_blk_idx(v->cur_blk_idx);
         }
-        if (!v->s.loop_filter)
-            ff_mpeg_draw_horiz_band(s, s->mb_y * 16, 16);
-        else if (s->mb_y)
-            ff_mpeg_draw_horiz_band(s, (s->mb_y-1) * 16, 16);
         s->first_slice_line = 0;
     }
 
-    if (v->s.loop_filter)
-        ff_mpeg_draw_horiz_band(s, (s->end_mb_y - 1) * 16, 16);
     ff_er_add_slice(&s->er, 0, s->start_mb_y << v->field_mode, s->mb_width - 1,
                     (s->end_mb_y << v->field_mode) - 1, ER_MB_END);
     return 0;
@@ -2830,7 +2825,7 @@ static void vc1_decode_p_blocks(VC1Context *v)
         s->mb_x = 0;
         init_block_index(v);
         for (; s->mb_x < s->mb_width; s->mb_x++) {
-            ff_update_block_index(s);
+            update_block_index(s);
 
             if (v->fcm == ILACE_FIELD || (v->fcm == PROGRESSIVE && v->mv_type_is_raw) || v->skip_is_raw)
                 if (get_bits_left(&v->s.gb) <= 1) {
@@ -2875,12 +2870,8 @@ static void vc1_decode_p_blocks(VC1Context *v)
         memmove(v->luma_mv_base,
                 v->luma_mv - s->mb_stride,
                 sizeof(v->luma_mv_base[0]) * 2 * s->mb_stride);
-        if (s->mb_y != s->start_mb_y)
-            ff_mpeg_draw_horiz_band(s, (s->mb_y - 1) * 16, 16);
         s->first_slice_line = 0;
     }
-    if (s->end_mb_y >= s->start_mb_y)
-        ff_mpeg_draw_horiz_band(s, (s->end_mb_y - 1) * 16, 16);
     ff_er_add_slice(&s->er, 0, s->start_mb_y << v->field_mode, s->mb_width - 1,
                     (s->end_mb_y << v->field_mode) - 1, ER_MB_END);
 }
@@ -2919,7 +2910,7 @@ static void vc1_decode_b_blocks(VC1Context *v)
         s->mb_x = 0;
         init_block_index(v);
         for (; s->mb_x < s->mb_width; s->mb_x++) {
-            ff_update_block_index(s);
+            update_block_index(s);
 
             if (v->fcm == ILACE_FIELD || v->skip_is_raw || v->dmb_is_raw)
                 if (get_bits_left(&v->s.gb) <= 1) {
@@ -2957,14 +2948,8 @@ static void vc1_decode_b_blocks(VC1Context *v)
         memmove(v->is_intra_base,
                 v->is_intra - s->mb_stride,
                 sizeof(v->is_intra_base[0]) * 2 * s->mb_stride);
-        if (!v->s.loop_filter)
-            ff_mpeg_draw_horiz_band(s, s->mb_y * 16, 16);
-        else if (s->mb_y)
-            ff_mpeg_draw_horiz_band(s, (s->mb_y - 1) * 16, 16);
         s->first_slice_line = 0;
     }
-    if (v->s.loop_filter)
-        ff_mpeg_draw_horiz_band(s, (s->end_mb_y - 1) * 16, 16);
     ff_er_add_slice(&s->er, 0, s->start_mb_y << v->field_mode, s->mb_width - 1,
                     (s->end_mb_y << v->field_mode) - 1, ER_MB_END);
 }
@@ -2981,11 +2966,10 @@ static void vc1_decode_skip_blocks(VC1Context *v)
     for (s->mb_y = s->start_mb_y; s->mb_y < s->end_mb_y; s->mb_y++) {
         s->mb_x = 0;
         init_block_index(v);
-        ff_update_block_index(s);
+        update_block_index(s);
         memcpy(s->dest[0], s->last_picture.f->data[0] + s->mb_y * 16 * s->linesize,   s->linesize   * 16);
         memcpy(s->dest[1], s->last_picture.f->data[1] + s->mb_y *  8 * s->uvlinesize, s->uvlinesize *  8);
         memcpy(s->dest[2], s->last_picture.f->data[2] + s->mb_y *  8 * s->uvlinesize, s->uvlinesize *  8);
-        ff_mpeg_draw_horiz_band(s, s->mb_y * 16, 16);
         s->first_slice_line = 0;
     }
     s->pict_type = AV_PICTURE_TYPE_P;

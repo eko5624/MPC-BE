@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -150,6 +150,9 @@ public:
 	{
 		int samplerate;
 		int channels;
+
+		int FrameSize, FrameSamples;
+		REFERENCE_TIME rtDuration;
 
 		bool operator == (const struct latm_aachdr& h) const {
 			return (samplerate == h.samplerate
@@ -315,6 +318,10 @@ public:
 	struct aes3_ts_hdr {
 	};
 
+	struct avs3_ts_hdr {
+		uint8_t bitdepth = 0;
+	};
+
 #pragma pack(pop)
 
 	bool Read(seqhdr& h, int len, CMediaType* pmt = nullptr, bool find_sync = true);
@@ -353,6 +360,8 @@ public:
 	bool Read(pcm_law_hdr& h, bool bAlaw, CMediaType* pmt = nullptr);
 	bool Read(opus_ts_hdr& h, int len, const std::vector<BYTE>& extradata, CMediaType* pmt = nullptr);
 	bool Read(aes3_ts_hdr& h, int len, CMediaType* pmt = nullptr);
+
+	bool Read(avs3_ts_hdr& h, int len, CMediaType* pmt = nullptr);
 
 	// LPCM
 	bool ReadDVDLPCMHdr(CMediaType* pmt = nullptr);

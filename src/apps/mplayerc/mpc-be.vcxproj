@@ -49,7 +49,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <PreBuildEvent>
-      <Command>..\..\..\update_version.bat</Command>
+      <Command>..\..\..\update_revision.cmd</Command>
     </PreBuildEvent>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -62,7 +62,9 @@
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)include;$(SolutionDir)src;$(SolutionDir)src\ExtLib\MediaInfo;$(SolutionDir)src\ExtLib\ZenLib;$(SolutionDir)src\ExtLib\mfx_dispatch\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src;$(SolutionDir)src\ExtLib\MediaInfo;$(SolutionDir)src\ExtLib\ZenLib;$(SolutionDir)src\ExtLib\mfx_dispatch\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <Manifest>
       <EnableDpiAwareness>false</EnableDpiAwareness>
@@ -189,6 +191,7 @@
     <ClCompile Include="PPageWebServer.cpp" />
     <ClCompile Include="RateControl.cpp" />
     <ClCompile Include="RegFilterChooserDlg.cpp" />
+    <ClCompile Include="VideoSettings.cpp" />
     <ClCompile Include="SaveDlg.cpp" />
     <ClCompile Include="SaveTextFileDialog.cpp" />
     <ClCompile Include="SaveImageDialog.cpp" />
@@ -243,6 +246,7 @@
     <ClInclude Include="ItemPropertiesDlg.h" />
     <ClInclude Include="MediaControls.h" />
     <ClInclude Include="Misc.h" />
+    <ClInclude Include="mpc_messages.h" />
     <ClInclude Include="OSD.h" />
     <ClInclude Include="PlayerCaptureDialog.h" />
     <ClInclude Include="PlayerFlyBar.h" />
@@ -322,6 +326,7 @@
     <ClInclude Include="PPageWebServer.h" />
     <ClInclude Include="rapidjsonHelper.h" />
     <ClInclude Include="RegFilterChooserDlg.h" />
+    <ClInclude Include="VideoSettings.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="SaveDlg.h" />
     <ClInclude Include="SaveTextFileDialog.h" />
@@ -544,7 +549,7 @@
     <ProjectReference Include="$(SolutionDir)src\filters\reader\CDXAReader\CDXAReader.vcxproj">
       <Project>{4d3b4ff4-535a-4201-ab7d-9aec1e737a95}</Project>
     </ProjectReference>
-    <ProjectReference Include="$(SolutionDir)src\filters\reader\UDPReader\UDPReader.vcxproj">
+    <ProjectReference Include="$(SolutionDir)src\filters\reader\StreamReader\MPCStreamReader.vcxproj">
       <Project>{3020ff9b-8202-488d-b137-11decc510e6e}</Project>
     </ProjectReference>
     <ProjectReference Include="$(SolutionDir)src\filters\reader\VTSReader\VTSReader.vcxproj">
@@ -598,7 +603,7 @@
     <ProjectReference Include="$(SolutionDir)src\filters\transform\MPCVideoDec\MPCVideoDec.vcxproj">
       <Project>{58e36bf5-4a06-47e4-bd40-4ccef8c634df}</Project>
     </ProjectReference>
-    <ProjectReference Include="$(SolutionDir)src\filters\transform\Mpeg2DecFilter\Mpeg2DecFilter.vcxproj">
+    <ProjectReference Include="$(SolutionDir)src\filters\transform\DVDVideoDecoder\MpcDvdVideoDecoder.vcxproj">
       <Project>{305bab2d-0d75-4fbc-8bcd-a2917392b48c}</Project>
     </ProjectReference>
     <ProjectReference Include="$(SolutionDir)src\SubPic\SubPic.vcxproj">

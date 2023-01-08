@@ -187,6 +187,11 @@ AP4_AtomFactory::CreateAtomFromStream(AP4_ByteStream& stream,
         size = size_high;
     }
 
+    if (size == 0) {
+        stream.Seek(start);
+        return AP4_ERROR_INVALID_FORMAT;
+    }
+
     // create the atom
     switch (type) {
         case AP4_ATOM_TYPE_MOOV:
@@ -742,6 +747,7 @@ AP4_AtomFactory::CreateAtomFromStream(AP4_ByteStream& stream,
         case AP4_ATOM_TYPE_WFEX:
         case AP4_ATOM_TYPE_GLBL:
         case AP4_ATOM_TYPE_DOPS:
+        case AP4_ATOM_TYPE_pcmC:
             atom = new AP4_DataInfoAtom(type, size, stream);
             break;
 

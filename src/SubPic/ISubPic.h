@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2020 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <atlbase.h>
 #include "CoordGeom.h"
 
 enum SUBTITLE_TYPE {
@@ -66,7 +65,7 @@ public IUnknown {
 	STDMETHOD (GetDesc) (SubPicDesc& spd /*[out]*/) PURE;
 	STDMETHOD (CopyTo) (ISubPic* pSubPic /*[in]*/) PURE;
 
-	STDMETHOD (ClearDirtyRect) (DWORD color /*[in]*/) PURE;
+	STDMETHOD (ClearDirtyRect) () PURE;
 	STDMETHOD (GetDirtyRect) (RECT* pDirtyRect /*[out]*/) PURE;
 	STDMETHOD (SetDirtyRect) (RECT* pDirtyRect /*[in]*/) PURE;
 
@@ -77,8 +76,12 @@ public IUnknown {
 	STDMETHOD (Lock) (SubPicDesc& spd /*[out]*/) PURE;
 	STDMETHOD (Unlock) (RECT* pDirtyRect /*[in]*/) PURE;
 
-	STDMETHOD (AlphaBlt) (RECT* pSrc, RECT* pDst, SubPicDesc* pTarget = NULL /*[in]*/) PURE;
-	STDMETHOD (GetSourceAndDest) (RECT rcWindow /*[in]*/, RECT rcVideo /*[in]*/, BOOL bPositionRelative /*[in]*/, CPoint ShiftPos /*[in]*/, RECT* pRcSource /*[out]*/, RECT* pRcDest /*[out]*/, int xOffsetInPixels /*[in]*/, const BOOL bUseSpecialCase/*[in]*/) const PURE;
+	STDMETHOD (AlphaBlt) (RECT* pSrc, RECT* pDst, SubPicDesc* pTarget = nullptr /*[in]*/) PURE;
+	STDMETHOD (GetSourceAndDest) (
+		RECT rcWindow /*[in]*/, RECT rcVideo /*[in]*/,
+		RECT* pRcSource /*[out]*/, RECT* pRcDest /*[out]*/,
+		BOOL bPositionRelative /*[in]*/, CPoint ShiftPos /*[in]*/,
+		int xOffsetInPixels /*[in]*/, const BOOL bUseSpecialCase/*[in]*/) const PURE;
 	STDMETHOD (SetVirtualTextureSize) (const SIZE pSize, const POINT pTopLeft) PURE;
 
 	STDMETHOD_(REFERENCE_TIME, GetSegmentStart) () PURE;
@@ -89,7 +92,6 @@ public IUnknown {
 	STDMETHOD (SetType) (SUBTITLE_TYPE subtitleType /*[in]*/) PURE;
 	STDMETHOD (GetType) (SUBTITLE_TYPE* pSubtitleType /*[out]*/) PURE;
 
-	STDMETHOD_(bool, GetInverseAlpha)() const PURE;
 	STDMETHOD_(void, SetInverseAlpha)(bool bInverted) PURE;
 };
 
@@ -112,6 +114,8 @@ public IUnknown {
 	STDMETHOD (SetMaxTextureSize) (SIZE MaxTextureSize) PURE;
 
 	STDMETHOD (Reset) () PURE;
+
+	STDMETHOD_(void, SetInverseAlpha)(bool bInverted) PURE;
 };
 
 //
@@ -160,51 +164,6 @@ public IUnknown {
 	STDMETHOD (GetStats) (int nSubPic /*[in]*/, REFERENCE_TIME& rtStart, REFERENCE_TIME& rtStop /*[out]*/) PURE;
 
 	STDMETHOD_(bool, LookupSubPic)(REFERENCE_TIME rtNow /*[in]*/, bool bAdviseBlocking, CComPtr<ISubPic>& pSubPic /*[out]*/) PURE;
-};
-
-//
-// ISubPicAllocatorPresenter3 (under development)
-//
-#define TARGET_FRAME 0
-#define TARGET_SCREEN 1
-
-interface __declspec(uuid("AD863F43-83F9-4B8E-962C-426F2BDBEAEF"))
-ISubPicAllocatorPresenter3 :
-public IUnknown {
-	STDMETHOD (CreateRenderer) (IUnknown** ppRenderer) PURE;
-
-	STDMETHOD_(CLSID, GetAPCLSID) () PURE;
-
-	STDMETHOD_(SIZE, GetVideoSize) () PURE;
-	STDMETHOD_(SIZE, GetVideoSizeAR) () PURE;
-	STDMETHOD_(void, SetPosition) (RECT w, RECT v) PURE;
-	STDMETHOD (SetRotation) (int rotation) PURE;
-	STDMETHOD_(int, GetRotation) () PURE;
-	STDMETHOD (SetFlip) (bool flip) PURE;
-	STDMETHOD_(bool, GetFlip) () PURE;
-	STDMETHOD_(bool, Paint) (bool fAll) PURE;
-
-	STDMETHOD_(void, SetTime) (REFERENCE_TIME rtNow) PURE;
-	STDMETHOD_(void, SetSubtitleDelay) (int delay_ms) PURE;
-	STDMETHOD_(int, GetSubtitleDelay) () PURE;
-	STDMETHOD_(double, GetFPS) () PURE;
-
-	STDMETHOD_(void, SetSubPicProvider) (ISubPicProvider* pSubPicProvider) PURE;
-	STDMETHOD_(void, Invalidate) (REFERENCE_TIME rtInvalidate = -1) PURE;
-
-	STDMETHOD (GetDIB) (BYTE* lpDib, DWORD* size) PURE; // may be deleted in the future
-	STDMETHOD (GetVideoFrame) (BYTE* lpDib, DWORD* size) PURE;
-	STDMETHOD (GetDisplayedImage) (LPVOID* dibImage) PURE;
-
-	STDMETHOD_(int, GetPixelShaderMode) () PURE;
-	STDMETHOD (ClearPixelShaders) (int target) PURE;
-	STDMETHOD (AddPixelShader) (int target, LPCWSTR name, LPCSTR profile, LPCSTR sourceCode) PURE;
-
-	STDMETHOD_(bool, ResizeDevice) () PURE;
-	STDMETHOD_(bool, ResetDevice) () PURE;
-	STDMETHOD_(bool, DisplayChange) () PURE;
-
-	STDMETHOD_(bool, IsRendering)() PURE;
 };
 
 //

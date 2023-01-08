@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2022 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <atlbase.h>
 #include "../BaseSplitter/BaseSplitter.h"
 
 #define RMSplitterName     L"MPC RealMedia Splitter"
@@ -166,9 +165,9 @@ public:
 	RMFF::FileHdr m_fh;
 	RMFF::ContentDesc m_cd;
 	RMFF::Properies m_p;
-	CAutoPtrList<RMFF::MediaProperies> m_mps;
-	CAutoPtrList<RMFF::DataChunk> m_dcs;
-	CAutoPtrList<RMFF::IndexRecord> m_irs;
+	std::list<std::unique_ptr<RMFF::MediaProperies>> m_mps;
+	std::vector<std::unique_ptr<RMFF::DataChunk>> m_dcs;
+	std::list<std::unique_ptr<RMFF::IndexRecord>> m_irs;
 
 	struct subtitle {
 		CStringA name, data;
@@ -186,7 +185,7 @@ private:
 		DWORD offset;
 	};
 
-	class CSegments : public CAutoPtrList<segment>, public CCritSec
+	class CSegments : public std::list<std::unique_ptr<segment>>, public CCritSec
 	{
 	public:
 		REFERENCE_TIME rtStart;
@@ -195,7 +194,7 @@ private:
 			CAutoLock cAutoLock(this);
 			rtStart = 0;
 			fDiscontinuity = fSyncPoint = fMerged = false;
-			RemoveAll();
+			clear();
 		}
 	} m_segments;
 
@@ -204,7 +203,7 @@ private:
 	HRESULT DeliverSegments();
 
 protected:
-	HRESULT DeliverPacket(CAutoPtr<CPacket> p);
+	HRESULT DeliverPacket(std::unique_ptr<CPacket> p);
 
 public:
 	CRealMediaSplitterOutputPin(std::vector<CMediaType>& mts, LPCWSTR pName, CBaseFilter* pFilter, CCritSec* pLock, HRESULT* phr);
@@ -224,7 +223,7 @@ protected:
 	void DemuxSeek(REFERENCE_TIME rt);
 	bool DemuxLoop();
 
-	POSITION m_seekpos;
+	UINT32 m_seekdc;
 	UINT32 m_seekpacket;
 	UINT64 m_seekfilepos;
 

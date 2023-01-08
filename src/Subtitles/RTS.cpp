@@ -20,7 +20,6 @@
  */
 
 #include "stdafx.h"
-#include <math.h>
 #include <intrin.h>
 #include "RTS.h"
 
@@ -56,6 +55,7 @@ CMyFont::CMyFont(STSStyle& style)
 	lf.lfClipPrecision = CLIP_DEFAULT_PRECIS;
 	lf.lfQuality = ANTIALIASED_QUALITY;
 	lf.lfPitchAndFamily = DEFAULT_PITCH|FF_DONTCARE;
+	lf.lfCharSet = DEFAULT_CHARSET;
 
 	if (!CreateFontIndirectW(&lf)) {
 		wcscpy_s(lf.lfFaceName, L"Arial");
@@ -616,14 +616,16 @@ bool CPolygon::ParseStr()
 		};
 
 		for (LPCWSTR str = m_str; *str;) {
-			// Trim left whitespace
-			while (CStringW::StrTraits::IsSpace(*str)) {
+			// Trim any leading invalid characters and whitespace
+			while (*str && !isValidAction(*str)) {
 				str++;
 			}
 			const WCHAR c = *str;
-			do {
-				str++;
-			} while (isValidAction(*str));
+			if (*str) {
+				do {
+					str++;
+				} while (isValidAction(*str));
+			}
 			switch (c) {
 				case L'm':
 					if (!bFoundMove) {

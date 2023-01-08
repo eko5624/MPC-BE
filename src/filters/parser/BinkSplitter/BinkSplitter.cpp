@@ -1,5 +1,5 @@
 /*
- * (C) 2016-2021 see Authors.txt
+ * (C) 2016-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -31,8 +31,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] =
 
 const AMOVIESETUP_PIN sudpPins[] =
 {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] =
@@ -174,7 +174,7 @@ HRESULT CBinkSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 		mt.SetSampleSize(0);
 		mt.SetTemporalCompression(FALSE);
 		mts.push_back(mt);
-		CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Video", this, this, &hr));
+		std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Video", this, this, &hr));
 		AddOutputPin(0, pPinOut);
 	}
 
@@ -200,7 +200,8 @@ HRESULT CBinkSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 			mt.SetFormat((BYTE*)&wfe, sizeof(wfe));
 			mt.lSampleSize = 1;
 			mts.push_back(mt);
-			CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Audio", this, this, &hr));
+
+			std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Audio", this, this, &hr));
 			AddOutputPin(i + 1, pPinOut);
 		}
 
@@ -248,7 +249,7 @@ HRESULT CBinkSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 	m_rtNewStart = m_rtCurrent = 0;
 	m_rtNewStop = m_rtStop = m_rtDuration = 10000000i64 * num_frames * fps_den / fps_num;
 
-	return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+	return m_pOutputs.size() > 0 ? S_OK : E_FAIL;
 }
 
 bool CBinkSplitterFilter::DemuxInit()
@@ -293,7 +294,7 @@ bool CBinkSplitterFilter::DemuxLoop()
 				UINT32 packet_size = 0;
 				m_pFile->ByteRead((BYTE*)&packet_size, 4);
 				if (packet_size >= 4) {
-					CAutoPtr<CPacket> pa(DNew CPacket());
+					std::unique_ptr<CPacket> pa(DNew CPacket());
 					if (pa->SetCount(packet_size)) {
 						pa->TrackNumber = i + 1;
 						pa->bSyncPoint = TRUE;
@@ -306,7 +307,7 @@ bool CBinkSplitterFilter::DemuxLoop()
 						m_audiotracks[i].pts += llMulDiv(samples_bytes / (m_audiotracks[i].channels * 2), UNITS, m_audiotracks[i].sample_rate, 0);
 						pa->rtStop = m_audiotracks[i].pts;
 
-						hr = DeliverPacket(pa);
+						hr = DeliverPacket(std::move(pa));
 					}
 				}
 				else {
@@ -318,7 +319,7 @@ bool CBinkSplitterFilter::DemuxLoop()
 		int packet_size = m_seektable[m_indexpos].pos + m_seektable[m_indexpos].size - m_pFile->GetPos();
 		ASSERT(packet_size > 0);
 
-		CAutoPtr<CPacket> pv(DNew CPacket());
+		std::unique_ptr<CPacket> pv(DNew CPacket());
 		if (pv->SetCount(packet_size)) {
 			pv->TrackNumber = 0;
 			pv->bSyncPoint = m_seektable[m_indexpos].keyframe;
@@ -327,7 +328,7 @@ bool CBinkSplitterFilter::DemuxLoop()
 
 			m_pFile->ByteRead(pv->data(), packet_size);
 
-			hr = DeliverPacket(pv);
+			hr = DeliverPacket(std::move(pv));
 		}
 
 		m_indexpos++;
@@ -409,7 +410,7 @@ CBinkSourceFilter::CBinkSourceFilter(LPUNKNOWN pUnk, HRESULT* phr)
 	: CBinkSplitterFilter(pUnk, phr)
 {
 	m_clsid = __uuidof(this);
-	m_pInput.Free();
+	m_pInput.reset();
 }
 
 STDMETHODIMP CBinkSourceFilter::QueryFilterInfo(FILTER_INFO* pInfo)

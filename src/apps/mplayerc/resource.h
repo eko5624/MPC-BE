@@ -112,30 +112,6 @@
 #define IDF_SHADER_CORRECTION_422       753
 #define IDF_SHADER_CONVERT_TO_INTERLACE 755
 
-#define IDF_SHADER_PS20_BSPLINE4_X      760
-#define IDF_SHADER_PS20_BSPLINE4_Y      761
-#define IDF_SHADER_PS20_MITCHELL4_X     762
-#define IDF_SHADER_PS20_MITCHELL4_Y     763
-#define IDF_SHADER_PS20_CATMULL4_X      764
-#define IDF_SHADER_PS20_CATMULL4_Y      765
-#define IDF_SHADER_PS20_BICUBIC06_X     766
-#define IDF_SHADER_PS20_BICUBIC06_Y     767
-#define IDF_SHADER_PS20_BICUBIC08_X     768
-#define IDF_SHADER_PS20_BICUBIC08_Y     769
-#define IDF_SHADER_PS20_BICUBIC10_X     770
-#define IDF_SHADER_PS20_BICUBIC10_Y     771
-#define IDF_SHADER_PS20_LANCZOS2_X      772
-#define IDF_SHADER_PS20_LANCZOS2_Y      773
-#define IDF_SHADER_PS20_DOWNSCALER_SIMPLE_X  776
-#define IDF_SHADER_PS20_DOWNSCALER_SIMPLE_Y  777
-#define IDF_SHADER_PS20_DOWNSCALER_BOX_X     778
-#define IDF_SHADER_PS20_DOWNSCALER_BOX_Y     779
-#define IDF_SHADER_PS20_CORRECTION_YCGCO     780
-#define IDF_SHADER_PS20_CONVERT_PQ_TO_SDR    781
-#define IDF_SHADER_PS20_CONVERT_2020_TO_709  782
-#define IDF_SHADER_PS20_CORRECTION_422       783
-#define IDF_SHADER_PS20_CONVERT_TO_INTERLACE 785
-
 // commands
 #define ID_FILE_OPENFILEURL             800
 #define ID_FILE_OPENDVD                 801
@@ -365,6 +341,8 @@
 #define ID_SUB_POS_RIGHT                1103
 #define ID_SUB_POS_RESTORE              1104
 #define ID_SUB_COPYTOCLIPBOARD          1106
+#define ID_SUB_SIZE_DEC                 1107
+#define ID_SUB_SIZE_INC                 1108
 #define ID_STEREO3D_AUTO                1110
 #define ID_STEREO3D_MONO                1111
 #define ID_STEREO3D_ROW_INTERLEAVED     1112
@@ -464,6 +442,7 @@
 #define ID_LANGUAGE_BASQUE              5024
 #define ID_LANGUAGE_GREEK               5025
 #define ID_LANGUAGE_ROMANIAN            5026
+#define ID_LANGUAGE_CROATIAN            5027
 #define ID_LANGUAGE_LAST                5050
 ////////////////////////////////////////////
 // strings for built-in filters
@@ -804,9 +783,7 @@
 #define IDS_SRC_VTS                     14004
 #define IDS_SRC_ROQ                     14011
 #define IDS_SRC_MPA                     14016
-#define IDS_TRA_RV                      14018
-#define IDS_TRA_RA                      14019
-#define IDS_TRA_MPEG2                   14021
+#define IDS_TRA_DVD_VIDEO               14021
 #define IDS_TRA_LPCM                    14023
 #define IDS_TRA_PS2AUD                  14028
 #define IDS_TRA_FFMPEG                  14029
@@ -1424,6 +1401,9 @@
 #define IDS_SUB_POS_RESTORE             34014
 //
 #define IDS_SUB_COPYTOCLIPBOARD         34016
+#define IDS_SUB_SIZE_DEC                34017
+#define IDS_SUB_SIZE_INC                34018
+#define IDS_SUB_SIZE                    34019
 // subtitle renderer
 #define IDS_SUB_NOT_USE                 34020
 #define IDS_SUB_USE_INTERNAL            34021

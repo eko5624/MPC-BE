@@ -25,6 +25,8 @@
  * @author Michael Niedermayer <michaelni@gmx.at>
  */
 
+#include "config_components.h"
+
 #include "libavutil/avassert.h"
 #include "libavutil/display.h"
 #include "libavutil/film_grain_params.h"
@@ -34,6 +36,7 @@
 #include "internal.h"
 #include "cabac.h"
 #include "cabac_functions.h"
+#include "decode.h"
 #include "error_resilience.h"
 #include "avcodec.h"
 #include "h264.h"
@@ -479,6 +482,9 @@ int ff_h264_update_thread_context_for_user(AVCodecContext *dst,
 
     h->is_avc = h1->is_avc;
     h->nal_length_size = h1->nal_length_size;
+    // ==> Start patch MPC
+    h->x264_build = h1->x264_build;
+    // ==> End patch MPC
 
     return 0;
 }
@@ -535,7 +541,7 @@ static int h264_frame_start(H264Context *h)
     h->cur_pic_ptr = pic;
     ff_h264_unref_picture(h, &h->cur_pic);
     if (CONFIG_ERROR_RESILIENCE) {
-        ff_h264_set_erpic(&h->slice_ctx[0].er.cur_pic, NULL);
+        ff_h264_set_erpic(&h->er.cur_pic, NULL);
     }
 
     if ((ret = ff_h264_ref_picture(h, &h->cur_pic, h->cur_pic_ptr)) < 0)
@@ -547,9 +553,9 @@ static int h264_frame_start(H264Context *h)
     }
 
     if (CONFIG_ERROR_RESILIENCE && h->enable_er) {
-        ff_er_frame_start(&h->slice_ctx[0].er);
-        ff_h264_set_erpic(&h->slice_ctx[0].er.last_pic, NULL);
-        ff_h264_set_erpic(&h->slice_ctx[0].er.next_pic, NULL);
+        ff_er_frame_start(&h->er);
+        ff_h264_set_erpic(&h->er.last_pic, NULL);
+        ff_h264_set_erpic(&h->er.next_pic, NULL);
     }
 
     for (i = 0; i < 16; i++) {
@@ -1023,11 +1029,7 @@ static int h264_slice_header_init(H264Context *h)
     ff_videodsp_init(&h->vdsp, sps->bit_depth_luma);
 
     if (!HAVE_THREADS || !(h->avctx->active_thread_type & FF_THREAD_SLICE)) {
-        ret = ff_h264_slice_context_init(h, &h->slice_ctx[0]);
-        if (ret < 0) {
-            av_log(h->avctx, AV_LOG_ERROR, "context_init() failed.\n");
-            goto fail;
-        }
+        ff_h264_slice_context_init(h, &h->slice_ctx[0]);
     } else {
         for (i = 0; i < h->nb_slice_ctx; i++) {
             H264SliceContext *sl = &h->slice_ctx[i];
@@ -1037,10 +1039,7 @@ static int h264_slice_header_init(H264Context *h)
             sl->mvd_table[0]       = h->mvd_table[0]       + i * 8 * 2 * h->mb_stride;
             sl->mvd_table[1]       = h->mvd_table[1]       + i * 8 * 2 * h->mb_stride;
 
-            if ((ret = ff_h264_slice_context_init(h, sl)) < 0) {
-                av_log(h->avctx, AV_LOG_ERROR, "context_init() failed.\n");
-                goto fail;
-            }
+            ff_h264_slice_context_init(h, sl);
         }
     }
 
@@ -1675,7 +1674,7 @@ static int h264_field_start(H264Context *h, const H264SliceContext *sl,
 
     while (h->poc.frame_num != h->poc.prev_frame_num && !h->first_field &&
            h->poc.frame_num != (h->poc.prev_frame_num + 1) % (1 << sps->log2_max_frame_num)) {
-        H264Picture *prev = h->short_ref_count ? h->short_ref[0] : NULL;
+        const H264Picture *prev = h->short_ref_count ? h->short_ref[0] : NULL;
         av_log(h->avctx, AV_LOG_DEBUG, "Frame num gap %d %d\n",
                h->poc.frame_num, h->poc.prev_frame_num);
         if (!sps->gaps_in_frame_num_allowed_flag)
@@ -2686,7 +2685,7 @@ static void decode_finish_row(const H264Context *h, H264SliceContext *sl)
 
     ff_h264_draw_horiz_band(h, sl, top, height);
 
-    if (h->droppable || sl->h264->slice_ctx[0].er.error_occurred)
+    if (h->droppable || h->er.error_occurred)
         return;
 
     ff_thread_report_progress(&h->cur_pic_ptr->tf, top + height - 1,
@@ -2701,9 +2700,7 @@ static void er_add_slice(H264SliceContext *sl,
         return;
 
     if (CONFIG_ERROR_RESILIENCE) {
-        ERContext *er = &sl->h264->slice_ctx[0].er;
-
-        ff_er_add_slice(er, startx, starty, endx, endy, status);
+        ff_er_add_slice(sl->er, startx, starty, endx, endy, status);
     }
 }
 
@@ -2732,13 +2729,13 @@ static int decode_slice(struct AVCodecContext *avctx, void *arg)
     sl->is_complex = FRAME_MBAFF(h) || h->picture_structure != PICT_FRAME ||
                      (CONFIG_GRAY && (h->flags & AV_CODEC_FLAG_GRAY));
 
-    if (!(h->avctx->active_thread_type & FF_THREAD_SLICE) && h->picture_structure == PICT_FRAME && h->slice_ctx[0].er.error_status_table) {
+    if (!(h->avctx->active_thread_type & FF_THREAD_SLICE) && h->picture_structure == PICT_FRAME && sl->er->error_status_table) {
         const int start_i  = av_clip(sl->resync_mb_x + sl->resync_mb_y * h->mb_width, 0, h->mb_num - 1);
         if (start_i) {
-            int prev_status = h->slice_ctx[0].er.error_status_table[h->slice_ctx[0].er.mb_index2xy[start_i - 1]];
+            int prev_status = sl->er->error_status_table[sl->er->mb_index2xy[start_i - 1]];
             prev_status &= ~ VP_START;
             if (prev_status != (ER_MV_END | ER_DC_END | ER_AC_END))
-                h->slice_ctx[0].er.error_occurred = 1;
+                sl->er->error_occurred = 1;
         }
     }
 
@@ -2950,9 +2947,6 @@ int ff_h264_execute_decode_slices(H264Context *h)
             int slice_idx;
 
             sl                 = &h->slice_ctx[i];
-            if (CONFIG_ERROR_RESILIENCE) {
-                sl->er.error_count = 0;
-            }
 
             /* make sure none of those slices overlap */
             slice_idx = sl->mb_y * h->mb_width + sl->mb_x;
@@ -2973,10 +2967,6 @@ int ff_h264_execute_decode_slices(H264Context *h)
         /* pull back stuff from slices to master context */
         sl                   = &h->slice_ctx[context_count - 1];
         h->mb_y              = sl->mb_y;
-        if (CONFIG_ERROR_RESILIENCE) {
-            for (i = 1; i < context_count; i++)
-                h->slice_ctx[0].er.error_count += h->slice_ctx[i].er.error_count;
-        }
 
         if (h->postpone_filter) {
             h->postpone_filter = 0;

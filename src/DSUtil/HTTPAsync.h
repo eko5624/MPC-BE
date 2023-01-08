@@ -1,5 +1,5 @@
 /*
- * (C) 2016-2020 see Authors.txt
+ * (C) 2016-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -23,6 +23,10 @@
 #include <wininet.h>
 #include <mutex>
 #include "UrlParser.h"
+
+namespace http {
+	inline CStringW userAgent = L"Mozilla/5.0";
+}
 
 class CHTTPAsync
 {
@@ -49,12 +53,17 @@ protected:
 	CString m_host;
 	CString m_path;
 
+	CString m_url_redirect_str;
+
 	INTERNET_PORT m_nPort     = 0;
 	INTERNET_SCHEME m_nScheme = INTERNET_SCHEME_HTTP;
 
 	CString m_header;
 	CString m_contentType;
+	CString m_contentEncoding;
 	UINT64 m_lenght = 0;
+
+	bool m_bIsCompressed = false;
 
 	static void CALLBACK Callback(__in HINTERNET hInternet,
 								  __in_opt DWORD_PTR dwContext,
@@ -75,8 +84,18 @@ public:
 	HRESULT SendRequest(LPCWSTR lpszCustomHeader = L"", DWORD dwTimeOut = INFINITE);
 	HRESULT Read(PBYTE pBuffer, DWORD dwSizeToRead, LPDWORD dwSizeRead, DWORD dwTimeOut = INFINITE);
 
-	CString GetHeader() const;
-	CString GetContentType() const;
+	const CString& GetHeader() const;
+
+	// get content type in lowercase
+	const CString& GetContentType() const;
+	// get content encoding in lowercase
+	const CString& GetContentEncoding() const;
+
+	const bool IsCompressed() const;
+	bool GetUncompressed(std::vector<BYTE>& buffer);
+
 	UINT64 GetLenght() const;
+
+	const CString& GetRedirectURL() const;
 };
 

@@ -27,6 +27,8 @@
 #include "DSUtil/AudioParser.h"
 #include "DSUtil/MP4AudioDecoderConfig.h"
 
+#include <libavutil/pixfmt.h>
+
 CMpegSplitterFile::CMpegSplitterFile(IAsyncReader* pAsyncReader, HRESULT& hr, CHdmvClipInfo &ClipInfo, bool bIsBD, bool ForcedSub, int AC3CoreOnly, bool SubEmptyPin)
 	: CBaseSplitterFileEx(pAsyncReader, hr, FM_FILE | FM_FILE_DL | FM_FILE_VAR | FM_STREAM)
 	, m_type(MPEG_TYPES::mpeg_invalid)
@@ -65,31 +67,31 @@ HRESULT CMpegSplitterFile::Init(IAsyncReader* pAsyncReader)
 	if (ByteRead(data, sizeof(data)) != S_OK) {
 		return E_FAIL;
 	}
-	DWORD id = GETU32(data);
-	DWORD id2 = GETU32(data + 4);
+	const DWORD id = GETU32(data);
+	const DWORD id2 = GETU32(data + 4);
 
 	if (id == FCC('RIFF') && GETU32(data+8) != FCC('CDXA') // AVI, WAVE, AMV and other
-			|| id == 0xA3DF451A         // Matroska
-			|| id2 == FCC('ftyp')       // MP4
-			|| id2 == FCC('moov')       // MOV
-			|| id2 == FCC('mdat')       // MOV
-			|| id2 == FCC('wide')       // MOV
-			|| id2 == FCC('skip')       // MOV
-			|| id2 == FCC('free')       // MOV
-			|| id2 == FCC('pnot')       // MOV
-			|| id == FCC('Rar!')        // RAR
-			|| id == 0x04034B50         // ZIP
-			|| id == 0xAFBC7A37         // 7-Zip
+			|| id == 0xA3DF451A        // Matroska
+			|| id2 == FCC('ftyp')      // MP4
+			|| id2 == FCC('moov')      // MOV
+			|| id2 == FCC('mdat')      // MOV
+			|| id2 == FCC('wide')      // MOV
+			|| id2 == FCC('skip')      // MOV
+			|| id2 == FCC('free')      // MOV
+			|| id2 == FCC('pnot')      // MOV
+			|| id == FCC('Rar!')       // RAR
+			|| id == 0x04034B50        // ZIP
+			|| id == 0xAFBC7A37        // 7-Zip
 			|| GETU16(data) == 'ZM') { // EXE, DLL
 		return E_FAIL;
 	}
 
-	Seek(0);
-	m_bIMKH_CCTV = (BitRead(32, true) == 'IMKH');
+	m_bIMKH_CCTV = (id == FCC('IMKH'));
 
 	{
+		Seek(0);
 		byte b = 0;
-		while (GetPos() < (65 * KILOBYTE) && (b = BitRead(8)) != 0x47 && GetRemaining());
+		while (GetPos() < (65 * KILOBYTE) && S_OK == ByteRead(&b, 1) && b != 0x47);
 
 		if (b == 0x47) {
 			Seek(GetPos() - 1);
@@ -187,6 +189,21 @@ HRESULT CMpegSplitterFile::Init(IAsyncReader* pAsyncReader)
 			}
 		}
 		SearchStreams(0, stop);
+
+		if (m_type == MPEG_TYPES::mpeg_ps) {
+			// ignoring first wrong empty block at the beginning of some VOB files
+			for (auto& [track_num, sps] : m_SyncPoints) {
+				if (sps.size() >= 3) {
+					auto dur0 = std::abs(sps[1].rt - sps[0].rt);
+					auto dur1 = std::abs(sps[2].rt - sps[1].rt);
+					auto dur2 = std::abs(sps[3].rt - sps[2].rt);
+					if (dur0 > dur1 * 100 && dur0 > dur2 * 100) {
+						// check the first block with the second and third, to exclude corrupted data in the second block
+						sps.erase(sps.begin());
+					}
+				}
+			}
+		}
 
 		const int step_size = 512 * KILOBYTE;
 
@@ -792,6 +809,7 @@ void CMpegSplitterFile::SearchStreams(const __int64 start, const __int64 stop, c
 #define MPEG4_VIDEO       (1ULL << 15)
 #define AC4_AUDIO         (1ULL << 16)
 #define AES3_AUDIO        (1ULL << 17)
+#define AVS3_VIDEO        (1ULL << 18)
 
 #define PES_STREAM_TYPE_ANY (MPEG_AUDIO | AAC_AUDIO | AC3_AUDIO | DTS_AUDIO/* | LPCM_AUDIO */| MPEG2_VIDEO | H264_VIDEO | DIRAC_VIDEO | HEVC_VIDEO/* | PGS_SUB*/ | DVB_SUB | TELETEXT_SUB | DTS_EXPRESS_AUDIO)
 
@@ -848,7 +866,9 @@ static const struct StreamType {
 	// Teletext Subtitle
 	{ PES_PRIVATE,							TELETEXT_SUB},
 	// MPEG4 Video
-	{ VIDEO_STREAM_MPEG4,					MPEG4_VIDEO}
+	{ VIDEO_STREAM_MPEG4,					MPEG4_VIDEO },
+	// MPEG4 Video
+	{ VIDEO_STREAM_AVS3,					AVS3_VIDEO  }
 };
 
 static const struct {
@@ -1027,6 +1047,18 @@ DWORD CMpegSplitterFile::AddStream(const WORD pid, BYTE pesid, const BYTE ext_id
 				}
 			}
 		}
+
+		// AVS3 Video
+		if (type == stream_type::unknown && (stream_type & AVS3_VIDEO) && m_type == MPEG_TYPES::mpeg_ts) {
+			Seek(start);
+			avs3_ts_hdr h;
+			if (!m_streams[stream_type::video].Find(s) && Read(h, len, &s.mt)) {
+				s.codec = stream_codec::AVS3;
+				type = stream_type::video;
+
+				m_pix_fmt = h.bitdepth == 10 ? AV_PIX_FMT_YUV420P10 : AV_PIX_FMT_YUV420P;
+			}
+		}
 	}
 
 	if (!m_streams[stream_type::audio].Find(s)
@@ -1093,13 +1125,21 @@ DWORD CMpegSplitterFile::AddStream(const WORD pid, BYTE pesid, const BYTE ext_id
 			}
 		}
 
-		// A-law PCM
 		if (type == unknown && m_type == MPEG_TYPES::mpeg_ps
 				&& m_bIMKH_CCTV && pesid == 0xc0
 				&& stream_type != MPEG_AUDIO && stream_type != AAC_AUDIO) {
 			pcm_law_hdr h;
-			if (Read(h, pes_stream_type == 0x91 ? false : true, &s.mt)) {
-				type = audio;
+			if (pes_stream_type == 0x91) {
+				// Mu-law PCM
+				if (Read(h, false, &s.mt)) {
+					type = audio;
+				}
+			}
+			else if (len > 80) {
+				// A-law PCM
+				if (Read(h, true, &s.mt)) {
+					type = audio;
+				}
 			}
 		}
 	}
@@ -1496,8 +1536,9 @@ DWORD CMpegSplitterFile::AddStream(const WORD pid, BYTE pesid, const BYTE ext_id
 				__int64 nextPos;
 				REFERENCE_TIME rt = NextPTS(s, s.codec, nextPos);
 				if (rt != INVALID_TIME) {
+					const size_t timestamp_num = 30;
 					std::vector<REFERENCE_TIME> timecodes;
-					timecodes.reserve(TimecodeAnalyzer::DefaultFrameNum);
+					timecodes.reserve(timestamp_num);
 
 					Seek(nextPos);
 					int count = 0;
@@ -1507,15 +1548,18 @@ DWORD CMpegSplitterFile::AddStream(const WORD pid, BYTE pesid, const BYTE ext_id
 							break;
 						}
 
-						timecodes.push_back((rt + 100) / 200); // get a real precision for time codes (need for some files)
-						if (timecodes.size() >= TimecodeAnalyzer::DefaultFrameNum) {
+						timecodes.push_back(rt);
+						if (timecodes.size() >= timestamp_num) {
 							break;
 						}
 
 						Seek(nextPos);
 					}
 
-					rtAvgTimePerFrame = TimecodeAnalyzer::CalculateFrameTime(timecodes, 200);
+					rtAvgTimePerFrame = TimecodeAnalyzer::CalculateFrameTime(timecodes, 1, 10000);
+					if (rtAvgTimePerFrame == 0) {
+						rtAvgTimePerFrame = 333666; // 29.97 fps
+					}
 
 					if (s.mt.formattype == FORMAT_MPEG2_VIDEO) {
 						((MPEG2VIDEOINFO*)s.mt.pbFormat)->hdr.AvgTimePerFrame = rtAvgTimePerFrame;

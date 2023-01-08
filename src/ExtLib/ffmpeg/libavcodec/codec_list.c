@@ -1,4 +1,4 @@
-static const AVCodec * const codec_list[] = {
+static const FFCodec * const codec_list[] = {
     &ff_ac3_encoder,
 
     &ff_aic_decoder,
@@ -94,6 +94,7 @@ static const AVCodec * const codec_list[] = {
     &ff_ape_decoder,
     &ff_atrac3_decoder,
     &ff_atrac3p_decoder,
+    &ff_atrac9_decoder,
     &ff_binkaudio_dct_decoder,
     &ff_binkaudio_rdft_decoder,
     &ff_cook_decoder,
@@ -154,9 +155,11 @@ static const AVCodec * const codec_list[] = {
     &ff_adpcm_xa_decoder,
     &ff_adpcm_yamaha_decoder,
     &ff_s302m_decoder,
+    &ff_adpcm_g726_decoder,
 
     &ff_libspeex_decoder,
     &ff_libdav1d_decoder,
+    &ff_libuavs3d_decoder,
 
     &ff_av1_decoder,
     NULL };

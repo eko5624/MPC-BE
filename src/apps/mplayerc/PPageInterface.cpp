@@ -67,6 +67,7 @@ void CPPageInterface::DoDataExchange(CDataExchange* pDX)
 	DDX_Slider(pDX, IDC_SLIDER3, m_nThemeGreen);
 	DDX_Slider(pDX, IDC_SLIDER4, m_nThemeBlue);
 	DDX_Control(pDX, IDC_CHECK4, m_chkDarkMenu);
+	DDX_Control(pDX, IDC_CHECK5, m_chkDarkTitle);
 	DDX_Slider(pDX, IDC_SLIDER_OSDTRANS, m_nOSDTransparent);
 	DDX_Control(pDX, IDC_SLIDER1, m_ThemeBrightnessCtrl);
 	DDX_Control(pDX, IDC_SLIDER2, m_ThemeRedCtrl);
@@ -80,6 +81,7 @@ void CPPageInterface::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_COMBO2, m_FontSize);
 	DDX_Check(pDX, IDC_CHECK_PRV, m_fSmartSeek);
 	DDX_Control(pDX, IDC_EDIT1, m_edSmartSeekSize);
+	DDX_Control(pDX, IDC_COMBO4, m_SmartSeekVR);
 	DDX_Check(pDX, IDC_CHECK_CHM, m_fChapterMarker);
 	DDX_Check(pDX, IDC_CHECK_FLYBAR, m_fFlybar);
 	DDX_Control(pDX, IDC_EDIT2, m_edPlsFontPercent);
@@ -121,6 +123,7 @@ BOOL CPPageInterface::OnInitDialog()
 	m_nOSDTransparent		= m_nOSDTransparent_Old		= s.nOSDTransparent;
 	m_OSDBorder				= m_OSDBorder_Old			= s.nOSDBorder;
 	m_chkDarkMenu.SetCheck(s.bDarkMenu);
+	m_chkDarkTitle.SetCheck(s.bDarkTitle);
 
 	m_ThemeBrightnessCtrl.SetRange	(0, 100, TRUE);
 	m_ThemeRedCtrl.SetRange			(0, 255, TRUE);
@@ -148,6 +151,10 @@ BOOL CPPageInterface::OnInitDialog()
 	m_fSmartSeek		= s.fSmartSeek;
 	m_edSmartSeekSize.SetRange(5, 30);
 	m_edSmartSeekSize	= s.iSmartSeekSize;
+	m_SmartSeekVR.AddString(L"EVR");
+	m_SmartSeekVR.AddString(L"EVR-CP");
+	m_SmartSeekVR.SetCurSel(s.iSmartSeekVR);
+
 	m_fChapterMarker	= s.fChapterMarker;
 	m_fFlybar			= s.fFlybar;
 	m_edPlsFontPercent.SetRange(100, 200);
@@ -191,6 +198,11 @@ BOOL CPPageInterface::OnInitDialog()
 	GetDlgItem(IDC_STATIC6)->EnableWindow(m_fSmartSeek);
 	GetDlgItem(IDC_EDIT1)->EnableWindow(m_fSmartSeek);
 	GetDlgItem(IDC_STATIC7)->EnableWindow(m_fSmartSeek);
+	m_SmartSeekVR.EnableWindow(m_fSmartSeek);
+
+	if (!SysVersion::IsWin11orLater()) {
+		m_chkDarkTitle.EnableWindow(FALSE);
+	}
 
 	UpdateData(FALSE);
 
@@ -225,6 +237,7 @@ BOOL CPPageInterface::OnApply()
 		::PostMessageW(pFrame->m_hWnd,         WM_SIZE, s.nLastWindowType, MAKELPARAM(s.szLastWindowSize.cx, s.szLastWindowSize.cy));
 	}
 	s.bDarkMenu = !!m_chkDarkMenu.GetCheck();
+	s.bDarkTitle = !!m_chkDarkTitle.GetCheck();
 
 	s.fUseWin7TaskBar		= !!m_fUseWin7TaskBar;
 	s.fUseTimeTooltip		= !!m_fUseTimeTooltip;
@@ -235,6 +248,8 @@ BOOL CPPageInterface::OnApply()
 
 	s.fSmartSeek			= !!m_fSmartSeek;
 	s.iSmartSeekSize		= m_edSmartSeekSize;
+	s.iSmartSeekVR	= m_SmartSeekVR.GetCurSel();
+
 	s.fChapterMarker		= !!m_fChapterMarker;
 	s.fFlybar				= !!m_fFlybar;
 	s.fFontShadow			= !!m_fFontShadow;
@@ -261,6 +276,7 @@ BOOL CPPageInterface::OnApply()
 
 	pFrame->m_wndPlaylistBar.m_bUseDarkTheme = s.bUseDarkTheme;
 	pFrame->SetColor();
+	pFrame->SetColorTitle();
 	if (pFrame->m_wndPlaylistBar.IsWindowVisible()) {
 		pFrame->m_wndPlaylistBar.SendMessageW(WM_NCPAINT, 1, NULL);
 		pFrame->m_wndPlaylistBar.RedrawWindow(nullptr, nullptr, RDW_ERASE | RDW_INVALIDATE);
@@ -328,6 +344,7 @@ void CPPageInterface::OnThemeChange()
 	const auto pFrame = AfxGetMainFrame();
 
 	pFrame->SetColor();
+	pFrame->SetColorTitle();
 
 	if (::IsWindow(pFrame->m_hWnd_toolbar)) {
 		::PostMessageW(pFrame->m_hWnd_toolbar, WM_SIZE, SIZE_RESTORED, MAKELPARAM(320, 240));
@@ -389,6 +406,9 @@ void CPPageInterface::OnUpdateCheck3(CCmdUI* pCmdUI)
 	GetDlgItem(IDC_STATIC_CLRFACE)->EnableWindow(m_bUseDarkTheme);
 	GetDlgItem(IDC_STATIC_CLROUTLINE)->EnableWindow(m_bUseDarkTheme);
 	m_chkDarkMenu.EnableWindow(m_bUseDarkTheme);
+	if (SysVersion::IsWin11orLater()) {
+		m_chkDarkTitle.EnableWindow(m_bUseDarkTheme);
+	}
 }
 
 void CPPageInterface::OnCheckShadow()
@@ -644,6 +664,7 @@ void CPPageInterface::OnUsePreview()
 	GetDlgItem(IDC_STATIC6)->EnableWindow(m_fSmartSeek);
 	GetDlgItem(IDC_EDIT1)->EnableWindow(m_fSmartSeek);
 	GetDlgItem(IDC_STATIC7)->EnableWindow(m_fSmartSeek);
+	m_SmartSeekVR.EnableWindow(m_fSmartSeek);
 
 	SetModified();
 }

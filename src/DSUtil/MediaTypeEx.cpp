@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -69,6 +69,8 @@ static const std::map<DWORD, LPCSTR> vfourcs = {
 	{FCC('HM91'), "HEVC(HM9.1)"},
 	{FCC('HM10'), "HEVC(HM10)"},
 	{FCC('HM12'), "HEVC(HM12)"},
+	{FCC('BIKB'), "Bink"},
+	{FCC('BIKI'), "Bink"},
 };
 
 static const std::map<WORD, LPCSTR> aformattags = {
@@ -197,6 +199,10 @@ static const std::map<GUID, LPCSTR> audioguids = {
 	{MEDIASUBTYPE_MPC7,            "MPC7"},
 	{MEDIASUBTYPE_MPC8,            "MPC8"},
 	{MEDIASUBTYPE_DOLBY_AC3_SPDIF, "S/PDIF"},
+	{MEDIASUBTYPE_ATRAC3,          "ATRAC3"},
+	{MEDIASUBTYPE_ATRAC3plus,      "ATRAC3plus"},
+	{MEDIASUBTYPE_ATRAC9,          "ATRAC9"},
+	{MEDIASUBTYPE_G726_ADPCM,      "G.726 ADPCM"}
 };
 
 static const std::map<GUID, LPCSTR> subtitleguids = {
@@ -237,6 +243,13 @@ static const std::map<GUID, LPCSTR> dxvaguids = {
 	ADDENTRY(DXVA2_ModeVP9_VLD_Profile0)
 	ADDENTRY(DXVA2_ModeVP9_VLD_10bit_Profile2)
 	ADDENTRY(DXVA2_ModeVP8_VLD)
+	ADDENTRY(DXVA2_ModeAV1_VLD_Profile0)
+	ADDENTRY(DXVA2_HEVC_VLD_Main_12bit_Intel)
+	ADDENTRY(DXVA2_HEVC_VLD_Main422_10bit_Intel)
+	ADDENTRY(DXVA2_HEVC_VLD_Main422_12bit_Intel)
+	ADDENTRY(DXVA2_HEVC_VLD_Main444_Intel)
+	ADDENTRY(DXVA2_HEVC_VLD_Main444_10bit_Intel)
+	ADDENTRY(DXVA2_HEVC_VLD_Main444_12bit_Intel)
 };
 #undef ADDENTRY
 
@@ -460,7 +473,7 @@ CString CMediaTypeEx::GetVideoCodecName(const GUID& subtype, DWORD biCompression
 
 		for (size_t i = 0; i < 4; i++) {
 			if (b[i] >= 'a' && b[i] <= 'z') {
-				b[i] = b[i] + 32;
+				b[i] = b[i] - 32;
 			}
 		}
 
@@ -804,7 +817,7 @@ void CMediaTypeEx::Dump(std::list<CString>& sl)
 		sl.emplace_back(str);
 
 		if (wfe.wFormatTag != WAVE_FORMAT_PCM && wfe.cbSize > 0 && formattype == FORMAT_WaveFormatEx) {
-			if (wfe.wFormatTag == WAVE_FORMAT_EXTENSIBLE && wfe.cbSize == sizeof(WAVEFORMATEXTENSIBLE)-sizeof(WAVEFORMATEX)) {
+			if (wfe.wFormatTag == WAVE_FORMAT_EXTENSIBLE && wfe.cbSize >= sizeof(WAVEFORMATEXTENSIBLE)-sizeof(WAVEFORMATEX)) {
 				sl.emplace_back(L"");
 
 				fmtsize = sizeof(WAVEFORMATEXTENSIBLE);

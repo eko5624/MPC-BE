@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2018 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -59,12 +59,14 @@ public:
 	CSliderCtrl m_ThemeGreenCtrl;
 	CSliderCtrl m_ThemeBlueCtrl;
 	CButton     m_chkDarkMenu;
+	CButton     m_chkDarkTitle;
 	CIntEdit    m_edSmartSeekSize;
 	CIntEdit    m_edPlsFontPercent;
 	CSliderCtrl m_OSDTransparentCtrl;
 	CComboBox m_TimeTooltipPosition;
 	CComboBox m_FontType;
 	CComboBox m_FontSize;
+	CComboBox m_SmartSeekVR;
 	CSpinButtonCtrl m_OSDBorderCtrl;
 
 	COLORREF m_clrFaceABGR;

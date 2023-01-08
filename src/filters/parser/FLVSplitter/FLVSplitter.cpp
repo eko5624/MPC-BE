@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -79,8 +79,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -1132,6 +1132,9 @@ HRESULT CFLVSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 							}
 
 							rtAvgTimePerFrame = TimecodeAnalyzer::CalculateFrameTime(timecodes, 10000);
+							if (rtAvgTimePerFrame == 0) {
+								rtAvgTimePerFrame = 417083; // 23.976 fps
+							}
 
 							if (mt.formattype == FORMAT_MPEG2_VIDEO) {
 								((MPEG2VIDEOINFO*)mt.pbFormat)->hdr.AvgTimePerFrame = rtAvgTimePerFrame;
@@ -1152,7 +1155,7 @@ HRESULT CFLVSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 		if (mt.subtype != GUID_NULL) {
 			std::vector<CMediaType> mts;
 			mts.push_back(mt);
-			CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, name, this, this, &hr));
+			std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, name, this, this, &hr));
 			EXECUTE_ASSERT(SUCCEEDED(AddOutputPin(t.TagType, pPinOut)));
 		}
 
@@ -1162,7 +1165,7 @@ HRESULT CFLVSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 	if (mtAAC.subtype != GUID_NULL) {
 		std::vector<CMediaType> mts;
 		mts.push_back(mtAAC);
-		CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Audio AAC", this, this, &hr));
+		std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterOutputPin(mts, L"Audio AAC", this, this, &hr));
 		EXECUTE_ASSERT(SUCCEEDED(AddOutputPin(FLV_AUDIODATA, pPinOut)));
 	}
 
@@ -1234,7 +1237,7 @@ HRESULT CFLVSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 	m_pFile->Seek(m_DataOffset);
 
-	return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+	return m_pOutputs.size() > 0 ? S_OK : E_FAIL;
 }
 
 bool CFLVSplitterFilter::DemuxInit()
@@ -1336,7 +1339,7 @@ bool CFLVSplitterFilter::DemuxLoop()
 {
 	HRESULT hr = S_OK;
 
-	CAutoPtr<CPacket> p;
+	std::unique_ptr<CPacket> p;
 
 	Tag t;
 	AudioTag at;
@@ -1388,7 +1391,7 @@ bool CFLVSplitterFilter::DemuxLoop()
 				goto NextTag;
 			}
 
-			p.Attach(DNew CPacket());
+			p.reset(DNew CPacket());
 			p->TrackNumber	= t.TagType;
 			p->rtStart		= 10000i64 * t.TimeStamp;
 			p->rtStop		= p->rtStart + 1;
@@ -1399,7 +1402,7 @@ bool CFLVSplitterFilter::DemuxLoop()
 				return true;
 			}
 
-			hr = DeliverPacket(p);
+			hr = DeliverPacket(std::move(p));
 		}
 NextTag:
 		m_pFile->Seek(next);
@@ -1442,5 +1445,5 @@ CFLVSourceFilter::CFLVSourceFilter(LPUNKNOWN pUnk, HRESULT* phr)
 	: CFLVSplitterFilter(pUnk, phr)
 {
 	m_clsid = __uuidof(this);
-	m_pInput.Free();
+	m_pInput.reset();
 }

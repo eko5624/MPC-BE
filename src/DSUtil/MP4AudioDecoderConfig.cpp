@@ -56,6 +56,7 @@ bool CMP4AudioDecoderConfig::ParseExtension(CGolombBuffer& parser)
         bool result = ParseAudioObjectType(parser, m_Extension.m_ObjectType);
         if (!result) return result;
         if (m_Extension.m_ObjectType == AOT_SBR) {
+            if (parser.BitsLeft() < 1) return false;
             m_Extension.m_SbrPresent = (parser.BitRead(1) == 1);
             if (m_Extension.m_SbrPresent) {
                 result = ParseSamplingFrequency(parser,
@@ -70,6 +71,7 @@ bool CMP4AudioDecoderConfig::ParseExtension(CGolombBuffer& parser)
                 }
             }
         } else if (m_Extension.m_ObjectType == AOT_ER_BSAC) {
+            if (parser.BitsLeft() < 1 + 4) return false;
             m_Extension.m_SbrPresent = (parser.BitRead(1) == 1);
             if (m_Extension.m_SbrPresent) {
                 result = ParseSamplingFrequency(parser,
@@ -256,8 +258,8 @@ bool CMP4AudioDecoderConfig::Parse(CGolombBuffer& parser)
 
     if (parser.BitsLeft() < 4) return false;
     m_ChannelConfiguration = parser.BitRead(4);
-    if (m_ChannelConfiguration < 8) {
-        static const BYTE channels[8] = { 0, 1, 2, 3, 4, 5, 6, 8 };
+    if (m_ChannelConfiguration < 14) {
+        static const BYTE channels[] = { 0, 1, 2, 3, 4, 5, 6, 8, 0, 0, 0, 7, 8, 24 };
         m_ChannelCount = channels[m_ChannelConfiguration];
     }
 

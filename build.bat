@@ -34,6 +34,7 @@ SET ARGPL=0
 SET ARGPA=0
 SET ARGIN=0
 SET ARGZI=0
+SET ARGPDB=0
 SET INPUT=0
 SET ARGSIGN=0
 
@@ -63,12 +64,13 @@ FOR %%A IN (%ARG%) DO (
   IF /I "%%A" == "Packages"   SET "PACKAGES=True"       & SET /A ARGPA+=1 & SET /A ARGCL+=1 & SET /A ARGD+=1 & SET /A ARGF+=1 & SET /A ARGM+=1
   IF /I "%%A" == "Installer"  SET "INSTALLER=True"      & SET /A ARGIN+=1 & SET /A ARGCL+=1 & SET /A ARGD+=1 & SET /A ARGF+=1 & SET /A ARGM+=1
   IF /I "%%A" == "Zip"        SET "ZIP=True"            & SET /A ARGZI+=1 & SET /A ARGCL+=1 & SET /A ARGM+=1
+  IF /I "%%A" == "PDB"        SET "PDB=True"            & SET /A ARGPDB+=1
   IF /I "%%A" == "Sign"       SET "SIGN=True"           & SET /A ARGSIGN+=1
 )
 
 REM pre-build checks
 
-IF NOT EXIST "revision.h" CALL "update_version.bat"
+IF NOT EXIST "revision.h" CALL "update_revision.cmd"
 
 IF EXIST "environments.bat" CALL "environments.bat"
 
@@ -76,7 +78,7 @@ IF NOT DEFINED MPCBE_MINGW GOTO MissingVar
 IF NOT DEFINED MPCBE_MSYS  GOTO MissingVar
 
 FOR %%X IN (%*) DO SET /A INPUT+=1
-SET /A VALID=%ARGB%+%ARGPL%+%ARGC%+%ARGBC%+%ARGPA%+%ARGIN%+%ARGZI%+%ARGSIGN%+%ARGCOMP%
+SET /A VALID=%ARGB%+%ARGPL%+%ARGC%+%ARGBC%+%ARGPA%+%ARGIN%+%ARGZI%+%ARGSIGN%+%ARGCOMP%+%ARGPDB%
 
 IF %VALID% NEQ %INPUT% GOTO UnsupportedSwitch
 
@@ -294,7 +296,7 @@ EXIT /B
 )
 
 FOR %%A IN ("Armenian" "Basque" "Belarusian" "Catalan" "Chinese Simplified"
- "Chinese Traditional" "Czech" "Dutch" "French" "German" "Greek" "Hebrew" "Hungarian"
+ "Chinese Traditional" "Czech" "Croatian" "Dutch" "French" "German" "Greek" "Hebrew" "Hungarian"
  "Italian" "Japanese" "Korean" "Polish" "Portuguese" "Romanian" "Russian" "Slovak" "Spanish"
  "Swedish" "Turkish" "Ukrainian"
 ) DO (
@@ -340,7 +342,7 @@ POPD
 EXIT /B
 
 :SubCreateInstaller
-IF "%~1" == "x64" SET ISDefs=/Dx64Build
+IF "%~1" == "Win32" (SET ISDefs=/DWin32Build) ELSE (SET ISDefs=)
 IF /I "%SIGN%" == "True" SET ISDefsSign=/DSign
 
 CALL :SubDetectInnoSetup
@@ -447,7 +449,7 @@ CALL :SubMsg "INFO" "%ZIP_NAME%.7z successfully created"
 
 IF EXIST "%PCKG_NAME%" RD /Q /S "%PCKG_NAME%"
 
-IF /I "%NAME%" == "MPC-BE" (
+IF /I "%NAME%" == "MPC-BE" IF /I "%PDB%" == "True" (
   TITLE Creating archive %ZIP_NAME%-pdb.7z...
   IF /I "%ARCH%" == "x64" (
     START "7z" /B /WAIT "%SEVENZIP%" a -t7z "%PackagesOut%\%MPCBE_VER%\%ZIP_NAME%-pdb.7z" "%~1_%ARCH%\mpc-be64.pdb"^
@@ -485,11 +487,13 @@ FOR /F "tokens=3,4 delims= " %%A IN (
   'FINDSTR /I /L /C:"define REV_HASH" "revision.h"') DO (SET "REVHASH=%%A")
 
 SET MPCBE_VER=%VerMajor%.%VerMinor%.%VerPatch%.%REVNUM%
+SET "SUFFIX_GIT=_git%REVDATE%-%REVHASH%"
 
 IF /I "%VERRELEASE%" == "1" (
+  IF /I "%REVNUM%" == "0" (
+    SET MPCBE_VER=%VerMajor%.%VerMinor%.%VerPatch%
+  )
   SET "SUFFIX_GIT="
-) ELSE (
-  SET "SUFFIX_GIT=_git%REVDATE%-%REVHASH%"
 )
 
 
@@ -509,14 +513,9 @@ IF /I "%x64_type%" == "amd64" (
 )
 
 FOR /F "delims=" %%A IN (
-  'REG QUERY "%U_%\Inno Setup 5_is1" /v "Inno Setup: App Path" 2^>Nul ^|FIND "REG_SZ"') DO (
-  SET "InnoSetupPath=%%A" & CALL :SubInnoSetupPath %%InnoSetupPath:*Z=%%)
-
-IF NOT DEFINED InnoSetupPath (
-  FOR /F "delims=" %%A IN (
-    'REG QUERY "%U_%\Inno Setup 6_is1" /v "Inno Setup: App Path" 2^>Nul ^|FIND "REG_SZ"') DO (
-    SET "InnoSetupPath=%%A" & CALL :SubInnoSetupPath %%InnoSetupPath:*Z=%%)
-  )
+  'REG QUERY "%U_%\Inno Setup 6_is1" /v "Inno Setup: App Path" 2^>Nul ^|FIND "REG_SZ"') DO (
+  SET "InnoSetupPath=%%A" & CALL :SubInnoSetupPath %%InnoSetupPath:*Z=%%
+)
 EXIT /B
 
 :SubDetectSevenzipPath

@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -107,7 +107,7 @@ HRESULT COSD::Create(CWnd* pWnd)
 IMPLEMENT_DYNAMIC(COSD, CWnd)
 
 BEGIN_MESSAGE_MAP(COSD, CWnd)
-	ON_MESSAGE_VOID(WM_HIDE, OnHide)
+	ON_MESSAGE_VOID(WM_OSD_HIDE, OnHide)
 	ON_MESSAGE_VOID(WM_OSD_DRAW, OnDrawWnd)
 	ON_WM_CREATE()
 	ON_WM_PAINT()
@@ -508,7 +508,7 @@ void COSD::InvalidateBitmapOSD()
 		return;
 	}
 
-	memset_u32(m_BitmapInfo.bmBits, 0xff000000, m_BitmapInfo.bmWidth * m_BitmapInfo.bmHeight * (m_BitmapInfo.bmBitsPixel >> 3));
+	fill_u32(m_BitmapInfo.bmBits, 0xff000000, m_BitmapInfo.bmWidth * m_BitmapInfo.bmHeight);
 
 	if (m_bSeekBarVisible) {
 		DrawSeekbar();
@@ -553,14 +553,22 @@ bool COSD::OnMouseMove(UINT nFlags, CPoint point)
 		} else if (m_rectSeekBar.PtInRect(point)) {
 			bRet = true;
 			if (!m_bSeekBarVisible) {
-				m_pMainFrame->IsD3DFullScreenMode() ? m_pMainFrame->m_pFullscreenWnd->SetCursor(IDC_HAND) : SetCursor(LoadCursorW(nullptr, IDC_HAND));
+				if (m_pMainFrame->IsD3DFullScreenMode()) {
+					m_pMainFrame->m_pFullscreenWnd->SetCursor(IDC_HAND);
+				} else {
+					SetCursor(LoadCursorW(nullptr, IDC_HAND));
+				}
 				m_bSeekBarVisible = true;
 				InvalidateBitmapOSD();
 			}
 		} else if (m_rectFlyBar.PtInRect(point)) {
 			bRet = true;
 			if (!m_bFlyBarVisible) {
-				m_pMainFrame->IsD3DFullScreenMode() ? m_pMainFrame->m_pFullscreenWnd->SetCursor(IDC_ARROW) : SetCursor(LoadCursorW(nullptr, IDC_ARROW));
+				if (m_pMainFrame->IsD3DFullScreenMode()) {
+					m_pMainFrame->m_pFullscreenWnd->SetCursor(IDC_ARROW);
+				} else {
+					SetCursor(LoadCursorW(nullptr, IDC_ARROW));
+				}
 				m_bFlyBarVisible = true;
 				InvalidateBitmapOSD();
 			} else {
@@ -579,9 +587,17 @@ bool COSD::OnMouseMove(UINT nFlags, CPoint point)
 				}
 
 				if (m_rectCloseButton.PtInRect(point) || m_rectExitButton.PtInRect(point)) {
-					m_pMainFrame->IsD3DFullScreenMode() ? m_pMainFrame->m_pFullscreenWnd->SetCursor(IDC_HAND) : SetCursor(LoadCursorW(nullptr, IDC_HAND));
+					if (m_pMainFrame->IsD3DFullScreenMode()) {
+						m_pMainFrame->m_pFullscreenWnd->SetCursor(IDC_HAND);
+					} else {
+						SetCursor(LoadCursorW(nullptr, IDC_HAND));
+					}
 				} else {
-					m_pMainFrame->IsD3DFullScreenMode() ? m_pMainFrame->m_pFullscreenWnd->SetCursor(IDC_ARROW) : SetCursor(LoadCursorW(nullptr, IDC_ARROW));
+					if (m_pMainFrame->IsD3DFullScreenMode()) {
+						m_pMainFrame->m_pFullscreenWnd->SetCursor(IDC_ARROW);
+					} else {
+						SetCursor(LoadCursorW(nullptr, IDC_ARROW));
+					}
 				}
 			}
 		} else if (m_bSeekBarVisible || m_bFlyBarVisible) {
@@ -594,7 +610,11 @@ bool COSD::OnMouseMove(UINT nFlags, CPoint point)
 
 void COSD::OnMouseLeave()
 {
-	m_pMainFrame->IsD3DFullScreenMode() ? m_pMainFrame->m_pFullscreenWnd->SetCursor(IDC_ARROW) : SetCursor(LoadCursorW(nullptr, IDC_ARROW));
+	if (m_pMainFrame->IsD3DFullScreenMode()) {
+		m_pMainFrame->m_pFullscreenWnd->SetCursor(IDC_ARROW);
+	} else {
+		SetCursor(LoadCursorW(nullptr, IDC_ARROW));
+	}
 
 	const bool bHideBars = (m_pMFVMB && (m_bSeekBarVisible || m_bFlyBarVisible));
 
@@ -705,11 +725,17 @@ void COSD::ClearMessage(bool hide)
 	} else if (m_pMVTO) {
 		m_pMVTO->OsdClearMessage();
 	} else if (::IsWindow(m_hWnd) && IsWindowVisible()) {
-		PostMessageW(WM_HIDE);
+		PostMessageW(WM_OSD_HIDE);
 	}
 }
 
-void COSD::DisplayMessage(OSD_MESSAGEPOS nPos, LPCWSTR strMsg, int nDuration/* = 5000*/, const bool bPeriodicallyDisplayed/* = false*/, const int FontSize/* = 0*/, LPCWSTR OSD_Font/* = nullptr*/)
+void COSD::DisplayMessage(
+	OSD_MESSAGEPOS nPos,
+	LPCWSTR strMsg,
+	int nDuration/* = 5000*/,
+	const bool bPeriodicallyDisplayed/* = false*/,
+	const int FontSize/* = 0*/,
+	LPCWSTR OSD_Font/* = nullptr*/)
 {
 	if (!m_bShowMessage) {
 		return;
@@ -734,7 +760,11 @@ void COSD::DisplayMessage(OSD_MESSAGEPOS nPos, LPCWSTR strMsg, int nDuration/* =
 		}
 
 		m_FontSize = FontSize ? std::clamp(FontSize, 8, 26) : s.nOSDSize;
-		m_OSD_Font = OSD_Font ? OSD_Font : s.strOSDFont;
+		if (OSD_Font) {
+			m_OSD_Font = OSD_Font;
+		} else {
+			m_OSD_Font = s.strOSDFont;
+		}
 
 		if (m_OSD_FontCashed != m_OSD_Font
 				|| m_FontSizeCashed != m_FontSize
@@ -770,7 +800,11 @@ void COSD::DisplayMessage(OSD_MESSAGEPOS nPos, LPCWSTR strMsg, int nDuration/* =
 		}
 
 		m_FontSize = FontSize ? std::clamp(FontSize, 8, 26) : s.nOSDSize;
-		m_OSD_Font = OSD_Font ? OSD_Font : s.strOSDFont;
+		if (OSD_Font) {
+			m_OSD_Font = OSD_Font;
+		} else {
+			m_OSD_Font = s.strOSDFont;
+		}
 
 		EndTimer();
 		if (nDuration != -1) {

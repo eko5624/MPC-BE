@@ -1,5 +1,5 @@
 /*
- * (C) 2016-2021 see Authors.txt
+ * (C) 2016-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -19,6 +19,8 @@
  */
 
 #pragma once
+
+#define MPC_WND_CLASS_NAMEW L"MPC-BE"
 
 #define KILOBYTE          1024
 #define MEGABYTE       1048576
@@ -45,10 +47,11 @@
 #define SAFE_DELETE(p)       { if (p) { delete (p);     (p) = nullptr; } }
 #define SAFE_DELETE_ARRAY(p) { if (p) { delete [] (p);  (p) = nullptr; } }
 
-#define PCIV_ATI         0x1002
-#define PCIV_nVidia      0x10DE
-#define PCIV_Intel       0x8086
-#define PCIV_S3_Graphics 0x5333
+#define PCIV_ATI             0x1002
+#define PCIV_nVidia          0x10DE
+#define PCIV_Intel           0x8086
+#define PCIV_S3_Graphics     0x5333
+#define PCIV_Qualcomm    0x4D4F4351
 
 // non-standard values for Transfer Matrix
 #define VIDEOTRANSFERMATRIX_FCC   6

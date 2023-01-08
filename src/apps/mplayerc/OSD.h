@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -20,15 +20,11 @@
 
 #pragma once
 
-#include <atlbase.h>
 #include <d3d9.h>
 #include <evr9.h>
 #include <mvrInterfaces.h>
 #include <HighDPI.h>
 #include "DSUtil/DSMPropertyBag.h"
-
-#define WM_HIDE			(WM_USER + 1001)
-#define WM_OSD_DRAW		(WM_USER + 1002)
 
 enum OSD_COLORS {
 	OSD_TRANSPARENT,
@@ -156,7 +152,13 @@ public:
 	void Start(CWnd* pWnd);
 	void Stop();
 
-	void DisplayMessage(OSD_MESSAGEPOS nPos, LPCWSTR strMsg, int nDuration = 5000, const bool bPeriodicallyDisplayed = false, const int FontSize = 0, LPCWSTR OSD_Font = nullptr);
+	void DisplayMessage(
+		OSD_MESSAGEPOS nPos,
+		LPCWSTR strMsg,
+		int nDuration = 5000,
+		const bool bPeriodicallyDisplayed = false,
+		const int FontSize = 0,
+		LPCWSTR OSD_Font = nullptr);
 	void DebugMessage(LPCWSTR format, ...);
 	void ClearMessage(bool hide = false);
 

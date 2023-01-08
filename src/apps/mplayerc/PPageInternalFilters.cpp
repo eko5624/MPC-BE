@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -28,7 +28,7 @@
 #include "filters/reader/CDDAReader/CDDAReader.h"
 #include "filters/reader/VTSReader/VTSReader.h"
 #include "filters/transform/MPCVideoDec/MPCVideoDec.h"
-#include "filters/transform/Mpeg2DecFilter/Mpeg2DecFilter.h"
+#include "filters/transform/DVDVideoDecoder/MpcDvdVideoDecoder.h"
 #include "filters/transform/MpaDecFilter/MpaDecFilter.h"
 
 static filter_t s_source_filters[] = {
@@ -70,6 +70,7 @@ static filter_t s_video_decoders[] = {
 	{L"AMV Video",					VIDEO_DECODER, VDEC_AMV,			0},
 	{L"Apple ProRes",				VIDEO_DECODER, VDEC_PRORES,			0},
 	{L"AOMedia Video 1 (AV1)",		VIDEO_DECODER, VDEC_AV1,			0},
+	{L"AVS3",						VIDEO_DECODER, VDEC_AVS3,			0},
 	{L"Avid DNxHD",					VIDEO_DECODER, VDEC_DNXHD,			0},
 	{L"Bink Video",					VIDEO_DECODER, VDEC_BINK,			0},
 	{L"Canopus Lossless/HQ/HQX",	VIDEO_DECODER, VDEC_CANOPUS,		0},
@@ -88,7 +89,7 @@ static filter_t s_video_decoders[] = {
 	{L"MJPEG",						VIDEO_DECODER, VDEC_MJPEG,			0},
 	{L"MPEG-1 Video",				VIDEO_DECODER, VDEC_MPEG1,			IDS_TRA_FFMPEG},
 	{L"MPEG-2 Video",				VIDEO_DECODER, VDEC_MPEG2,			IDS_TRA_FFMPEG},
-	{L"DVD MPEG Video",				VIDEO_DECODER, VDEC_DVD_LIBMPEG2,	IDS_TRA_MPEG2},
+	{L"DVD-Video",					VIDEO_DECODER, VDEC_DVD,			IDS_TRA_DVD_VIDEO},
 	{L"MS MPEG-4",					VIDEO_DECODER, VDEC_MSMPEG4,		0},
 	{L"PNG",						VIDEO_DECODER, VDEC_PNG,			0},
 	{L"QuickTime video (8BPS, QTRle, rpza)", VIDEO_DECODER, VDEC_QT,		0},
@@ -103,7 +104,7 @@ static filter_t s_video_decoders[] = {
 	{L"VP7/8/9",					VIDEO_DECODER, VDEC_VP789,			0},
 	{L"WMV1/2/3",					VIDEO_DECODER, VDEC_WMV,			0},
 	{L"Xvid/MPEG-4",				VIDEO_DECODER, VDEC_XVID,			0},
-	{L"RealVideo",					VIDEO_DECODER, VDEC_REAL,			IDS_TRA_RV},
+	{L"RealVideo",					VIDEO_DECODER, VDEC_REAL,			0},
 	{L"Uncompressed video (v210, V410, Y8, I420, \x2026)", VIDEO_DECODER, VDEC_UNCOMPRESSED, 0},
 };
 
@@ -127,7 +128,7 @@ static filter_t s_audio_decoders[] = {
 	{L"Opus",						AUDIO_DECODER, ADEC_OPUS,			0},
 	{L"PS2 Audio (PCM/ADPCM)",		AUDIO_DECODER, ADEC_PS2,			IDS_TRA_PS2AUD},
 	{L"QDesign Music Codec",		AUDIO_DECODER, ADEC_QDMC,			0},
-	{L"RealAudio",					AUDIO_DECODER, ADEC_REAL,			IDS_TRA_RA},
+	{L"RealAudio",					AUDIO_DECODER, ADEC_REAL,			0},
 	{L"Shorten",					AUDIO_DECODER, ADEC_SHORTEN,		0},
 	{L"Speex",						AUDIO_DECODER, ADEC_SPEEX,			0},
 	{L"TAK",						AUDIO_DECODER, ADEC_TAK,			0},
@@ -480,7 +481,7 @@ void CPPageInternalFilters::ShowPPage(CUnknown* (WINAPI * CreateInstance)(LPUNKN
 	CComPtr<IUnknown> pUnk = (IUnknown*)(INonDelegatingUnknown*)pObj;
 
 	if (SUCCEEDED(hr)) {
-		if (CComQIPtr<ISpecifyPropertyPages> pSPP = pUnk) {
+		if (CComQIPtr<ISpecifyPropertyPages> pSPP = pUnk.p) {
 			CComPropertySheet ps(ResStr(IDS_PROPSHEET_PROPERTIES), this);
 			ps.AddPages(pSPP);
 			ps.DoModal();

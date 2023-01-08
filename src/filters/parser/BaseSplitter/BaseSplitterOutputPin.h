@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <atlbase.h>
 #include <IKeyFrameInfo.h>
 #include <IBufferInfo.h>
 #include <IBitRateInfo.h>
@@ -87,7 +86,7 @@ protected:
 
 	// override this if you need some second level stream specific demuxing (optional)
 	// the default implementation will send the sample as is
-	virtual HRESULT DeliverPacket(CAutoPtr<CPacket> p);
+	virtual HRESULT DeliverPacket(std::unique_ptr<CPacket> p);
 
 	// IMediaSeeking
 
@@ -148,7 +147,7 @@ public:
 	size_t QueueCount();
 	size_t QueueSize();
 	HRESULT QueueEndOfStream();
-	virtual HRESULT QueuePacket(CAutoPtr<CPacket> p);
+	virtual HRESULT QueuePacket(std::unique_ptr<CPacket> p);
 
 	// returns true for everything which (the lack of) would not block other streams (subtitle streams, basically)
 	virtual bool IsDiscontinuous();

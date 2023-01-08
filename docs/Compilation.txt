@@ -7,7 +7,8 @@
      * Windows SDK 10.0.17763.0
      * Visual C++ ATL support
      * Visual C++ MFC support
- 
+  Download URL: https://learn.microsoft.com/en-us/visualstudio/releasenotes/vs2017-relnotes
+
  Visual Studio 2019
   1. Install Visual Studio 2019 (any edition will work fine). During installation, you must select the following components: 
    * Desktop development with C++
@@ -15,14 +16,22 @@
      * Windows SDK 10.0.17763.0 or newer (latest).
      * C++ ATL support
      * C++ MFC support
+  Download URL: https://learn.microsoft.com/en-us/visualstudio/releases/2019/release-notes
 
-  Download URL: http://www.visualstudio.com/downloads/download-visual-studio-vs
+ Visual Studio 2022
+  1. Install Visual Studio 2022 (any edition will work fine). During installation, you must select the following components: 
+   * Desktop development with C++
+     * MSVC v143 - Build Tools C++ 
+     * Windows SDK 10.0.18362.0 or newer (latest).
+     * C++ ATL support
+     * C++ MFC support
+  Download URL: https://learn.microsoft.com/en-us/visualstudio/releases/2022/release-notes
 
 Part B: Preparing the GCC environment
  NOTES:
   * If you installed the MSYS/MinGW package in an other directory you will have to use that path in the following steps.
 
- 1. Download and extract "MSYS_MinGW-w64_GCC_1120_x86-x64_v2.7z" to "C:\MSYS" -> https://mpc-be.org/MSYS/MSYS_MinGW-w64_GCC_1120_x86-x64_v2.7z
+ 1. Download and extract "MSYS_MinGW-w64_GCC_1220_x86-x64.7z" to "C:\MSYS" -> https://mpc-be.org/MSYS/MSYS_MinGW-w64_GCC_1220_x86-x64.7z
  2. Create a file named "environments.bat" in the source code folder of MPC-BE (see part D) containing the following entries:
     @ECHO OFF
     SET "MPCBE_MSYS=C:\MSYS"
@@ -52,7 +61,7 @@ Part D: Downloading and compiling the MPC-BE source
     d) Wait for the source tree to be downloaded.
    When usin Git client
     a) open cmd/terminal, cd "c:\repos"
-    b) run command "git clone https://github.com/Aleksoid1978/MPC-BE.git"
+    b) run command "git clone --recursive https://github.com/Aleksoid1978/MPC-BE.git"
     c) Wait for the source tree to be downloaded.
 
 3. Open folder "C:\repos\MPC-BE"
@@ -75,7 +84,5 @@ Alternatively, you can use build.bat (run: build.bat help for more info)
 
 Part D: Building the installer
 
-1a. Download Inno Setup Unicode 5.6.1 (https://files.jrsoftware.org/is/5/)
-    Download Inno Download Plugin 1.5.1 (https://mitrichsoftware.wordpress.com/inno-setup-tools/inno-download-plugin/)
-1b. Or download Inno Setup 6.1.2 or never (https://jrsoftware.org/isdl.php)
-2.  Install everything and then go to C:\repos\MPC-BE\distrib, open mpc-be_setup.iss with Inno Setup and compile it.
+1. Download Inno Setup 6.2.1 or never (https://jrsoftware.org/isdl.php)
+2. Install everything and then go to C:\repos\MPC-BE\distrib, open mpc-be_setup.iss with Inno Setup and compile it.

@@ -1,5 +1,5 @@
 /*
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -23,6 +23,7 @@
 #include <moreuuids.h>
 #include "RawVideoSplitter.h"
 #include "DSUtil/BitsWriter.h"
+#include "dxva2api.h"
 
 #ifdef REGISTER_FILTER
 
@@ -32,8 +33,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -231,6 +232,7 @@ HRESULT CRawVideoSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 		FOURCC fourcc_2    = 0;
 		WORD   bpp         = 12;
 		DWORD  interlFlags = 0;
+		DXVA2_ExtendedFormat exfmt = {};
 
 		int k;
 		std::list<CStringA> sl;
@@ -284,42 +286,62 @@ HRESULT CRawVideoSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 				}
 				break;
 			case 'C':
-				CStringA cs = str.Mid(1);
+			{
+				const CStringA cs = str.Mid(1);
 				// 8-bit
 				if (cs == "mono") {
-					fourcc		= FCC('Y800');
-					bpp			= 8;
+					fourcc = FCC('Y800');
+					bpp    = 8;
 				}
-				else if (cs == "420" || cs == "420jpeg" || cs == "420mpeg2" || cs == "420paldv") {
-					fourcc		= FCC('I420');
-					bpp			= 12;
+				else if (StartsWith(cs, "420")) {
+					fourcc = FCC('I420');
+					bpp    = 12;
+					if (cs == "420jpeg") {
+						exfmt.VideoChromaSubsampling = DXVA2_VideoChromaSubsampling_Vertically_AlignedChromaPlanes;
+					}
+					else if (cs == "420mpeg2") {
+						exfmt.VideoChromaSubsampling = DXVA2_VideoChromaSubsampling_MPEG2;
+					}
+					else if (cs == "420paldv") {
+						exfmt.VideoChromaSubsampling = DXVA2_VideoChromaSubsampling_DV_PAL;
+					}
 				}
 				else if (cs == "411") {
-					fourcc		= FCC('Y41B');
-					bpp			= 12;
+					fourcc = FCC('Y41B');
+					bpp    = 12;
 				}
 				else if (cs == "422") {
-					fourcc		= FCC('Y42B');
-					bpp			= 16;
+					fourcc = FCC('Y42B');
+					bpp    = 16;
 				}
 				else if (cs == "444") {
-					fourcc		= FCC('444P'); // for libavcodec
-					fourcc_2	= FCC('I444'); // for madVR
-					bpp			= 24;
+					fourcc   = FCC('444P'); // for libavcodec
+					fourcc_2 = FCC('I444'); // for madVR
+					bpp      = 24;
 				}
 				// 10-bit
 				else if (cs == "420p10") {
-					fourcc		= MAKEFOURCC('Y', '3', 11 , 10 );
-					bpp			= 24;
-					mt.subtype	= MEDIASUBTYPE_LAV_RAWVIDEO;
+					fourcc = MAKEFOURCC('Y', '3', 11 , 10 );
+					bpp    = 24;
+					mt.subtype = MEDIASUBTYPE_LAV_RAWVIDEO;
 				}
 				else { // unsuppurted colour space
-					fourcc		= 0;
-					bpp			= 0;
+					fourcc = 0;
+					bpp    = 0;
 				}
 				break;
-			//case 'X':
-			//	break;
+			}
+			case 'X':
+				if (StartsWith(str, "XCOLORRANGE=")) {
+					const CStringA range = str.Mid(12);
+					if (range == "LIMITED") {
+						exfmt.NominalRange = DXVA2_NominalRange_16_235;
+					}
+					else if (range == "FULL") {
+						exfmt.NominalRange = DXVA2_NominalRange_0_255;
+					}
+				}
+				break;
 			}
 		}
 
@@ -348,6 +370,10 @@ HRESULT CRawVideoSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 		//vih2->dwBitRate = m_framesize * 8 * fpsnum / fpsden;
 		vih2->AvgTimePerFrame       = m_AvgTimePerFrame;
 		vih2->dwInterlaceFlags      = interlFlags;
+		if (exfmt.value) {
+			exfmt.value |= (AMCONTROL_USED | AMCONTROL_COLORINFO_PRESENT);
+			vih2->dwControlFlags = exfmt.value;
+		}
 
 		sar_x *= width;
 		sar_y *= height;
@@ -962,7 +988,7 @@ HRESULT CRawVideoSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 				vih2->AvgTimePerFrame = 400000;
 			}
 		}
-		CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterParserOutputPin(mts, pName, this, this, &hr));
+		std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CBaseSplitterParserOutputPin(mts, pName, this, this, &hr));
 		EXECUTE_ASSERT(SUCCEEDED(AddOutputPin(0, pPinOut)));
 	}
 
@@ -970,7 +996,7 @@ HRESULT CRawVideoSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 		m_iQueueDuration = 200; // hack. equivalent to 240 packets
 	}
 
-	return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+	return m_pOutputs.size() > 0 ? S_OK : E_FAIL;
 }
 
 bool CRawVideoSplitterFilter::DemuxInit()
@@ -1011,7 +1037,7 @@ bool CRawVideoSplitterFilter::DemuxLoop()
 	HRESULT hr = S_OK;
 
 	REFERENCE_TIME rt = 0;
-	CAutoPtr<CPacket> mpeg4packet;
+	std::unique_ptr<CPacket> mpeg4packet;
 
 	while (SUCCEEDED(hr) && !CheckRequest(nullptr) && m_pFile->GetRemaining()) {
 
@@ -1022,7 +1048,7 @@ bool CRawVideoSplitterFilter::DemuxLoop()
 			}
 			const __int64 framenum = (m_pFile->GetPos() - m_startpos) / (sizeof(FRAME_) + m_framesize);
 
-			CAutoPtr<CPacket> p(DNew CPacket());
+			std::unique_ptr<CPacket> p(DNew CPacket());
 			p->rtStart = framenum * m_AvgTimePerFrame;
 			p->rtStop  = p->rtStart + m_AvgTimePerFrame;
 
@@ -1031,7 +1057,7 @@ bool CRawVideoSplitterFilter::DemuxLoop()
 				break;
 			}
 
-			hr = DeliverPacket(p);
+			hr = DeliverPacket(std::move(p));
 			continue;
 		}
 
@@ -1044,7 +1070,7 @@ bool CRawVideoSplitterFilter::DemuxLoop()
 			const int framesize = GETU32(header);
 			const __int64 framenum = GETU64(header + 4);
 
-			CAutoPtr<CPacket> p(DNew CPacket());
+			std::unique_ptr<CPacket> p(DNew CPacket());
 			p->rtStart = framenum * m_AvgTimePerFrame;
 			p->rtStop = p->rtStart + m_AvgTimePerFrame;
 
@@ -1053,7 +1079,7 @@ bool CRawVideoSplitterFilter::DemuxLoop()
 				break;
 			}
 
-			hr = DeliverPacket(p);
+			hr = DeliverPacket(std::move(p));
 			continue;
 		}
 
@@ -1062,7 +1088,7 @@ bool CRawVideoSplitterFilter::DemuxLoop()
 				const bool eof = !m_pFile->GetRemaining();
 
 				if (mpeg4packet && !mpeg4packet->empty() && (m_pFile->BitRead(32, true) == 0x000001b6 || eof)) {
-					hr = DeliverPacket(mpeg4packet);
+					hr = DeliverPacket(std::move(mpeg4packet));
 				}
 
 				if (eof) {
@@ -1070,7 +1096,7 @@ bool CRawVideoSplitterFilter::DemuxLoop()
 				}
 
 				if (!mpeg4packet) {
-					mpeg4packet.Attach(DNew CPacket());
+					mpeg4packet.reset(DNew CPacket());
 					mpeg4packet->clear();
 					mpeg4packet->rtStart = rt;
 					mpeg4packet->rtStop  = rt + m_AvgTimePerFrame;
@@ -1120,13 +1146,13 @@ bool CRawVideoSplitterFilter::DemuxLoop()
 			if (len) {
 				m_pFile->Seek(pos);
 
-				CAutoPtr<CPacket> p(DNew CPacket());
+				std::unique_ptr<CPacket> p(DNew CPacket());
 				p->resize(len);
 				if ((hr = m_pFile->ByteRead(p->data(), len)) != S_OK) {
 					break;
 				}
 
-				hr = DeliverPacket(p);
+				hr = DeliverPacket(std::move(p));
 			} else {
 				break;
 			}
@@ -1135,13 +1161,13 @@ bool CRawVideoSplitterFilter::DemuxLoop()
 		}
 
 		if (const size_t size = std::min(64LL * KILOBYTE, m_pFile->GetRemaining())) {
-			CAutoPtr<CPacket> p(DNew CPacket());
+			std::unique_ptr<CPacket> p(DNew CPacket());
 			p->resize(size);
 			if ((hr = m_pFile->ByteRead(p->data(), size)) != S_OK) {
 				break;
 			}
 
-			hr = DeliverPacket(p);
+			hr = DeliverPacket(std::move(p));
 		}
 	}
 
@@ -1156,5 +1182,5 @@ CRawVideoSourceFilter::CRawVideoSourceFilter(LPUNKNOWN pUnk, HRESULT* phr)
 	: CRawVideoSplitterFilter(pUnk, phr)
 {
 	m_clsid = __uuidof(this);
-	m_pInput.Free();
+	m_pInput.reset();
 }

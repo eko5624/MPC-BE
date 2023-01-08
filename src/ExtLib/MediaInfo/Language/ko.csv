@@ -150,6 +150,12 @@
 : ;: 
 3D;
 3DType;
+5.1.2ch;
+5.1.4ch;
+5.1ch;
+608_Mode;
+7.1.2ch;
+7.1ch;
 About;정보
 About_Hint;연락처와 최신 버전 확인
 Accompaniment;반주
@@ -180,6 +186,7 @@ Arranger;편곡자
 ArtDirector;미술 감독
 AspectRatio;종횡비
 AssistantDirector;조감독
+AssociatedVideo_FrameRate;
 at;at
 At least one file;(최소한 하나의 파일을 열어야 합니다)
 Audio;오디오
@@ -198,11 +205,15 @@ AudioRenderingIndication;
 AudioSceneInfoID;
 AudioTrackLayout;
 Author;작가
+Back4ToBack2;
+Balance_FrontBackListener;
+Balance_FrontBackOverheadFloor;
 BarCode;바코드
 Basic;기본
 Basic_Note;노트 : 이 파일에 관한 더 자세한 정보를 원하시면 다른 보기를 선택하세요(시트, 트리...)
 BedChannelConfiguration;
 BedChannelCount;
+BinauralRenderMode;
 BitDepth;
 BitDepth_Detected;
 BitDepth_Stored;
@@ -217,9 +228,11 @@ BitRate_Nominal;명목상의 비트레이트
 Bits-(Pixel*Frame);비트/(픽셀*프레임)
 BufferSize;
 Cancel;취소
+CaptionServiceName;
 Channel(s);채널
 ChannelCoded;
 ChannelConfiguration;
+ChannelFormat;
 ChannelLayout;
 ChannelMode;
 ChannelPositions;채널 위치
@@ -277,6 +290,7 @@ colour_range;
 Comment;주석
 CommissionedBy;의뢰
 Compilation;
+ComplementaryObject;
 CompleteName;전체 이름
 CompletionDate;
 ComplexityIndex;
@@ -287,9 +301,13 @@ Compression_Mode_Lossy;
 Compression_Ratio;압축률
 Conductor;지휘자
 ConformanceCheck;
+ConformanceErrors;
+ConformanceInfos;
+ConformanceWarnings;
 ContactEmail;
 ContactTelephoneNumber;
 Container and general information;컨테이너와 일반 정보
+Content;
 ContentType;내용 종류
 CoProducer;공동 제작자
 Copyright;저작권
@@ -304,6 +322,7 @@ Cover_Mime;표지 MIME
 Cover_Type;표지 타입
 Cropped;자른 영역
 Custom;커스텀
+CustomDownmixTargets;
 Customize;커스터마이즈
 DarkMode;
 Date;날짜
@@ -331,20 +350,28 @@ DisplayAspectRatio_CleanAperture;
 DisplayAspectRatio_Original;원본 화면 종횡비
 DistributedBy;배포
 Distributor;
+Dolby_Atmos_Metadata;
 DolbyAtmos;
 Donate;기부하기
 DotsPerInch;인치당 도트
 Downmix;
+Downmix_5.1.x;
+Downmix_5to2;
 DrcSets_Count;
 DrcSets_Effects;
 Duration;길이
 Duration_End;종료 시간
+Duration_End_Command;
 Duration_Start;시작 시간
+Duration_Start_Command;
+Duration_Start2End;
+DynamicObject;
 DynamicRangeControl;
 Eac3DrcProfile;
 Edit;편집
 EditedBy;편집
 EditorialClassification;
+ElementaryStream;
 ElementCount;
 EMail;이메일
 Encoded_Application;인코딩 프로그램
@@ -357,6 +384,10 @@ EPG_Positions;EPG 포지션 (내부)
 EpisodeTitleNumber;
 Error_File;파일을 읽는 중 에러
 Error_File_Write;
+Events_PaintOn;
+Events_PopOn;
+Events_RollUp;
+Events_Total;
 ExecutiveProducer;제작 감독
 Exit;종료
 Exit_Hint;프로그램을 종료합니다
@@ -378,7 +409,11 @@ FileExtension;파일 확장자
 FileName;파일명
 FileNameExtension;
 FileSize;파일 크기
+FirstDisplay_Delay_Frames;
+FirstDisplay_Type;
+FirstFrameOfAction;
 FlatPanelTv;
+FlowID;
 Folder;폴더
 Folder (R);폴더 (R)
 Folder (R)_Hint;조사할 폴더를 선택 (모든 하위 폴더를 포함)
@@ -422,6 +457,7 @@ Format_Settings_Wrapping;
 Format_Tier;
 Format_Url;포맷 웹링크
 Format_Version;포맷 버전
+FormatDefinition;
 FpaManufacturer;
 FpaPass;
 FpaVersion;
@@ -662,6 +698,7 @@ ImageCount;이미지 스트림 개수
 ImmersiveStereo;
 Info;정보
 Instruments;악기
+IntegratedLoudness;
 IntegratedLoudness_Level;
 IntegratedLoudness_Speech;
 InteractivityEnabled;
@@ -891,15 +928,20 @@ LfeMixGain;
 Library;Muxing 라이브러리
 Lifetime_Subscribe_Button;
 Lightness;밝기
+Lines_Count;
+Lines_MaxCountPerEvent;
 LineUpStart;
 LinkedTo_Bed_Pos;
 LinkedTo_ChannelFormat_Pos;
+LinkedTo_ComplementaryObject_Pos;
 LinkedTo_Content_Pos;
 LinkedTo_Group_Pos;
 LinkedTo_Object_Pos;
 LinkedTo_PackFormat_Pos;
 LinkedTo_SignalGroup_Pos;
+LinkedTo_StreamFormat_Pos;
 LinkedTo_Substream_Pos;
+LinkedTo_TrackFormat_Pos;
 LinkedTo_TrackUID_Pos;
 List;목록
 LoRoCenterMixGain;
@@ -948,6 +990,9 @@ Menu_Hint;더 자세히
 Menu_No;메뉴 없음
 MenuCount;메뉴 스트림 개수
 MenuID;메뉴 ID
+Metadata_Format;
+Metadata_Format_Type;
+Metadata_MuxingMode;
 MixType;
 mn;분
 Mood;무드
@@ -978,9 +1023,12 @@ NumberOfObjects;
 NumberOfPackFormats;
 NumberOfPresentations;
 NumberOfProgrammes;
+NumberOfStreamFormats;
 NumberOfSubstreams;
+NumberOfTrackFormats;
 NumberOfTrackUIDs;
 NumColors;색상수
+Object;
 ObjectCount;
 OK;확인
 One output file per input file;입력 파일 마다 하나의 출력 파일
@@ -1043,6 +1091,7 @@ OverallBitRate_Minimum;최소 총 비트레이트
 OverallBitRate_Mode;총 비트레이트 모드
 OverallBitRate_Nominal;명목상의 총 비트레이트
 PackageName;
+PackFormat;
 Part;파트
 Part_Count;총계
 PartNumber;
@@ -1085,6 +1134,7 @@ ProductionDesigner;프로덕션
 ProductionNumber;
 ProductionStudio;스튜디오
 ProductPlacement;
+Programme;
 ProgrammeHasText;
 ProgrammeTextLanguage;
 ProgrammeTitle;
@@ -1121,6 +1171,8 @@ ScanType;스캔 방식
 ScanType_Original;
 ScanType_StoreMethod;
 ScreenplayBy;각본
+ScreenToCenter;
+ScreenToFront;
 Season;시즌
 SecondaryAudioLanguage;
 see below;아래 참고
@@ -1167,6 +1219,7 @@ StoreMethod_SeparatedFields_2;
 Stream;스트림
 Stream_MoreInfo;이 스트림에 대한 자세한 정보
 StreamCount;이 종류의 스트림 개수
+StreamFormat;
 StreamID;스트림 ID
 streamIdentifier;
 StreamKind;스트림 종류
@@ -1224,23 +1277,49 @@ ThanksTo;감사
 Thousands separator;천단위 구분자
 TimeCode;
 TimeCode_FirstFrame;
+TimeCode_LastFrame;
+TimeCode_MaxFrameNumber;
+TimeCode_MaxFrameNumber_Theory;
 TimeCode_Settings;
 TimeCode_Source;
-TimeCode_Striped;
+TimeCode_Stripped;
 TimeStamp;
 TimeZone;시간대
 Title;제목
 Title_More;제목, 자세히
+Top4ToTop2;
+TopBackToFront;
+TopBackToSide;
+TopFrontToBack;
+TopFrontToFront;
+TopFrontToSide;
 Total;총
 TotalNumberOfParts;
 TotalProgrammeDuration;
 Track;트랙 이름
 Track_Count;트랙 개수
+TrackFormat;
+TrackIndex;
+TrackUID;
 transfer_characteristics;
 Translate_Reports;
 Translator;번역
+Transport;
 Tree;트리
 Tree & Text;트리 & 텍스트
+Trim_Center;
+Trim_Height;
+Trim_Surround;
+TrimMode;
+TrimMode0i;
+TrimMode1i;
+TrimMode2i;
+TrimMode3i;
+TrimMode4i;
+TrimMode5i;
+TrimMode6i;
+TrimMode7i;
+TrimMode8i;
 TruePeakLevel;
 TruePeakLevel_Album;
 Type;
@@ -1285,5 +1364,5 @@ Written_Location;제작 장소
 WrittenBy;제작자
 Yes;예
 Your system;이 시스템
-ZZ_Automatic_Percent;73
-ZZ_AutomaticLanguage_Percent;76
+ZZ_Automatic_Percent;68
+ZZ_AutomaticLanguage_Percent;72

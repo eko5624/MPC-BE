@@ -24,7 +24,7 @@
 #include "SettingsDefines.h"
 #include "FakeFilterMapper2.h"
 #include "FilterEnum.h"
-#include "filters/renderer/VideoRenderers/RenderersSettings.h"
+#include "VideoSettings.h"
 #include "Subtitles/STS.h"
 #include "MediaFormats.h"
 #include "DVBChannel.h"
@@ -213,7 +213,7 @@ enum : int {
 	PLAYBACKWND_FITSCREENLARGER,
 };
 
-static const std::vector<int> s_CommonVideoHeights = { 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320 };
+inline static const std::vector<int> s_CommonVideoHeights = { 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320 };
 
 struct ShaderC {
 	CString   label;
@@ -514,7 +514,7 @@ public:
 
 	int				iMonitor;
 
-	CString			ParseFileName(const CString& param);
+	CStringW		ParseFileName(const CStringW& param);
 	void			ParseCommandLine(cmdLine& cmdln);
 
 	// Added a Debug display to the screen (/debug option)
@@ -661,12 +661,6 @@ public:
 	int				iStereo3DMode;
 	bool			bStereo3DSwapLR;
 
-	// Color control
-	int				iBrightness;
-	int				iContrast;
-	int				iHue;
-	int				iSaturation;
-
 	// Fullscreen
 	bool			fLaunchfullscreen;
 	bool			fShowBarsWhenFullScreen;
@@ -736,7 +730,7 @@ public:
 	CStringA		strAudioFilter1;
 
 	// External Filters
-	CAutoPtrList<FilterOverride> m_filters;
+	std::list<std::unique_ptr<FilterOverride>> m_ExternalFilters;
 
 	// Subtitles
 	int				iSubtitleRenderer;
@@ -762,6 +756,7 @@ public:
 	int				nThemeGreen;
 	int				nThemeBlue;
 	bool			bDarkMenu;
+	bool			bDarkTitle;
 	int				nOSDTransparent;
 	int				nOSDBorder;
 
@@ -775,6 +770,7 @@ public:
 	int				nTimeTooltipPosition;
 	bool			fSmartSeek;
 	int				iSmartSeekSize;
+	int				iSmartSeekVR;
 	bool			fChapterMarker;
 	bool			fFlybar;
 	int				iPlsFontPercent;
@@ -840,7 +836,7 @@ public:
 	bool			bFavRememberPos;
 	bool			bFavRelativeDrive;
 	// Save Image...
-	CString			strSnapShotPath, strSnapShotExt;
+	CStringW		strSnapShotPath, strSnapShotExt;
 	bool			bSnapShotSubtitles;
 	// Save Thumbnails...
 	int				iThumbRows, iThumbCols, iThumbWidth, iThumbQuality, iThumbLevelPNG;
@@ -901,8 +897,10 @@ public:
 	int				iYDLMaxHeight;
 	bool			bYDLMaximumQuality;
 
-	CString			strAceStreamAddress;
-	CString			strTorrServerAddress;
+	CStringW		strAceStreamAddress;
+	CStringW		strTorrServerAddress;
+
+	CStringW		strUserAgent;
 
 	DWORD			nLastFileInfoPage;
 
@@ -943,7 +941,7 @@ public:
 	int				GetMultiInst();
 	engine_t		GetFileEngine(CString path);
 
-	CFiltersPrioritySettings	FiltersPrioritySettings;
+	CFiltersPrioritySettings	FiltersPriority;
 
 	std::list<CString>			slSubtitlePathsAddons;
 	std::list<CString>			slAudioPathsAddons;

@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -83,13 +83,12 @@ s_maxTexRes[] = {
 	{   0, L"Desktop" },
 	{2560, L"2560x1440"},
 	{1920, L"1920x1080"},
-	{1320, L"1320x900" },
+	{1600, L"1600x900" },
 	{1280, L"1280x720" },
 	{1024, L"1024x768" },
 	{ 800, L"800x600"  },
 	{ 640, L"640x480"  },
 	{ 512, L"512x384"  },
-	{ 384, L"384x288"  }
 };
 
 int TexWidth2Index(int w)
@@ -127,14 +126,14 @@ BOOL CPPageSubRend::OnInitDialog()
 	m_edtVerPos = s.nVerPos;
 	m_edtVerPos.SetRange(-10,110);
 	m_nVerPosCtrl.SetRange(-10, 110);
-	m_nSPCSize = s.m_VRSettings.nSubpicCount;
+	m_nSPCSize = s.m_VRSettings.SubpicSets.nCount;
 	m_nSPCSizeCtrl.SetRange(RS_SPCSIZE_MIN, RS_SPCSIZE_MAX);
 	for (unsigned i = 0; i < std::size(s_maxTexRes); i++) {
 		m_spmaxres.AddString(s_maxTexRes[i].name);
 	}
-	m_spmaxres.SetCurSel(TexWidth2Index(s.m_VRSettings.iSubpicMaxTexWidth));
-	m_bSPCAllowAnimationWhenBuffering = s.m_VRSettings.bSubpicAnimationWhenBuffering;
-	m_bbSPAllowDropSubPic = s.m_VRSettings.bSubpicAllowDrop;
+	m_spmaxres.SetCurSel(TexWidth2Index(s.m_VRSettings.SubpicSets.iMaxTexWidth));
+	m_bSPCAllowAnimationWhenBuffering = s.m_VRSettings.SubpicSets.bAnimationWhenBuffering;
+	m_bbSPAllowDropSubPic = s.m_VRSettings.SubpicSets.bAllowDrop;
 	m_nSubDelayInterval = s.nSubDelayInterval;
 
 	CorrectCWndWidth(GetDlgItem(IDC_CHECK3));
@@ -155,19 +154,21 @@ BOOL CPPageSubRend::OnApply()
 	if (s.fOverridePlacement != !!m_fOverridePlacement
 			|| s.nHorPos != m_edtHorPos
 			|| s.nVerPos != m_edtVerPos
-			|| s.m_VRSettings.nSubpicCount != m_nSPCSize
+			|| s.m_VRSettings.SubpicSets.nCount != m_nSPCSize
 			|| s.nSubDelayInterval != m_nSubDelayInterval
-			|| s.m_VRSettings.iSubpicMaxTexWidth != TexIndex2Width(m_spmaxres.GetCurSel())
-			|| s.m_VRSettings.bSubpicAllowDrop != !!m_bbSPAllowDropSubPic
-			|| s.m_VRSettings.bSubpicAnimationWhenBuffering != !!m_bSPCAllowAnimationWhenBuffering) {
+			|| s.m_VRSettings.SubpicSets.iMaxTexWidth != TexIndex2Width(m_spmaxres.GetCurSel())
+			|| s.m_VRSettings.SubpicSets.bAllowDrop != !!m_bbSPAllowDropSubPic
+			|| s.m_VRSettings.SubpicSets.bAnimationWhenBuffering != !!m_bSPCAllowAnimationWhenBuffering) {
 		s.fOverridePlacement = !!m_fOverridePlacement;
 		s.nHorPos = m_edtHorPos;
 		s.nVerPos = m_edtVerPos;
-		s.m_VRSettings.nSubpicCount = m_nSPCSize;
+		s.m_VRSettings.SubpicSets.nCount = m_nSPCSize;
 		s.nSubDelayInterval = m_nSubDelayInterval;
-		s.m_VRSettings.iSubpicMaxTexWidth = TexIndex2Width(m_spmaxres.GetCurSel());
-		s.m_VRSettings.bSubpicAllowDrop = !!m_bbSPAllowDropSubPic;
-		s.m_VRSettings.bSubpicAnimationWhenBuffering = !!m_bSPCAllowAnimationWhenBuffering;
+		s.m_VRSettings.SubpicSets.iMaxTexWidth = TexIndex2Width(m_spmaxres.GetCurSel());
+		s.m_VRSettings.SubpicSets.bAllowDrop = !!m_bbSPAllowDropSubPic;
+		s.m_VRSettings.SubpicSets.bAnimationWhenBuffering = !!m_bSPCAllowAnimationWhenBuffering;
+
+		AfxGetMainFrame()->ApplySubpicSettings();
 
 		AfxGetMainFrame()->UpdateSubtitle();
 	}

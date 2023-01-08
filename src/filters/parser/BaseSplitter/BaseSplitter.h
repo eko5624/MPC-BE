@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <atlbase.h>
 #include <qnetwork.h>
 #include <IKeyFrameInfo.h>
 #include <IBufferInfo.h>
@@ -62,18 +61,18 @@ class CBaseSplitterFilter
 	CCritSec m_csmtnew;
 	std::map<DWORD, CMediaType> m_mtnew;
 
-	CAutoPtrList<CBaseSplitterOutputPin> m_pRetiredOutputs;
+	std::list<std::unique_ptr<CBaseSplitterOutputPin>> m_pRetiredOutputs;
 
 protected:
 	CHdmvClipInfo::CPlaylist m_Items;
 	CStringW m_fn;
 
-	CAutoPtr<CBaseSplitterInputPin> m_pInput;
-	CAutoPtrList<CBaseSplitterOutputPin> m_pOutputs;
+	std::unique_ptr<CBaseSplitterInputPin> m_pInput;
+	std::list<std::unique_ptr<CBaseSplitterOutputPin>> m_pOutputs;
 
 	CBaseSplitterOutputPin* GetOutputPin(DWORD TrackNum);
 	DWORD GetOutputTrackNum(CBaseSplitterOutputPin* pPin);
-	HRESULT AddOutputPin(DWORD TrackNum, CAutoPtr<CBaseSplitterOutputPin> pPin);
+	HRESULT AddOutputPin(DWORD TrackNum, std::unique_ptr<CBaseSplitterOutputPin>& pPin);
 	HRESULT RenameOutputPin(DWORD TrackNumSrc, DWORD TrackNumDst, std::vector<CMediaType> mts, BOOL bNeedReconnect = FALSE);
 	virtual HRESULT DeleteOutputs();
 	virtual HRESULT CreateOutputs(IAsyncReader* pAsyncReader) PURE; // override this ...
@@ -94,7 +93,7 @@ protected:
 
 	void DeliverBeginFlush();
 	void DeliverEndFlush();
-	HRESULT DeliverPacket(CAutoPtr<CPacket> p);
+	HRESULT DeliverPacket(std::unique_ptr<CPacket> p);
 
 	int m_priority;
 

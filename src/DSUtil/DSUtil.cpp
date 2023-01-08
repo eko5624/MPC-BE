@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -31,7 +31,6 @@
 #include <moreuuids.h>
 #include <basestruct.h>
 #include <emmintrin.h>
-#include <math.h>
 #include <d3d9.h>
 #include <dxva2api.h>
 #include <mvrInterfaces.h>
@@ -908,6 +907,20 @@ cdrom_t GetCDROMType(WCHAR drive, std::list<CString>& files)
 	path.Format(L"%c:", drive);
 
 	if (GetDriveTypeW(path + L"\\") == DRIVE_CDROM) {
+		// Check if it contains a disc
+		HANDLE hDevice = CreateFileW(LR"(\\.\)" + path, FILE_READ_ATTRIBUTES,
+									 FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
+		if (hDevice == INVALID_HANDLE_VALUE) {
+			return CDROM_Unknown;
+		}
+		DWORD cbBytesReturned = {};
+		BOOL bSuccess = DeviceIoControl(hDevice, IOCTL_STORAGE_CHECK_VERIFY2,
+										nullptr, 0, nullptr, 0, &cbBytesReturned, nullptr);
+		CloseHandle(hDevice);
+		if (!bSuccess) {
+			return CDROM_Unknown;
+		}
+
 		// CDROM_DVDVideo
 		FindFiles(path + L"\\VIDEO_TS\\VIDEO_TS.IFO", files);
 		if (files.size() > 0) {
@@ -2440,6 +2453,13 @@ static const struct {
 	{&DXVA2_VP9_VLD_Intel,							L"VP9 Intel"},
 	// AV1
 	{&DXVA2_ModeAV1_VLD_Profile0,					L"AV1 profile 0"},
+	// HEVC Intel
+	{&DXVA2_HEVC_VLD_Main_12bit_Intel,				L"HEVC 12-bit Intel"},
+	{&DXVA2_HEVC_VLD_Main422_10bit_Intel,			L"HEVC 422 10-bit Intel"},
+	{&DXVA2_HEVC_VLD_Main422_12bit_Intel,			L"HEVC 422 12-bit Intel"},
+	{&DXVA2_HEVC_VLD_Main444_Intel,					L"HEVC 444 8-bit Intel"},
+	{&DXVA2_HEVC_VLD_Main444_10bit_Intel,			L"HEVC 444 10-bit Intel"},
+	{&DXVA2_HEVC_VLD_Main444_12bit_Intel,			L"HEVC 444 12-bit Intel"},
 };
 
 CString GetDXVAMode(const GUID& guidDecoder)
@@ -2633,10 +2653,16 @@ void getExtraData(const BYTE *format, const GUID *formattype, const ULONG format
 	const BYTE *extraposition = nullptr;
 	ULONG extralength = 0;
 	if (*formattype == FORMAT_WaveFormatEx) {
-		//WAVEFORMATEX *wfex = (WAVEFORMATEX *)format;
-		extraposition = format + sizeof(WAVEFORMATEX);
-		// Protected against over-reads
-		extralength   = formatlen - sizeof(WAVEFORMATEX);
+		const auto wfex = (WAVEFORMATEX *)format;
+		if (wfex->wFormatTag == WAVE_FORMAT_EXTENSIBLE && formatlen >= sizeof(WAVEFORMATEXTENSIBLE)) {
+			extraposition = format + sizeof(WAVEFORMATEXTENSIBLE);
+			// Protected against over-reads
+			extralength = formatlen - sizeof(WAVEFORMATEXTENSIBLE);
+		} else {
+			extraposition = format + sizeof(WAVEFORMATEX);
+			// Protected against over-reads
+			extralength = formatlen - sizeof(WAVEFORMATEX);
+		}
 	} else if (*formattype == FORMAT_VorbisFormat2) {
 		VORBISFORMAT2 *vf2 = (VORBISFORMAT2 *)format;
 		unsigned offset = 1;

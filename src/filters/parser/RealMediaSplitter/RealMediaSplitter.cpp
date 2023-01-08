@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2022 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -97,8 +97,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
 };
 
 const AMOVIESETUP_MEDIATYPE sudPinTypesIn2[] = {
@@ -113,8 +113,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesOut2[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins2[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn2), sudPinTypesIn2},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut2), sudPinTypesOut2}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn2), sudPinTypesIn2},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut2), sudPinTypesOut2}
 };
 
 const AMOVIESETUP_MEDIATYPE sudPinTypesIn3[] = {
@@ -135,8 +135,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesOut3[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins3[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn3), sudPinTypesIn3},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut3), sudPinTypesOut3}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn3), sudPinTypesIn3},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut3), sudPinTypesOut3}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -230,10 +230,7 @@ HRESULT CRealMediaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 	m_rtStop = 10000i64*m_pFile->m_p.tDuration;
 
-	POSITION pos = m_pFile->m_mps.GetHeadPosition();
-	while (pos) {
-		MediaProperies* pmp = m_pFile->m_mps.GetNext(pos);
-
+	for (const auto& pmp : m_pFile->m_mps) {
 		CStringW name;
 		name.Format(L"Output %02d", pmp->stream);
 		if (!pmp->name.IsEmpty()) {
@@ -510,7 +507,7 @@ HRESULT CRealMediaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 		HRESULT hr;
 
-		CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CRealMediaSplitterOutputPin(mts, name, this, this, &hr));
+		std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CRealMediaSplitterOutputPin(mts, name, this, this, &hr));
 		if (SUCCEEDED(AddOutputPin((DWORD)pmp->stream, pPinOut))) {
 			if (!m_rtStop) {
 				m_pFile->m_p.tDuration = std::max(m_pFile->m_p.tDuration, pmp->tDuration);
@@ -537,7 +534,7 @@ HRESULT CRealMediaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 		HRESULT hr;
 
-		CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CRealMediaSplitterOutputPin(mts, name, this, this, &hr));
+		std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CRealMediaSplitterOutputPin(mts, name, this, this, &hr));
 		AddOutputPin((DWORD)~stream, pPinOut);
 	}
 
@@ -548,7 +545,7 @@ HRESULT CRealMediaSplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 	SetProperty(L"CPYR", CStringW(m_pFile->m_cd.copyright));
 	SetProperty(L"DESC", CStringW(m_pFile->m_cd.comment));
 
-	return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+	return m_pOutputs.size() > 0 ? S_OK : E_FAIL;
 }
 
 bool CRealMediaSplitterFilter::DemuxInit()
@@ -560,7 +557,7 @@ bool CRealMediaSplitterFilter::DemuxInit()
 	}
 
 	// reindex if needed
-	if (m_pFile->m_irs.GetCount() == 0) {
+	if (m_pFile->m_irs.size() == 0) {
 		m_nOpenProgress = 0;
 
 		int stream = m_pFile->GetMasterStream();
@@ -568,9 +565,10 @@ bool CRealMediaSplitterFilter::DemuxInit()
 		UINT32 tLastStart = (UINT32)-1;
 		UINT32 nPacket = 0;
 
-		POSITION pos = m_pFile->m_dcs.GetHeadPosition();
-		while (pos && !m_fAbort) {
-			DataChunk* pdc = m_pFile->m_dcs.GetNext(pos);
+		for (const auto& pdc : m_pFile->m_dcs) {
+			if (m_fAbort) {
+				break;
+			}
 
 			m_pFile->Seek(pdc->pos);
 
@@ -588,11 +586,11 @@ bool CRealMediaSplitterFilter::DemuxInit()
 					m_rtDuration = std::max((__int64)(10000i64*mph.tStart), m_rtDuration);
 
 					if (mph.flags&MediaPacketHeader::PN_KEYFRAME_FLAG && tLastStart != mph.tStart) {
-						CAutoPtr<IndexRecord> pir(DNew IndexRecord);
+						std::unique_ptr<IndexRecord> pir(DNew IndexRecord);
 						pir->tStart = mph.tStart;
 						pir->ptrFilePos = (UINT32)filepos;
 						pir->packet = nPacket;
-						m_pFile->m_irs.AddTail(pir);
+						m_pFile->m_irs.emplace_back(std::move(pir));
 
 						tLastStart = mph.tStart;
 					}
@@ -614,15 +612,15 @@ bool CRealMediaSplitterFilter::DemuxInit()
 		m_nOpenProgress = 100;
 
 		if (m_fAbort) {
-			m_pFile->m_irs.RemoveAll();
+			m_pFile->m_irs.clear();
 		}
 
 		m_fAbort = false;
 	}
 
-	m_seekpos		= nullptr;
-	m_seekpacket	= 0;
-	m_seekfilepos	= 0;
+	m_seekdc      = UINT32_MAX;
+	m_seekpacket  = 0;
+	m_seekfilepos = 0;
 
 	return true;
 }
@@ -630,76 +628,80 @@ bool CRealMediaSplitterFilter::DemuxInit()
 void CRealMediaSplitterFilter::DemuxSeek(REFERENCE_TIME rt)
 {
 	if (rt <= 0) {
-		m_seekpos = m_pFile->m_dcs.GetHeadPosition();
-		m_seekpacket = 0;
-		m_seekfilepos = m_pFile->m_dcs.GetHead()->pos;
+		m_seekdc      = 0;
+		m_seekpacket  = 0;
+		m_seekfilepos = m_pFile->m_dcs.front()->pos;
 	} else {
-		m_seekpos = nullptr;
+		m_seekdc = UINT32_MAX;
+		auto CheckDCsIdx = [&](const UINT32& indx) {
+			return (indx < m_pFile->m_dcs.size());
+		};
 
-		POSITION pos = m_pFile->m_irs.GetTailPosition();
-		while (pos && !m_seekpos) {
-			IndexRecord* pir = m_pFile->m_irs.GetPrev(pos);
+		for (auto it = m_pFile->m_irs.crbegin(); it != m_pFile->m_irs.crend(); ++it) {
+			auto& pir = *it;
 			if (pir->tStart < rt/10000) {
 				m_seekpacket = pir->packet;
 
-				pos = m_pFile->m_dcs.GetTailPosition();
-				while (pos && !m_seekpos) {
-					POSITION tmp = pos;
-
-					DataChunk* pdc = m_pFile->m_dcs.GetPrev(pos);
-
-					if (pdc->pos <= pir->ptrFilePos) {
-						m_seekpos = tmp;
+				UINT32 idxR = m_pFile->m_dcs.size();
+				while (idxR) {
+					idxR--;
+					if (m_pFile->m_dcs[idxR]->pos <= pir->ptrFilePos) {
+						m_seekdc = idxR;
 						m_seekfilepos = pir->ptrFilePos;
 
-						POSITION pos = m_pFile->m_dcs.GetHeadPosition();
-						while (pos != m_seekpos) {
-							m_seekpacket -= m_pFile->m_dcs.GetNext(pos)->nPackets;
+						UINT32 idxL = 0;
+						while (idxL < m_seekdc) {
+							m_seekpacket -= m_pFile->m_dcs[idxL]->nPackets;
+							idxL++;
 						}
+						break;
 					}
 				}
 
 				// search the closest keyframe to the seek time (commented out 'cause rm seems to index all of its keyframes...)
 				/*
-								if(m_seekpos)
-								{
-									DataChunk* pdc = m_pFile->m_dcs.GetAt(m_seekpos);
+				if(m_seekpos)
+				{
+					DataChunk* pdc = m_pFile->m_dcs.GetAt(m_seekpos);
 
-									m_pFile->Seek(m_seekfilepos);
+					m_pFile->Seek(m_seekfilepos);
 
-									REFERENCE_TIME seektime = -1;
-									UINT32 seekstream = -1;
+					REFERENCE_TIME seektime = -1;
+					UINT32 seekstream = -1;
 
-									for(UINT32 i = m_seekpacket; i < pdc->nPackets; i++)
-									{
-										UINT64 filepos = m_pFile->GetPos();
+					for(UINT32 i = m_seekpacket; i < pdc->nPackets; i++)
+					{
+						UINT64 filepos = m_pFile->GetPos();
 
-										MediaPacketHeader mph;
-										if(S_OK != m_pFile->Read(mph, false))
-											break;
+						MediaPacketHeader mph;
+						if(S_OK != m_pFile->Read(mph, false))
+							break;
 
-										if(seekstream == -1) seekstream = mph.stream;
-										if(seekstream != mph.stream) continue;
+						if(seekstream == -1) seekstream = mph.stream;
+						if(seekstream != mph.stream) continue;
 
-										if(seektime == 10000i64*mph.tStart) continue;
-										if(rt < 10000i64*mph.tStart) break;
+						if(seektime == 10000i64*mph.tStart) continue;
+						if(rt < 10000i64*mph.tStart) break;
 
-										if((mph.flags&MediaPacketHeader::PN_KEYFRAME_FLAG))
-										{
-											m_seekpacket = i;
-											m_seekfilepos = filepos;
-											seektime = 10000i64*mph.tStart;
-										}
-									}
-								}
+						if((mph.flags&MediaPacketHeader::PN_KEYFRAME_FLAG))
+						{
+							m_seekpacket = i;
+							m_seekfilepos = filepos;
+							seektime = 10000i64*mph.tStart;
+						}
+					}
+				}
 				*/
+			}
+			if (m_seekdc < m_pFile->m_dcs.size()) {
+				break;
 			}
 		}
 
-		if (!m_seekpos) {
-			m_seekpos = m_pFile->m_dcs.GetHeadPosition();
-			m_seekpacket = 0;
-			m_seekfilepos = m_pFile->m_dcs.GetAt(m_seekpos)->pos;
+		if (m_seekdc == UINT32_MAX) {
+			m_seekdc      = 0;
+			m_seekpacket  = 0;
+			m_seekfilepos = m_pFile->m_dcs.front()->pos;
 		}
 	}
 }
@@ -707,13 +709,12 @@ void CRealMediaSplitterFilter::DemuxSeek(REFERENCE_TIME rt)
 bool CRealMediaSplitterFilter::DemuxLoop()
 {
 	HRESULT hr = S_OK;
-	POSITION pos;
 
 	auto it = m_pFile->m_subs.begin();
 	for (DWORD stream = 0; it != m_pFile->m_subs.end() && SUCCEEDED(hr) && !CheckRequest(nullptr); stream++) {
 		CRMFile::subtitle& s = *it++;
 
-		CAutoPtr<CPacket> p(DNew CPacket);
+		std::unique_ptr<CPacket> p(DNew CPacket);
 
 		p->TrackNumber = ~stream;
 		p->bSyncPoint = TRUE;
@@ -744,12 +745,13 @@ bool CRealMediaSplitterFilter::DemuxLoop()
 		memcpy((char*)ptr, s.data, s.data.GetLength());
 		ptr += s.name.GetLength();
 
-		hr = DeliverPacket(p);
+		hr = DeliverPacket(std::move(p));
 	}
 
-	pos = m_seekpos;
-	while (pos && SUCCEEDED(hr) && !CheckRequest(nullptr)) {
-		DataChunk* pdc = m_pFile->m_dcs.GetNext(pos);
+	UINT32 idxdc = m_seekdc;
+	while (idxdc < m_pFile->m_dcs.size() && SUCCEEDED(hr) && !CheckRequest(nullptr)) {
+		const auto& pdc = m_pFile->m_dcs[idxdc];
+		idxdc++;
 
 		m_pFile->Seek(m_seekfilepos > 0 ? m_seekfilepos : pdc->pos);
 
@@ -759,13 +761,13 @@ bool CRealMediaSplitterFilter::DemuxLoop()
 				break;
 			}
 
-			CAutoPtr<CPacket> p(DNew CPacket);
+			std::unique_ptr<CPacket> p(DNew CPacket);
 			p->TrackNumber	= mph.stream;
 			p->bSyncPoint	= !!(mph.flags & MediaPacketHeader::PN_KEYFRAME_FLAG);
 			p->rtStart		= 10000i64 * mph.tStart;
 			p->rtStop		= p->rtStart + 1;
 			p->SetData(mph.pData.data(), mph.pData.size());
-			hr				= DeliverPacket(p);
+			hr				= DeliverPacket(std::move(p));
 		}
 
 		m_seekpacket = 0;
@@ -782,7 +784,7 @@ STDMETHODIMP CRealMediaSplitterFilter::GetKeyFrameCount(UINT& nKFs)
 	if (!m_pFile) {
 		return E_UNEXPECTED;
 	}
-	nKFs = m_pFile->m_irs.GetCount();
+	nKFs = m_pFile->m_irs.size();
 	return S_OK;
 }
 
@@ -799,9 +801,8 @@ STDMETHODIMP CRealMediaSplitterFilter::GetKeyFrames(const GUID* pFormat, REFEREN
 	}
 
 	UINT nKFsTmp = 0;
-	POSITION pos = m_pFile->m_irs.GetHeadPosition();
-	for (int i = 0; pos && nKFsTmp < nKFs; i++) {
-		pKFs[nKFsTmp++] = 10000i64*m_pFile->m_irs.GetNext(pos)->tStart;
+	for (auto it = m_pFile->m_irs.cbegin(); it != m_pFile->m_irs.cend() && nKFsTmp < nKFs; ++it) {
+		pKFs[nKFsTmp++] = 10000i64 * (*it)->tStart;
 	}
 	nKFs = nKFsTmp;
 
@@ -833,12 +834,12 @@ HRESULT CRealMediaSplitterOutputPin::DeliverEndFlush()
 
 HRESULT CRealMediaSplitterOutputPin::DeliverSegments()
 {
-	if (m_segments.GetCount() == 0) {
+	if (m_segments.empty()) {
 		m_segments.Clear();
 		return S_OK;
 	}
 
-	CAutoPtr<CPacket> p(DNew CPacket());
+	std::unique_ptr<CPacket> p(DNew CPacket());
 
 	p->TrackNumber		= DWORD_MAX;
 	p->bDiscontinuity	= m_segments.fDiscontinuity;
@@ -846,22 +847,20 @@ HRESULT CRealMediaSplitterOutputPin::DeliverSegments()
 	p->rtStart			= m_segments.rtStart;
 	p->rtStop			= m_segments.rtStart + 1;
 
-	DWORD len = 0, total = 0;;
-	POSITION pos = m_segments.GetHeadPosition();
-	while (pos) {
-		const segment* s = m_segments.GetNext(pos);
+	DWORD len = 0, total = 0;
+	for (const auto& s : m_segments) {
 		len = std::max(len, s->offset + (DWORD)s->data.size());
 		total += s->data.size();
 	}
 	ASSERT(len == total);
 
-	len += 1 + 2 * 4 * (!m_segments.fMerged ? m_segments.GetCount() : 1);
+	len += 1 + 2 * 4 * (!m_segments.fMerged ? m_segments.size() : 1);
 
 	p->resize(len);
 
 	BYTE* pData = p->data();
 
-	*pData++ = m_segments.fMerged ? 0 : (BYTE)(m_segments.GetCount() - 1);
+	*pData++ = m_segments.fMerged ? 0 : (BYTE)(m_segments.size() - 1);
 
 	if (m_segments.fMerged) {
 		*((DWORD*)pData) = 1;
@@ -869,27 +868,23 @@ HRESULT CRealMediaSplitterOutputPin::DeliverSegments()
 		*((DWORD*)pData) = 0;
 		pData += 4;
 	} else {
-		pos = m_segments.GetHeadPosition();
-		while (pos) {
+		for (const auto& s : m_segments) {
 			*((DWORD*)pData) = 1;
 			pData += 4;
-			const segment* s = m_segments.GetNext(pos);
 			*((DWORD*)pData) = s->offset;
 			pData += 4;
 		}
 	}
 
-	pos = m_segments.GetHeadPosition();
-	while (pos) {
-		const segment* s = m_segments.GetNext(pos);
+	for (const auto& s : m_segments) {
 		memcpy(pData + s->offset, s->data.data(), s->data.size());
 	}
 	m_segments.Clear();
 
-	return __super::DeliverPacket(p);
+	return __super::DeliverPacket(std::move(p));
 }
 
-HRESULT CRealMediaSplitterOutputPin::DeliverPacket(CAutoPtr<CPacket> p)
+HRESULT CRealMediaSplitterOutputPin::DeliverPacket(std::unique_ptr<CPacket> p)
 {
 	HRESULT hr = S_OK;
 
@@ -972,15 +967,15 @@ HRESULT CRealMediaSplitterOutputPin::DeliverPacket(CAutoPtr<CPacket> p)
 			if (len2 <= 0) {
 				return E_FAIL;
 			}
-			if (m_segments.IsEmpty()) {
+			if (m_segments.empty()) {
 				packetoffset = 0;
 			}
 
-			CAutoPtr<segment> s(DNew segment);
+			std::unique_ptr<segment> s(DNew segment);
 			s->offset = packetoffset;
 			s->data.resize(len2);
 			memcpy(s->data.data(), pIn, len2);
-			m_segments.AddTail(s);
+			m_segments.emplace_back(std::move(s));
 
 			pIn += len2;
 
@@ -1019,7 +1014,7 @@ HRESULT CRealMediaSplitterOutputPin::DeliverPacket(CAutoPtr<CPacket> p)
 		BOOL bDiscontinuity = p->bDiscontinuity;
 
 		for (const auto& size : sizes) {
-			CAutoPtr<CPacket> p(DNew CPacket);
+			std::unique_ptr<CPacket> p(DNew CPacket);
 			p->bDiscontinuity = bDiscontinuity;
 			p->bSyncPoint = true;
 			p->rtStart = rtStart;
@@ -1027,12 +1022,13 @@ HRESULT CRealMediaSplitterOutputPin::DeliverPacket(CAutoPtr<CPacket> p)
 			p->SetData(ptr, size);
 			ptr += size;
 			bDiscontinuity = false;
-			if (S_OK != (hr = __super::DeliverPacket(p))) {
+			hr = __super::DeliverPacket(std::move(p));
+			if (S_OK != hr) {
 				break;
 			}
 		}
 	} else {
-		hr = __super::DeliverPacket(p);
+		hr = __super::DeliverPacket(std::move(p));
 	}
 
 	return hr;
@@ -1046,7 +1042,7 @@ CRealMediaSourceFilter::CRealMediaSourceFilter(LPUNKNOWN pUnk, HRESULT* phr)
 	: CRealMediaSplitterFilter(pUnk, phr)
 {
 	m_clsid = __uuidof(this);
-	m_pInput.Free();
+	m_pInput.reset();
 }
 
 //
@@ -1112,8 +1108,10 @@ HRESULT CRMFile::Read(MediaPacketHeader& mph, bool fFull)
 	len -= sizeof(object_version);
 	len -= FIELD_OFFSET(MediaPacketHeader, flags);
 	len -= sizeof(flags);
-	ASSERT(len >= 0);
-	len = std::max(len, 0L);
+	//ASSERT(len >= 0);
+	if (len < 0) {
+		len = 0;
+	}
 
 	if (fFull) {
 		mph.pData.resize(len);
@@ -1234,7 +1232,7 @@ HRESULT CRMFile::Init()
 					m_p.flags = (Properies::flags_t)flags;
 					break;
 				case 'MDPR': {
-					CAutoPtr<MediaProperies> mp(DNew MediaProperies);
+					std::unique_ptr<MediaProperies> mp(DNew MediaProperies);
 					if (S_OK != (hr = Read(mp->stream))) {
 						return hr;
 					}
@@ -1282,11 +1280,11 @@ HRESULT CRMFile::Init()
 					}
 					mp->width = mp->height = 0;
 					mp->interlaced = mp->top_field_first = false;
-					m_mps.AddTail(mp);
+					m_mps.emplace_back(std::move(mp));
 					break;
 				}
 				case 'DATA': {
-					CAutoPtr<DataChunk> dc(DNew DataChunk);
+					std::unique_ptr<DataChunk> dc(DNew DataChunk);
 					if (S_OK != (hr = Read(dc->nPackets))) {
 						return hr;
 					}
@@ -1294,7 +1292,7 @@ HRESULT CRMFile::Init()
 						return hr;
 					}
 					dc->pos = GetPos();
-					m_dcs.AddTail(dc);
+					m_dcs.emplace_back(std::move(dc));
 					GetDimensions();
 					break;
 				}
@@ -1316,7 +1314,7 @@ HRESULT CRMFile::Init()
 							return hr;
 						}
 						if (object_version == 0) {
-							CAutoPtr<IndexRecord> ir(DNew IndexRecord);
+							std::unique_ptr<IndexRecord> ir(DNew IndexRecord);
 							if (S_OK != (hr = Read(ir->tStart))) {
 								return hr;
 							}
@@ -1327,7 +1325,7 @@ HRESULT CRMFile::Init()
 								return hr;
 							}
 							if (ich.stream == stream) {
-								m_irs.AddTail(ir);
+								m_irs.emplace_back(std::move(ir));
 							}
 						}
 					}
@@ -1364,7 +1362,7 @@ HRESULT CRMFile::Init()
 			hdr.size = GetPos() - pos;
 		}
 
-		ASSERT(hdr.object_id == 'DATA'
+		ASSERT(hdr.object_id == 'DATA' || hdr.object_id == 'INDX'
 			   || GetPos() == pos + hdr.size
 			   || GetPos() == pos + sizeof(hdr));
 
@@ -1511,11 +1509,9 @@ static void GetDimensions_X10(unsigned char* p, unsigned int* wi, unsigned int* 
 
 void CRMFile::GetDimensions()
 {
-	POSITION pos = m_mps.GetHeadPosition();
-	while (pos) {
+	for (const auto& pmp : m_mps) {
 		UINT64 filepos = GetPos();
 
-		MediaProperies* pmp = m_mps.GetNext(pos);
 		if (pmp->mime == "video/x-pn-realvideo") {
 			pmp->width = pmp->height = 0;
 
@@ -1603,9 +1599,7 @@ int CRMFile::GetMasterStream()
 {
 	int s1 = -1, s2 = -1;
 
-	POSITION pos = m_mps.GetHeadPosition();
-	while (pos) {
-		MediaProperies* pmp = m_mps.GetNext(pos);
+	for (const auto& pmp : m_mps) {
 		if (pmp->mime == "video/x-pn-realvideo") {
 			s1 = pmp->stream;
 			break;

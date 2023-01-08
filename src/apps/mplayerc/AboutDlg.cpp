@@ -1,5 +1,5 @@
 /*
- * (C) 2014-2022 see Authors.txt
+ * (C) 2014-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,6 +21,8 @@
 #include "stdafx.h"
 #include "AboutDlg.h"
 #include "DSUtil/FileHandle.h"
+
+#include "Version.h"
 
 extern "C" char *GetFFmpegCompiler();
 extern "C" char *GetlibavcodecVersion();
@@ -48,9 +50,9 @@ BOOL CAboutDlg::OnInitDialog()
 	m_appname += L" (64-bit)";
 #endif
 
-	m_strVersionNumber.Append(MPC_VERSION_FULL_WSTR);
+	m_strVersionNumber.Append(MPC_VERSION_WSTR);
 #if (MPC_VERSION_STATUS == 0)
-	m_strVersionNumber.Append(L" alpha");
+	m_strVersionNumber.Append(L" dev");
 #endif
 #ifdef _DEBUG
 	m_strVersionNumber.Append(L", Debug");
@@ -59,31 +61,24 @@ BOOL CAboutDlg::OnInitDialog()
 	m_strGitInfo.AppendFormat(L"git %S - %S", REV_DATE, REV_HASH);
 #endif
 
-#if defined(__INTEL_COMPILER)
-	#if (__INTEL_COMPILER >= 1210)
-		m_MPCCompiler = L"ICL " MAKE_STR(__INTEL_COMPILER) L" Build ") MAKE_STR(__INTEL_COMPILER_BUILD_DATE);
-	#else
-		#error Compiler is not supported!
-	#endif
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER)
 	m_MPCCompiler.Format(L"MSVC %.2d.%.2d.%.5d", _MSC_VER / 100, _MSC_VER % 100, _MSC_FULL_VER % 100000);
 	#if _MSC_BUILD
 		m_MPCCompiler.AppendFormat(L".%.2d", _MSC_BUILD);
 	#endif
 #else
-	#error Please add support for your compiler
+	m_MPCCompiler = L"unknown compiler";
 #endif
 
-#if (__AVX__)
+// https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros
+#if (__AVX2__)
+	m_MPCCompiler += L" (AVX2)";
+#elif (__AVX__)
 	m_MPCCompiler += L" (AVX)";
-#elif (__SSSE3__)
-	m_MPCCompiler += L" (SSSE3)";
-#elif (__SSE3__)
-	m_MPCCompiler += L" (SSE3)";
-#elif !defined(_M_X64) && defined(_M_IX86_FP)
-	#if (_M_IX86_FP == 2)   // /arch:SSE2 was used
+#elif !defined(_M_X64)
+	#if (_M_IX86_FP == 2)
 		m_MPCCompiler += L" (SSE2)";
-	#elif (_M_IX86_FP == 1) // /arch:SSE was used
+	#elif (_M_IX86_FP == 1)
 		m_MPCCompiler += L" (SSE)";
 	#endif
 #endif

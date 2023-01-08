@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2017 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -23,38 +23,39 @@
 
 #include "SubPicImpl.h"
 
-enum {MSP_P010,MSP_P016,MSP_RGB32,MSP_RGB24,MSP_RGB16,MSP_RGB15,MSP_YUY2,MSP_NV12,MSP_YV12,MSP_IYUV,MSP_AYUV,MSP_RGBA};
-
 // CMemSubPic
 
 class CMemSubPic : public CSubPicImpl
 {
-	SubPicDesc m_spd;
-
 protected:
-	STDMETHODIMP_(void*) GetObject(); // returns SubPicDesc*
+	SubPicDesc m_spd;
 
 public:
 	CMemSubPic(SubPicDesc& spd);
 	virtual ~CMemSubPic();
 
 	// ISubPic
-	STDMETHODIMP GetDesc(SubPicDesc& spd);
-	STDMETHODIMP CopyTo(ISubPic* pSubPic);
-	STDMETHODIMP ClearDirtyRect(DWORD color);
-	STDMETHODIMP Lock(SubPicDesc& spd);
-	STDMETHODIMP Unlock(RECT* pDirtyRect);
-	STDMETHODIMP AlphaBlt(RECT* pSrc, RECT* pDst, SubPicDesc* pTarget);
+protected:
+	STDMETHODIMP_(void*) GetObject() override; // returns SubPicDesc*
+public:
+	STDMETHODIMP GetDesc(SubPicDesc& spd) override;
+	STDMETHODIMP CopyTo(ISubPic* pSubPic) override;
+	STDMETHODIMP ClearDirtyRect() override;
+	STDMETHODIMP Lock(SubPicDesc& spd) override;
+	STDMETHODIMP Unlock(RECT* pDirtyRect) override;
+	STDMETHODIMP AlphaBlt(RECT* pSrc, RECT* pDst, SubPicDesc* pTarget) override;
 };
 
 // CMemSubPicAllocator
 
 class CMemSubPicAllocator : public CSubPicAllocatorImpl
 {
-	int m_type;
+protected:
+	const int m_type;
 	CSize m_maxsize;
 
-	bool Alloc(bool fStatic, ISubPic** ppSubPic);
+	// CSubPicAllocatorImpl
+	bool Alloc(bool fStatic, ISubPic** ppSubPic) override;
 
 public:
 	CMemSubPicAllocator(int type, SIZE maxsize);

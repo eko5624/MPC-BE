@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2020 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,10 @@
 
 #pragma once
 
+#include "IDSMResourceBag.h"
+
 #include <map>
+#include <mutex>
 
 // IDSMPropertyBag
 
@@ -37,6 +40,8 @@ public IPropertyBag2 {
 
 class IDSMPropertyBagImpl : public ATL::CSimpleMap<CStringW, CStringW>, public IDSMPropertyBag, public IPropertyBag
 {
+	std::mutex m_mutex;
+
 	BOOL Add(const CStringW& key, const CStringW& val) {
 		return __super::Add(key, val);
 	}
@@ -45,8 +50,8 @@ class IDSMPropertyBagImpl : public ATL::CSimpleMap<CStringW, CStringW>, public I
 	}
 
 public:
-	IDSMPropertyBagImpl();
-	virtual ~IDSMPropertyBagImpl();
+	IDSMPropertyBagImpl() = default;
+	~IDSMPropertyBagImpl() = default;
 
 	// IPropertyBag
 
@@ -68,19 +73,6 @@ public:
 	STDMETHODIMP GetProperty(LPCWSTR key, BSTR* value);
 	STDMETHODIMP DelAllProperties();
 	STDMETHODIMP DelProperty(LPCWSTR key);
-};
-
-// IDSMResourceBag
-
-interface __declspec(uuid("EBAFBCBE-BDE0-489A-9789-05D5692E3A93"))
-IDSMResourceBag :
-public IUnknown {
-	STDMETHOD_(DWORD, ResGetCount) () PURE;
-	STDMETHOD(ResGet) (DWORD iIndex, BSTR* ppName, BSTR* ppDesc, BSTR* ppMime, BYTE** ppData, DWORD* pDataLen, DWORD_PTR* pTag) PURE;
-	STDMETHOD(ResSet) (DWORD iIndex, LPCWSTR pName, LPCWSTR pDesc, LPCWSTR pMime, BYTE* pData, DWORD len, DWORD_PTR tag) PURE;
-	STDMETHOD(ResAppend) (LPCWSTR pName, LPCWSTR pDesc, LPCWSTR pMime, BYTE* pData, DWORD len, DWORD_PTR tag) PURE;
-	STDMETHOD(ResRemoveAt) (DWORD iIndex) PURE;
-	STDMETHOD(ResRemoveAll) (DWORD_PTR tag) PURE;
 };
 
 class CDSMResource

@@ -23,6 +23,7 @@
 //---------------------------------------------------------------------------
 #include "MediaInfo/Audio/File_Aac.h"
 #include "MediaInfo/Audio/File_Aac_GeneralAudio.h"
+#include "MediaInfo/MediaInfo_Config_MediaInfo.h"
 using namespace std;
 //---------------------------------------------------------------------------
 
@@ -37,6 +38,7 @@ namespace MediaInfoLib
 extern const int32u Aac_sampling_frequency[];
 extern const char* Aac_audioObjectType(int8u audioObjectType);
 extern const char* Aac_Format_Profile(int8u ID);
+extern int8u Aac_Channels_Get(int8u ChannelLayout);
 
 //---------------------------------------------------------------------------
 static const char* Aac_id_syn_ele[8]=
@@ -315,15 +317,27 @@ void File_Aac::program_config_element()
 //***************************************************************************
 
 //---------------------------------------------------------------------------
+void File_Aac::payload()
+{
+    //Parsing
+    switch (audioObjectType)
+    {
+        case   2: raw_data_block(); break;
+        #if MEDIAINFO_TRACE || MEDIAINFO_CONFORMANCE
+        case  42: UsacFrame(); break;
+        #endif //MEDIAINFO_TRACE || MEDIAINFO_CONFORMANCE
+        default: Skip_BS(Data_BS_Remain(),                      "payload");
+    }
+}
+
+//---------------------------------------------------------------------------
 void File_Aac::raw_data_block()
 {
-    raw_data_block_Pos=0;
-
-    if (audioObjectType!=2)
+    if ((ParseCompletely<1 && Status[IsFilled])
+     ||  ParseCompletely<0)
     {
-        Skip_BS(Data_BS_Remain(),                               "Data");
-        Frame_Count++;
-        return; //We test only AAC LC
+        Skip_BS(Data_BS_Remain(),                               "raw_data_block");
+        return;
     }
 
     if (sampling_frequency_index>=13)
@@ -333,9 +347,11 @@ void File_Aac::raw_data_block()
         return;
     }
 
-    //Parsing
     Element_Begin1("raw_data_block");
+    raw_data_block_Pos=0;
+    ChannelPos_Temp=0;
     int8u id_syn_ele=0, id_syn_ele_Previous;
+    bool HasEnd=false;
     do
     {
         Element_Begin0();
@@ -368,12 +384,25 @@ void File_Aac::raw_data_block()
         #endif //MEDIAINFO_TRACE
 
         Element_End0();
+
+        if (id_syn_ele==0x07)
+        {
+            HasEnd=true;
+            break;
+        }
     }
-    while(Element_IsOK() && Data_BS_Remain() && id_syn_ele!=0x07); //ID_END
+    while(Element_IsOK() && Data_BS_Remain());
     if (Element_IsOK() && id_syn_ele!=0x07)
         Trusted_IsNot("Not ending by END element");
     if (Element_IsOK() && Data_BS_Remain()%8)
         Skip_S1(Data_BS_Remain()%8,                             "byte_alignment");
+    if ((!HasEnd || (ChannelCount_Temp && ChannelPos_Temp!=ChannelCount_Temp)) && Retrieve_Const(Stream_Audio, 0, "Errors").empty())
+    {
+        if (!HasEnd)
+            Fill(Stream_Audio, 0, "Errors", "Missing ID_END");
+        if (ChannelCount_Temp && ChannelPos_Temp!=ChannelCount_Temp)
+            Fill(Stream_Audio, 0, "Errors", "Incoherent count of channels");
+    }
     Element_End0();
 }
 
@@ -654,6 +683,12 @@ void File_Aac::fill_element(int8u id_syn_ele)
 //---------------------------------------------------------------------------
 void File_Aac::gain_control_data()
 {
+    if (Retrieve_Const(Stream_Audio, 0, "GainControl_Present").empty())
+    {
+        Fill(Stream_Audio, 0, "GainControl_Present", "Yes");
+        Fill_SetOptions(Stream_Audio, 0, "GainControl_Present", "N NTY");
+    }
+
     int8u max_band, adjust_num, aloc_bits, aloc_bits0;
     int8u wd_max=0;
     switch(window_sequence)
@@ -751,6 +786,7 @@ void File_Aac::individual_channel_stream (bool common_window, bool scale_flag)
         //~ reordered_spectral_data ();
     }
     Element_End0();
+    ChannelPos_Temp++;
 }
 
 //---------------------------------------------------------------------------

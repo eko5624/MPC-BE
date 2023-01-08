@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2014 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -20,8 +20,6 @@
  */
 
 #pragma once
-
-#include <atlbase.h>
 
 #define BufferFilterName L"MPC Buffer Filter"
 
@@ -87,7 +85,7 @@ class CBufferFilterOutputPin : public CTransformOutputPin
 public:
 	CBufferFilterOutputPin(CTransformFilter* pFilter, HRESULT* phr);
 
-	CAutoPtr<CBufferFilterOutputQueue> m_pOutputQueue;
+	std::unique_ptr<CBufferFilterOutputQueue> m_pOutputQueue;
 
 	HRESULT Active();
 	HRESULT Inactive();

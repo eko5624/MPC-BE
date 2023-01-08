@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -23,7 +23,6 @@
 #include <MMreg.h>
 #include <moreuuids.h>
 #include <basestruct.h>
-#include <cmath>
 #include "DSUtil/GolombBuffer.h"
 #include "DSUtil/AudioParser.h"
 #include "DSUtil/MP4AudioDecoderConfig.h"
@@ -56,8 +55,8 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 };
 
 const AMOVIESETUP_PIN sudpPins[] = {
-	{L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
-	{L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
+	{(LPWSTR)L"Input", FALSE, FALSE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesIn), sudPinTypesIn},
+	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, 0, nullptr}
 };
 
 const AMOVIESETUP_FILTER sudFilter[] = {
@@ -1549,18 +1548,19 @@ HRESULT CMP4SplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 							fourcc = 0xa109;
 						} else if ((type == AP4_ATOM_TYPE_NONE || type == AP4_ATOM_TYPE_RAW) && bitspersample == 8 ||
 								    type == AP4_ATOM_TYPE_SOWT && bitspersample == 16 ||
-								   (type == AP4_ATOM_TYPE_IN24 || type == AP4_ATOM_TYPE_IN32) && ase->GetEndian()==ENDIAN_LITTLE) {
+								   (type == AP4_ATOM_TYPE_IN24 || type == AP4_ATOM_TYPE_IN32) && ase->GetEndian() == ENDIAN_LITTLE) {
 							if (type == AP4_ATOM_TYPE_IN24) {
 								bitspersample = 24;
 							} else if (type == AP4_ATOM_TYPE_IN32) {
 								bitspersample = 32;
 							}
 							fourcc = type = WAVE_FORMAT_PCM;
-						} else if ((type == AP4_ATOM_TYPE_FL32 || type == AP4_ATOM_TYPE_FL64) && ase->GetEndian()==ENDIAN_LITTLE) {
+						} else if ((type == AP4_ATOM_TYPE_FL32 || type == AP4_ATOM_TYPE_FL64) && ase->GetEndian() == ENDIAN_LITTLE) {
 							fourcc = type = WAVE_FORMAT_IEEE_FLOAT;
 						} else if (type == AP4_ATOM_TYPE_LPCM || type == AP4_ATOM_TYPE_IPCM) {
 							DWORD flags = ase->GetFormatSpecificFlags();
-							if ((flags & 2) || (type == AP4_ATOM_TYPE_IPCM)) { // big endian
+							const bool bBigEndian = (flags & 2) || (type == AP4_ATOM_TYPE_IPCM && ase->GetEndian() != ENDIAN_LITTLE);
+							if (bBigEndian) {
 								if (flags & 1) { // floating point
 									if      (bitspersample == 32) type = AP4_ATOM_TYPE_FL32;
 									else if (bitspersample == 64) type = AP4_ATOM_TYPE_FL64;
@@ -1573,7 +1573,7 @@ HRESULT CMP4SplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 										 ((type >>  8) & 0x0000ff00) |
 										 ((type <<  8) & 0x00ff0000) |
 										 ((type << 24) & 0xff000000);
-							} else {         // little endian
+							} else {
 								if (flags & 1) { // floating point
 									fourcc = type = WAVE_FORMAT_IEEE_FLOAT;
 								} else {
@@ -1884,7 +1884,7 @@ HRESULT CMP4SplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 				}
 			}
 
-			CAutoPtr<CBaseSplitterOutputPin> pPinOut(DNew CMP4SplitterOutputPin(mts, pinName, this, this, &hr));
+			std::unique_ptr<CBaseSplitterOutputPin> pPinOut(DNew CMP4SplitterOutputPin(mts, pinName, this, this, &hr));
 
 			if (!TrackName.IsEmpty()) {
 				pPinOut->SetProperty(L"NAME", TrackName);
@@ -2108,7 +2108,7 @@ HRESULT CMP4SplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 	m_rtNewStop = m_rtStop = m_rtDuration;
 
-	if (m_pOutputs.GetCount()) {
+	if (m_pOutputs.size()) {
 		AP4_Movie* movie = m_pFile->GetMovie();
 
 		for (auto& [id, tp] : m_trackpos) {
@@ -2151,7 +2151,7 @@ HRESULT CMP4SplitterFilter::CreateOutputs(IAsyncReader* pAsyncReader)
 
 	SetID3TagProperties(this, m_pFile->m_pID3Tag);
 
-	return m_pOutputs.GetCount() > 0 ? S_OK : E_FAIL;
+	return m_pOutputs.size() > 0 ? S_OK : E_FAIL;
 }
 
 bool CMP4SplitterFilter::DemuxInit()
@@ -2275,7 +2275,7 @@ start:
 		if (pPin && pPin->IsConnected() && AP4_SUCCEEDED(track->ReadSample(pNext->second.index, sample, data))) {
 			const CMediaType& mt = pPin->CurrentMediaType();
 
-			CAutoPtr<CPacket> p(DNew CPacket());
+			std::unique_ptr<CPacket> p(DNew CPacket());
 			p->TrackNumber = (DWORD)track->GetId();
 			p->rtStart = RescaleI64x32(sample.GetCts(), UNITS, track->GetMediaTimeScale());
 			p->rtStop = RescaleI64x32(sample.GetCts() + sample.GetDuration(), UNITS, track->GetMediaTimeScale());
@@ -2340,7 +2340,7 @@ start:
 
 			p->rtStart -= m_rtOffset;
 			p->rtStop -= m_rtOffset;
-			hr = DeliverPacket(p);
+			hr = DeliverPacket(std::move(p));
 		}
 
 		{
@@ -2480,7 +2480,7 @@ CMP4SourceFilter::CMP4SourceFilter(LPUNKNOWN pUnk, HRESULT* phr)
 	: CMP4SplitterFilter(pUnk, phr)
 {
 	m_clsid = __uuidof(this);
-	m_pInput.Free();
+	m_pInput.reset();
 }
 
 //
@@ -2508,7 +2508,7 @@ HRESULT CMP4SplitterOutputPin::DeliverEndFlush()
 	return __super::DeliverEndFlush();
 }
 
-HRESULT CMP4SplitterOutputPin::DeliverPacket(CAutoPtr<CPacket> p)
+HRESULT CMP4SplitterOutputPin::DeliverPacket(std::unique_ptr<CPacket> p)
 {
 	CAutoLock cAutoLock(this);
 
@@ -2543,7 +2543,7 @@ HRESULT CMP4SplitterOutputPin::DeliverPacket(CAutoPtr<CPacket> p)
 						break;
 					}
 
-					CAutoPtr<CPacket> packet(DNew CPacket());
+					std::unique_ptr<CPacket> packet(DNew CPacket());
 					packet->SetData(pData, sz);
 
 					packet->TrackNumber    = p->TrackNumber;
@@ -2556,7 +2556,8 @@ HRESULT CMP4SplitterOutputPin::DeliverPacket(CAutoPtr<CPacket> p)
 						rtStartTmp      = INVALID_TIME;
 						rtStopTmp       = INVALID_TIME;
 					}
-					if (S_OK != (hr = __super::DeliverPacket(packet))) {
+					hr = __super::DeliverPacket(std::move(packet));
+					if (S_OK != hr) {
 						break;
 					}
 
@@ -2569,5 +2570,5 @@ HRESULT CMP4SplitterOutputPin::DeliverPacket(CAutoPtr<CPacket> p)
 		}
 	}
 
-	return __super::DeliverPacket(p);
+	return __super::DeliverPacket(std::move(p));
 }

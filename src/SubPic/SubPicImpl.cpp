@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2018 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -27,19 +27,7 @@
 //
 
 CSubPicImpl::CSubPicImpl()
-	: CUnknown(L"CSubPicImpl", NULL)
-	, m_rtStart(0)
-	, m_rtStop(0)
-	, m_rtSegmentStart(0)
-	, m_rtSegmentStop(0)
-	, m_rcDirty(0, 0, 0, 0)
-	, m_maxsize(0, 0)
-	, m_size(0, 0)
-	, m_vidrect(0, 0, 0, 0)
-	, m_virtualTextureSize(0, 0)
-	, m_virtualTextureTopLeft(0, 0)
-	, m_eSubtitleType(SUBTITLE_TYPE::ST_TEXT)
-	, m_bInvAlpha(false)
+	: CUnknown(L"CSubPicImpl", nullptr)
 {
 }
 
@@ -113,28 +101,43 @@ STDMETHODIMP CSubPicImpl::GetDirtyRect(RECT* pDirtyRect)
 	return pDirtyRect ? *pDirtyRect = m_rcDirty, S_OK : E_POINTER;
 }
 
-STDMETHODIMP CSubPicImpl::GetSourceAndDest(RECT rcWindow, RECT rcVideo, BOOL bPositionRelative, CPoint ShiftPos, RECT* pRcSource, RECT* pRcDest, int xOffsetInPixels, const BOOL bUseSpecialCase) const
+STDMETHODIMP CSubPicImpl::GetSourceAndDest(
+	RECT rcWindow, RECT rcVideo,
+	RECT* pRcSource, RECT* pRcDest,
+	BOOL bPositionRelative, CPoint ShiftPos,
+	int xOffsetInPixels, const BOOL bUseSpecialCase) const
 {
+	if (m_rcDirty.IsRectEmpty()) {
+		// for some reason needed for XySubFilter
+		return E_ABORT;
+	}
+
 	CheckPointer(pRcSource, E_POINTER);
 	CheckPointer(pRcDest, E_POINTER);
 
 	if (m_size.cx > 0 && m_size.cy > 0) {
-		CPoint offset(0, 0);
 		double scaleX = 1.0, scaleY = 1.0;
 
-		const CRect rcTarget = bPositionRelative || m_eSubtitleType == SUBTITLE_TYPE::ST_VOBSUB || m_eSubtitleType == SUBTITLE_TYPE::ST_XSUB || m_eSubtitleType == SUBTITLE_TYPE::ST_XYSUBPIC ? rcVideo : rcWindow;
+		const CRect rcTarget = bPositionRelative || m_eSubtitleType != SUBTITLE_TYPE::ST_TEXT ? rcVideo : rcWindow;
 		const CSize szTarget = rcTarget.Size();
 		const bool bNeedSpecialCase = !!bUseSpecialCase && (m_eSubtitleType == SUBTITLE_TYPE::ST_HDMV || m_eSubtitleType == SUBTITLE_TYPE::ST_DVB || m_eSubtitleType == SUBTITLE_TYPE::ST_XYSUBPIC) && m_virtualTextureSize.cx > 720;
+		bool bMatchesAR = true;
 		if (bNeedSpecialCase) {
 			const double subtitleAR	= double(m_virtualTextureSize.cx) / m_virtualTextureSize.cy;
 			const double videoAR	= double(szTarget.cx) / szTarget.cy;
 
-			scaleX = scaleY = videoAR < subtitleAR ? double(szTarget.cx) / m_virtualTextureSize.cx : double(szTarget.cy) / m_virtualTextureSize.cy;
+			const auto diffAR = std::abs(videoAR - subtitleAR);
+			bMatchesAR = diffAR < 0.001;
+			if (bMatchesAR || videoAR > subtitleAR) {
+				scaleX = scaleY = double(szTarget.cx) / m_virtualTextureSize.cx;
+			} else {
+				scaleX = scaleY = double(szTarget.cy) / m_virtualTextureSize.cy;
+			}
 		} else {
 			scaleX = double(szTarget.cx) / m_virtualTextureSize.cx;
 			scaleY = double(szTarget.cy) / m_virtualTextureSize.cy;
 		}
-		offset += rcTarget.TopLeft();
+		CPoint offset = rcTarget.TopLeft();
 
 		CRect rcTemp = m_rcDirty;
 		*pRcSource = rcTemp;
@@ -146,16 +149,10 @@ STDMETHODIMP CSubPicImpl::GetSourceAndDest(RECT rcWindow, RECT rcVideo, BOOL bPo
 					   lround(rcTemp.bottom * scaleY));
 		rcTemp.OffsetRect(offset);
 
-		if (bNeedSpecialCase) {
-			offset.SetPoint(0, 0);
-			CSize szSourceScaled(m_virtualTextureSize.cx * scaleX, m_virtualTextureSize.cy * scaleY);
-			if (szTarget.cx > szSourceScaled.cx) {
-				offset.x = lround((szTarget.cx - szSourceScaled.cx) / 2.0);
-			}
-
-			if (szTarget.cy > szSourceScaled.cy) {
-				offset.y = lround((szTarget.cy - szSourceScaled.cy) / 2.0);
-			}
+		if (bNeedSpecialCase && !bMatchesAR) {
+			const auto extraHeight = szTarget.cy - m_virtualTextureSize.cy * scaleY;
+			const auto extraWidth = szTarget.cx - m_virtualTextureSize.cx * scaleX;
+			offset.SetPoint(lround(extraWidth / 2.), lround(extraHeight / 2.));
 			rcTemp.OffsetRect(offset);
 		}
 
@@ -234,11 +231,6 @@ STDMETHODIMP CSubPicImpl::GetType(SUBTITLE_TYPE* pSubtitleType)
 	return S_OK;
 }
 
-STDMETHODIMP_(bool) CSubPicImpl::GetInverseAlpha() const
-{
-	return m_bInvAlpha;
-}
-
 STDMETHODIMP_(void) CSubPicImpl::SetInverseAlpha(bool bInverted)
 {
 	m_bInvAlpha = bInverted;
@@ -249,7 +241,7 @@ STDMETHODIMP_(void) CSubPicImpl::SetInverseAlpha(bool bInverted)
 //
 
 CSubPicAllocatorImpl::CSubPicAllocatorImpl(SIZE cursize, bool fDynamicWriteOnly)
-	: CUnknown(L"ISubPicAllocatorImpl", NULL)
+	: CUnknown(L"ISubPicAllocatorImpl", nullptr)
 	, m_cursize(cursize)
 	, m_fDynamicWriteOnly(fDynamicWriteOnly)
 {
@@ -333,4 +325,9 @@ STDMETHODIMP CSubPicAllocatorImpl::Reset()
 
 	m_pStatic.Release();
 	return S_OK;
+}
+
+STDMETHODIMP_(void) CSubPicAllocatorImpl::SetInverseAlpha(bool bInverted)
+{
+	m_bInvAlpha = bInverted;
 }

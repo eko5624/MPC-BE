@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2019 see Authors.txt
+ * (C) 2006-2022 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -21,7 +21,6 @@
 
 #include "stdafx.h"
 #include <chrono>
-#include <cmath>
 #include <intsafe.h>
 #include "DSUtil/Utils.h"
 #include "SubPicQueueImpl.h"
@@ -34,9 +33,8 @@
 const double CSubPicQueueImpl::DEFAULT_FPS = 24/1.001;
 
 CSubPicQueueImpl::CSubPicQueueImpl(ISubPicAllocator* pAllocator, HRESULT* phr)
-	: CUnknown(L"CSubPicQueueImpl", NULL)
+	: CUnknown(L"CSubPicQueueImpl", nullptr)
 	, m_pAllocator(pAllocator)
-	, m_rtNow(0)
 	, m_fps(DEFAULT_FPS)
 	, m_rtTimePerFrame(std::llround(10000000.0 / DEFAULT_FPS))
 {
@@ -117,11 +115,7 @@ HRESULT CSubPicQueueImpl::RenderTo(ISubPic* pSubPic, REFERENCE_TIME rtStart, REF
 		return hr;
 	}
 
-	if (pSubPic->GetInverseAlpha()) {
-		hr = pSubPic->ClearDirtyRect(0x00000000);
-	} else {
-	    hr = pSubPic->ClearDirtyRect(0xFF000000);
-	}
+	hr = pSubPic->ClearDirtyRect();
 
 	SubPicDesc spd;
 	if (SUCCEEDED(hr)) {
@@ -155,12 +149,8 @@ HRESULT CSubPicQueueImpl::RenderTo(ISubPic* pSubPic, REFERENCE_TIME rtStart, REF
 CSubPicQueue::CSubPicQueue(int nMaxSubPic, bool bDisableAnim, bool bAllowDropSubPic, ISubPicAllocator* pAllocator, HRESULT* phr)
 	: CSubPicQueueImpl(pAllocator, phr)
 	, m_nMaxSubPic(nMaxSubPic)
-	, m_bExitThread(false)
 	, m_bDisableAnim(bDisableAnim)
 	, m_bAllowDropSubPic(bAllowDropSubPic)
-	, m_rtNowLast(LONGLONG_ERROR)
-	, m_bInvalidate(false)
-	, m_rtInvalidate(0)
 {
 	if (phr && FAILED(*phr)) {
 		return;
@@ -179,7 +169,7 @@ CSubPicQueue::CSubPicQueue(int nMaxSubPic, bool bDisableAnim, bool bAllowDropSub
 CSubPicQueue::~CSubPicQueue()
 {
 	m_bExitThread = true;
-	SetSubPicProvider(NULL);
+	SetSubPicProvider(nullptr);
 	CAMThread::Close();
 }
 
@@ -694,7 +684,7 @@ STDMETHODIMP CSubPicQueueNoThread::Invalidate(REFERENCE_TIME rtInvalidate)
 	CAutoLock cQueueLock(&m_csLock);
 
 	if (m_pSubPic && m_pSubPic->GetStop() > rtInvalidate) {
-		m_pSubPic = NULL;
+		m_pSubPic.Release();
 	}
 
 	return S_OK;

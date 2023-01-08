@@ -1,6 +1,6 @@
 /*
  * (C) 2003-2006 Gabest
- * (C) 2006-2021 see Authors.txt
+ * (C) 2006-2023 see Authors.txt
  *
  * This file is part of MPC-BE.
  *
@@ -44,6 +44,8 @@ protected:
 
 	COggSplitterFilter* m_pFilter = nullptr;
 
+	bool m_bMetadataUpdate = false;
+
 public:
 	COggSplitterOutputPin(LPCWSTR pName, CBaseFilter* pFilter, CCritSec* pLock, HRESULT* phr);
 
@@ -52,26 +54,28 @@ public:
 
 	void HandlePacket(DWORD TrackNumber, BYTE* pData, int len);
 	HRESULT UnpackPage(OggPage& page);
-	virtual HRESULT UnpackPacket(CAutoPtr<CPacket>& p, BYTE* pData, int len) PURE;
+	virtual HRESULT UnpackPacket(std::unique_ptr<CPacket>& p, BYTE* pData, int len) PURE;
 	virtual REFERENCE_TIME GetRefTime(__int64 granule_position) PURE;
-	CAutoPtr<CPacket> GetPacket();
+	std::unique_ptr<CPacket> GetPacket();
 
 	HRESULT DeliverEndFlush();
 	HRESULT DeliverNewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate);
+
+	bool IsMetadataUpdate();
 };
 
 class COggVorbisOutputPin : public COggSplitterOutputPin
 {
-	std::list<CAutoPtr<CPacket>> m_initpackets;
+	std::list<std::unique_ptr<CPacket>> m_initpackets;
 
 	DWORD m_audio_sample_rate;
 	DWORD m_blocksize[2], m_lastblocksize;
 	std::vector<bool> m_blockflags;
 
-	HRESULT UnpackPacket(CAutoPtr<CPacket>& p, BYTE* pData, int len) override;
+	HRESULT UnpackPacket(std::unique_ptr<CPacket>& p, BYTE* pData, int len) override;
 	REFERENCE_TIME GetRefTime(__int64 granule_position) override;
 
-	HRESULT DeliverPacket(CAutoPtr<CPacket> p);
+	HRESULT DeliverPacket(std::unique_ptr<CPacket> p);
 	HRESULT DeliverNewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate);
 
 public:
@@ -90,7 +94,7 @@ class COggFlacOutputPin : public COggSplitterOutputPin
 	WORD m_wBitsPerSample;
 	int  m_nAvgBytesPerSec;
 
-	HRESULT UnpackPacket(CAutoPtr<CPacket>& p, BYTE* pData, int len) override;
+	HRESULT UnpackPacket(std::unique_ptr<CPacket>& p, BYTE* pData, int len) override;
 	REFERENCE_TIME GetRefTime(__int64 granule_position) override;
 
 public:
@@ -99,7 +103,7 @@ public:
 
 class COggDirectShowOutputPin : public COggSplitterOutputPin
 {
-	HRESULT UnpackPacket(CAutoPtr<CPacket>& p, BYTE* pData, int len) override;
+	HRESULT UnpackPacket(std::unique_ptr<CPacket>& p, BYTE* pData, int len) override;
 	REFERENCE_TIME GetRefTime(__int64 granule_position) override;
 
 public:
@@ -111,7 +115,7 @@ class COggStreamOutputPin : public COggSplitterOutputPin
 	__int64 m_time_unit, m_samples_per_unit;
 	DWORD m_default_len;
 
-	HRESULT UnpackPacket(CAutoPtr<CPacket>& p, BYTE* pData, int len) override;
+	HRESULT UnpackPacket(std::unique_ptr<CPacket>& p, BYTE* pData, int len) override;
 	REFERENCE_TIME GetRefTime(__int64 granule_position) override;
 
 public:
@@ -144,13 +148,13 @@ public:
 
 class COggTheoraOutputPin : public COggSplitterOutputPin
 {
-	std::list<CAutoPtr<CPacket>> m_initpackets;
+	std::list<std::unique_ptr<CPacket>> m_initpackets;
 	LONG                         m_KfgShift;
 	LONG                         m_KfgMask;
 	UINT                         m_nVersion;
 	REFERENCE_TIME               m_rtAvgTimePerFrame;
 
-	HRESULT UnpackPacket(CAutoPtr<CPacket>& p, BYTE* pData, int len) override;
+	HRESULT UnpackPacket(std::unique_ptr<CPacket>& p, BYTE* pData, int len) override;
 	REFERENCE_TIME GetRefTime(__int64 granule_position) override;
 
 public:
@@ -168,7 +172,7 @@ class COggDiracOutputPin : public COggSplitterOutputPin
 	bool           m_bOldDirac;
 	bool           m_IsInitialized;
 
-	HRESULT UnpackPacket(CAutoPtr<CPacket>& p, BYTE* pData, int len) override;
+	HRESULT UnpackPacket(std::unique_ptr<CPacket>& p, BYTE* pData, int len) override;
 	REFERENCE_TIME GetRefTime(__int64 granule_position) override;
 
 public:
@@ -186,7 +190,7 @@ class COggOpusOutputPin : public COggSplitterOutputPin
 	int  m_SampleRate;
 	WORD m_Preskip;
 
-	HRESULT UnpackPacket(CAutoPtr<CPacket>& p, BYTE* pData, int len) override;
+	HRESULT UnpackPacket(std::unique_ptr<CPacket>& p, BYTE* pData, int len) override;
 	REFERENCE_TIME GetRefTime(__int64 granule_position) override;
 
 public:
@@ -197,7 +201,7 @@ class COggSpeexOutputPin : public COggSplitterOutputPin
 {
 	int m_SampleRate;
 
-	HRESULT UnpackPacket(CAutoPtr<CPacket>& p, BYTE* pData, int len) override;
+	HRESULT UnpackPacket(std::unique_ptr<CPacket>& p, BYTE* pData, int len) override;
 	REFERENCE_TIME GetRefTime(__int64 granule_position) override;
 
 public:
@@ -208,7 +212,7 @@ class COggVP8OutputPin : public COggSplitterOutputPin
 {
 	REFERENCE_TIME m_rtAvgTimePerFrame;
 
-	HRESULT UnpackPacket(CAutoPtr<CPacket>& p, BYTE* pData, int len) override;
+	HRESULT UnpackPacket(std::unique_ptr<CPacket>& p, BYTE* pData, int len) override;
 	REFERENCE_TIME GetRefTime(__int64 granule_position) override;
 
 public:
@@ -227,7 +231,6 @@ protected:
 	bool DemuxLoop();
 
 	DWORD m_bitstream_serial_number_start = 0;
-	DWORD m_bitstream_serial_number_last = 0;
 	DWORD m_bitstream_serial_number_Video = DWORD_MAX;
 
 public:

@@ -1,5 +1,5 @@
 ﻿;
-; (C) 2009-2021 see Authors.txt
+; (C) 2009-2022 see Authors.txt
 ;
 ; This file is part of MPC-BE.
 ;
@@ -81,8 +81,8 @@ hy.WelcomeLabel2=Սա կտեղակայի [name]-ը Ձեր համակարգչու
 hy.WinVersionTooLowError=[name]-ը պահանջում է Windows Vista կամ ավելի բարձր։
 
 ;Italian
-it.WelcomeLabel2=This will install [name] on your computer.%n%nIt is recommended that you close all other applications before continuing.
-it.WinVersionTooLowError=[name] requires Windows Vista or newer to run.
+it.WelcomeLabel2=Questo installerà [name] sul tuo computer.%n%nSi consiglia di chiudere tutte le altre applicazioni prima di continuare.
+it.WinVersionTooLowError=[name] richiede Windows Vista o versioni successive per l'esecuzione.
 
 ;Japanese
 ja.WelcomeLabel2=このプログラムはお使いのコンピューターに [name] をインストールします。%n%nセットアップを続行する前に他のすべてのアプリケーションを閉じることをお勧めします。
@@ -145,7 +145,7 @@ en.langcode=en
 en.comp_mpciconlib=Icon Library
 en.comp_mpcresources=Translations
 en.comp_mpcbeshellext=Install the shell extension
-en.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+en.comp_intel_msdk=H.264 MVC 3D Decoder
 en.msg_DeleteSettings=Do you also want to delete MPC-BE settings?%n%nIf you plan on installing MPC-BE again then you do not have to delete them.
 en.msg_NoD3DX9DLL_found=The latest DirectX runtime is not installed!%n%nPlease download and install the latest DirectX runtime June 2010 regardless of your operating system.
 en.msg_SetupIsRunningWarning=MPC-BE setup is already running!
@@ -172,6 +172,8 @@ en.AssociationMPCPlayMusicFilesS=Music Files
 en.AssociationMPCPlayVideoFilesF=Play Video
 en.AssociationMPCPlayVideoFilesS=Video Files
 en.PinToTaskBar=Pin to TaskBar
+en.ComponentWillBeDownloaded=will be downloaded
+en.ComponentAlreadyDownloaded=already downloaded
 
 
 #ifdef localize
@@ -182,7 +184,7 @@ br.langcode=br
 br.comp_mpciconlib=Biblioteca de ícones
 br.comp_mpcresources=Traduções
 br.comp_mpcbeshellext=Install the shell extension
-br.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+br.comp_intel_msdk=H.264 MVC 3D Decoder
 br.msg_DeleteSettings=Gostaria de excluir as configurações do MPC-BE?%n%nSe você quiser instalar o MPC-BE novamente então não precisa excluí-las.
 br.msg_NoD3DX9DLL_found=A versão mais recente do DirectX não está instalada!%n%nPor favor baixe e instale a versão mais recente June 2010 adequado ao seu sistema operacional.
 br.msg_SetupIsRunningWarning=A instalação do MPC-BE ja está sendo executada!
@@ -209,6 +211,8 @@ br.AssociationMPCPlayMusicFilesS=Music Files
 br.AssociationMPCPlayVideoFilesF=Play Video
 br.AssociationMPCPlayVideoFilesS=Video Files
 br.PinToTaskBar=Pin to TaskBar
+br.ComponentWillBeDownloaded=will be downloaded
+br.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Belarusian
@@ -217,7 +221,7 @@ by.langcode=by
 by.comp_mpciconlib=Бібліятэка значкоў
 by.comp_mpcresources=Пераклады
 by.comp_mpcbeshellext=Install the shell extension
-by.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+by.comp_intel_msdk=H.264 MVC 3D Decoder
 by.msg_DeleteSettings=Ці хочаце таксама выдаліць налады MPC-BE?%n%nКалі вы збіраецеся зноў усталяваць MPC-BE, тады іх можна пакінуць.
 by.msg_NoD3DX9DLL_found=Найноўшая бібліятэка DirectX не ўсталяваная!%n%nСцягніце і ўсталюйце яе (версія June 2010), незалежна ад таго, якая ў вас аперацыйная сістэма.
 by.msg_SetupIsRunningWarning=Праграма ўсталявання MPC-BE ужо працуе!
@@ -244,6 +248,8 @@ by.AssociationMPCPlayMusicFilesS=Music Files
 by.AssociationMPCPlayVideoFilesF=Play Video
 by.AssociationMPCPlayVideoFilesS=Video Files
 by.PinToTaskBar=Pin to TaskBar
+by.ComponentWillBeDownloaded=will be downloaded
+by.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Basque
@@ -251,6 +257,8 @@ eu.langid=00001069
 eu.langcode=eu
 eu.comp_mpciconlib=Ikur Liburutegia
 eu.comp_mpcresources=Itzulpenak
+eu.comp_mpcbeshellext=Install the shell extension
+eu.comp_intel_msdk=H.264 MVC 3D Decoder
 eu.msg_DeleteSettings=MPC-BE ezarpenak kentzea ere nahi dituzu?%n%nMPC-BE berriro ezartzeko asmoa baduzu ez dituzu ezabatu behar.
 eu.msg_NoD3DX9DLL_found=Azken DirectX bertsioa ez dago ezarrita!%n%nMesedez jeitsi eta ezarri azken DirectX bertsioa June 2010 sistema eragileari kasu egin gabe.
 eu.msg_SetupIsRunningWarning=MPC-BE ezarpena jadanik ekinean dago!
@@ -277,6 +285,8 @@ eu.AssociationMPCPlayMusicFilesS=Music Files
 eu.AssociationMPCPlayVideoFilesF=Play Video
 eu.AssociationMPCPlayVideoFilesS=Video Files
 eu.PinToTaskBar=Pin to TaskBar
+eu.ComponentWillBeDownloaded=will be downloaded
+eu.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Catalan
@@ -285,7 +295,7 @@ ca.langcode=ca
 ca.comp_mpciconlib=Llibreria d'icones
 ca.comp_mpcresources=Traduccions
 ca.comp_mpcbeshellext=Install the shell extension
-ca.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+ca.comp_intel_msdk=H.264 MVC 3D Decoder
 ca.msg_DeleteSettings=Vols eliminar les preferències del MPC-BE?%n%nSi planeges instal.lar altre cop el MPC-BE no necessites eliminar-les.
 ca.msg_NoD3DX9DLL_found=No està instal.lada la darrera versió de DirectX!%n%nSisplau instal.lar la darrera versió DirectX runtime June 2010 independentment del sistema operatiu.
 ca.msg_SetupIsRunningWarning=La instal.lació del MPC-BE ja se està executant!
@@ -312,6 +322,8 @@ ca.AssociationMPCPlayMusicFilesS=Music Files
 ca.AssociationMPCPlayVideoFilesF=Play Video
 ca.AssociationMPCPlayVideoFilesS=Video Files
 ca.PinToTaskBar=Pin to TaskBar
+ca.ComponentWillBeDownloaded=will be downloaded
+ca.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Czech
@@ -320,7 +332,7 @@ cz.langcode=cz
 cz.comp_mpciconlib=Ikony typů souborů
 cz.comp_mpcresources=Jazykové soubory
 cz.comp_mpcbeshellext=Install the shell extension
-cz.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+cz.comp_intel_msdk=H.264 MVC 3D Decoder
 cz.msg_DeleteSettings=Chcete smazat také nastavení MPC-BE?%n%nPokud plánujete MPC-BE znovu nainstalovat, mazat je nemusíte.
 cz.msg_NoD3DX9DLL_found=Nainstalovaná verze DirectX není dostatečně aktuální!%n%nStáhněte a nainstalujte nejnovější aktualizaci DirectX June 2010.%n%nPozor, aktualizace je pro všechny verze DirectX, nejen pro DirectX 9!
 cz.msg_SetupIsRunningWarning=Instalátor MPC-BE je již spuštěn!
@@ -347,6 +359,8 @@ cz.AssociationMPCPlayMusicFilesS=Music Files
 cz.AssociationMPCPlayVideoFilesF=Play Video
 cz.AssociationMPCPlayVideoFilesS=Video Files
 cz.PinToTaskBar=Pin to TaskBar
+cz.ComponentWillBeDownloaded=will be downloaded
+cz.ComponentAlreadyDownloaded=already downloaded
 
 
 ;German
@@ -355,7 +369,7 @@ de.langcode=de
 de.comp_mpciconlib=Icon-Bibliothek
 de.comp_mpcresources=Übersetzungen (u.a. deutsch)
 de.comp_mpcbeshellext=Alternative Kontextmenü-Erweiterung
-de.comp_intel_msdk=H.264/MVC Decoder (extra Download)
+de.comp_intel_msdk=H.264/MVC Decoder
 de.msg_DeleteSettings=Wollen Sie auch die Einstellungen von MPC-BE löschen?%n%nWenn Sie MPC-BE neu installieren möchten, müssen Sie diese Einstellungen nicht löschen.
 de.msg_NoD3DX9DLL_found=Die neueste DirectX-Runtime ist nicht installiert!%n%nLaden Sie die neueste DirectX-Runtime vom Juni 2010 herunter und installieren Sie sie, unabhängig von Ihrem Betriebssystem.
 de.msg_SetupIsRunningWarning=Das Installationsprogramm von MPC-BE wird bereits ausgeführt!
@@ -382,6 +396,8 @@ de.AssociationMPCPlayMusicFilesS=Audiodateien
 de.AssociationMPCPlayVideoFilesF=Videodateien wiedergeben
 de.AssociationMPCPlayVideoFilesS=Videodateien
 de.PinToTaskBar=An Taskleiste anheften
+de.ComponentWillBeDownloaded=wird heruntergeladen
+de.ComponentAlreadyDownloaded=bereits heruntergeladen
 
 
 ;Greek
@@ -390,7 +406,7 @@ el.langcode=el
 el.comp_mpciconlib=Βιβλιοθήκη Εικονιδίων
 el.comp_mpcresources=Μεταφράσεις
 el.comp_mpcbeshellext=Install the shell extension
-el.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+el.comp_intel_msdk=H.264 MVC 3D Decoder
 el.msg_DeleteSettings=Θέλετε να διαγράψετε τις ρυθμίσεις του MPC-BE;%n%nΑν σκοπεύετε να εγκαταστήσετε το MPC-BE πάλι τότε δεν χρειάζεται να τις διαγράψετε.
 el.msg_NoD3DX9DLL_found=The latest DirectX runtime is not installed!%n%nPlease download and install the latest DirectX runtime June 2010 regardless of your operating system.
 el.msg_SetupIsRunningWarning=Η εγκατάσταση του MPC-BE εκτελείται ήδη!
@@ -417,6 +433,8 @@ el.AssociationMPCPlayMusicFilesS=Music Files
 el.AssociationMPCPlayVideoFilesF=Play Video
 el.AssociationMPCPlayVideoFilesS=Video Files
 el.PinToTaskBar=Pin to TaskBar
+el.ComponentWillBeDownloaded=will be downloaded
+el.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Spanish
@@ -425,7 +443,7 @@ es.langcode=es
 es.comp_mpciconlib=Librería de iconos
 es.comp_mpcresources=Traducciones
 es.comp_mpcbeshellext=Install the shell extension
-es.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+es.comp_intel_msdk=H.264 MVC 3D Decoder
 es.msg_DeleteSettings=¿Quiere eliminar también las preferencias de MPC-BE?%n%nSi planea instalar de nuevo MPC-BE no necesita eliminarlas.
 es.msg_NoD3DX9DLL_found=¡No está instalada la última versión de DirectX!%n%nPor favor descargue e instale DirectX runtime June 2010 independientemente de su sistema operativo.
 es.msg_SetupIsRunningWarning=La instalación de MPC-BE ya se esta ejecutando!
@@ -452,6 +470,8 @@ es.AssociationMPCPlayMusicFilesS=Music Files
 es.AssociationMPCPlayVideoFilesF=Play Video
 es.AssociationMPCPlayVideoFilesS=Video Files
 es.PinToTaskBar=Pin to TaskBar
+es.ComponentWillBeDownloaded=will be downloaded
+es.ComponentAlreadyDownloaded=already downloaded
 
 
 ;French
@@ -460,7 +480,7 @@ fr.langcode=fr
 fr.comp_mpciconlib=Bibliothèque d'icône
 fr.comp_mpcresources=Traductions
 fr.comp_mpcbeshellext=Install the shell extension
-fr.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+fr.comp_intel_msdk=H.264 MVC 3D Decoder
 fr.msg_DeleteSettings=Souhaitez-vous supprimer également les paramètres de MPC-BE?%n%nSi vous réinstallez MPC-BE, il est conseillé de ne pas les supprimer.
 fr.msg_NoD3DX9DLL_found=La dernière version des composants d'exécution DirectX n'est pas installée !%n%nCelle-ci est nécessaire quelque soit votre système d'exploitation, veuillez la télécharger et l'installer June 2010.
 fr.msg_SetupIsRunningWarning=L'installation de MPC-BE est déjà en cours d'exécution!
@@ -487,6 +507,8 @@ fr.AssociationMPCPlayMusicFilesS=Music Files
 fr.AssociationMPCPlayVideoFilesF=Play Video
 fr.AssociationMPCPlayVideoFilesS=Video Files
 fr.PinToTaskBar=Pin to TaskBar
+fr.ComponentWillBeDownloaded=will be downloaded
+fr.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Hebrew
@@ -495,7 +517,7 @@ he.langcode=he
 he.comp_mpciconlib=ספריית אייקונים
 he.comp_mpcresources=תרגומים
 he.comp_mpcbeshellext=Install the shell extension
-he.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+he.comp_intel_msdk=H.264 MVC 3D Decoder
 he.msg_DeleteSettings=האם ברצונך גם למחוק את ההגדרות של MPC-BE?%n%nאם אתה מתכנן להתקין את MPC-BE בשנית, אינך חייב להסירן.
 he.msg_NoD3DX9DLL_found=סביבת הריצה של ה-DirectX הכי חדש אינה מותקנת.%n%nאנא הורד והתקן את סביבת הריצה הכי חדשה June 2010 בלי קשר למערכת ההפעלה שברשותך.
 he.msg_SetupIsRunningWarning=ההתקנה של MPC-BE כבר רצה!
@@ -522,6 +544,8 @@ he.AssociationMPCPlayMusicFilesS=Music Files
 he.AssociationMPCPlayVideoFilesF=Play Video
 he.AssociationMPCPlayVideoFilesS=Video Files
 he.PinToTaskBar=Pin to TaskBar
+he.ComponentWillBeDownloaded=will be downloaded
+he.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Hungarian
@@ -530,7 +554,7 @@ hu.langcode=hu
 hu.comp_mpciconlib=Ikon Gyűjtemény
 hu.comp_mpcresources=Fordítások
 hu.comp_mpcbeshellext=Telepítse a shell extension-t
-hu.comp_intel_msdk=H.264 MVC 3D Decoder (extra letöltés)
+hu.comp_intel_msdk=H.264 MVC 3D Decoder
 hu.msg_DeleteSettings=Az MPC-BE beállításokat is törölni szeretné?%n%nHa azt tervezi, hogy újratelepíti az MPC-BE-t, akkor nem kell törölnie őket.
 hu.msg_NoD3DX9DLL_found=A legújabb DirectX nincs telepítve!%n%nKérjük töltse le és telepítse a legújabb DirectX runtime June 2010 verziót függetlenül az operációs rendszerétől.
 hu.msg_SetupIsRunningWarning=Az MPC-BE telepítő már fut!
@@ -557,6 +581,8 @@ hu.AssociationMPCPlayMusicFilesS=Zene Fájlok
 hu.AssociationMPCPlayVideoFilesF=Video Lejátszás
 hu.AssociationMPCPlayVideoFilesS=Video Fájlok
 hu.PinToTaskBar=Rögzítés a tálcához
+hu.ComponentWillBeDownloaded=letöltésre kerül
+hu.ComponentAlreadyDownloaded=már letöltve
 
 
 ;Armenian
@@ -565,7 +591,7 @@ hy.langcode=hy
 hy.comp_mpciconlib=Պատկերների գրադարան
 hy.comp_mpcresources=Թարգմանություններ
 hy.comp_mpcbeshellext=Install the shell extension
-hy.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+hy.comp_intel_msdk=H.264 MVC 3D Decoder
 hy.msg_DeleteSettings=Ջնջե՞լ MPC-BE-ի կարգավորումները։%n%nԵթե նախատեսում եք վերատեղակայել MPC-BE, ապա պետք է չէ դրանք ջնջել։.
 hy.msg_NoD3DX9DLL_found=Վերջին DirectX-ը տեղակայված չէ!%n%nԽնդրում ենք տեղակայել վերջին DirectX-ըJune 2010։
 hy.msg_SetupIsRunningWarning=MPC-BE-ի տեղակայիչը արդեն բացված է!
@@ -592,6 +618,8 @@ hy.AssociationMPCPlayMusicFilesS=Music Files
 hy.AssociationMPCPlayVideoFilesF=Play Video
 hy.AssociationMPCPlayVideoFilesS=Video Files
 hy.PinToTaskBar=Pin to TaskBar
+hy.ComponentWillBeDownloaded=will be downloaded
+hy.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Italian
@@ -599,29 +627,36 @@ it.langid=00001040
 it.langcode=it
 it.comp_mpciconlib=Libreria icone
 it.comp_mpcresources=Traduzioni
-it.comp_mpcbeshellext=Install the shell extension
-it.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
-it.msg_DeleteSettings=Vou eliminare anche le impostazioni di MPC-BE?%n%nSe pensi di reinstallare MPC-BE in seguito non dovresti eliminarle.
-it.msg_NoD3DX9DLL_found=La libreria di runtime DirectX più recente non è installata!%n%nScarica e installa la libreria di runtime DirectX più recente June 2010 indipendentemente dal tuo sistema operativo.
-it.msg_SetupIsRunningWarning=L'installazione di MPC-BE è già in corso!
-it.msg_simd_sse2=Questa build di MPC-BE richiede una CPU con il supporto alle estensioni SSE2.%n%nLa tua CPU non dispone di questa caratteristica.
+it.comp_mpcbeshellext=Installa l'estensione della shell
+it.comp_intel_msdk=H.264 MVC 3D Decoder
+it.msg_DeleteSettings=Vuoi eliminare anche le impostazioni di MPC-BE?%n%nSe prevedi di installare nuovamente MPC-BE, non devi eliminarle.
+it.msg_NoD3DX9DLL_found=L'ultimo runtime DirectX non è installato!%n%nScarica e installa l'ultimo runtime DirectX di giugno 2010 indipendentemente dal tuo sistema operativo.
+it.msg_SetupIsRunningWarning=L'installazione di MPC-BE è già in esecuzione!
+it.msg_simd_sse2=Questa build di MPC-BE richiede una CPU con supporto per l'estensione SSE2.%n%nLa tua CPU non ha queste capacità.
 it.tsk_AllUsers=Per tutti gli utenti
-it.tsk_CurrentUser=Solo per l'utente corrente
+it.tsk_CurrentUser=Solo per l'attuale utente
 it.tsk_Other=Altre operazioni:
 it.tsk_ResetSettings=Ripristina impostazioni
 it.types_DefaultInstallation=Installazione predefinita
 it.types_CustomInstallation=Installazione personalizzata
-it.ViewChangelog=Visualizza Changelog
-it.AutoPlayType=Auto play:
-it.AssociationMPCPlayCDAudioOnArrivalF=Play Audio CD
-it.AssociationMPCPlayCDAudioS=Audio CD
-it.AssociationMPCPlayDVDMovieArrivalF=Play DVD Movie
-it.AssociationMPCPlayDVDMovieS=DVD Movie
-it.AssociationMPCPlayMusicFilesF=Play Music
-it.AssociationMPCPlayMusicFilesS=Music Files
-it.AssociationMPCPlayVideoFilesF=Play Video
-it.AssociationMPCPlayVideoFilesS=Video Files
-it.PinToTaskBar=Pin to TaskBar
+it.ViewChangelog=Visualizza registro delle modifiche
+it.AssociationFormatsAV=Configurazione delle associazioni con file video e audio:
+it.AssociationFormats=Associazione con file video e audio
+it.AssociationVideo=Associazione con file video
+it.AssociationAudio=Associazione con file audio
+it.AssociationPlaylist=Associazione con playlist
+it.AutoPlayType=Riproduzione automatica:
+it.AssociationMPCPlayCDAudioOnArrivalF=Riproduci CD audio
+it.AssociationMPCPlayCDAudioS=CD audio
+it.AssociationMPCPlayDVDMovieArrivalF=Riproduci film in DVD
+it.AssociationMPCPlayDVDMovieS=Film in DVD
+it.AssociationMPCPlayMusicFilesF=Riproduci musica
+it.AssociationMPCPlayMusicFilesS=File musicali
+it.AssociationMPCPlayVideoFilesF=Riproduci video
+it.AssociationMPCPlayVideoFilesS=File video
+it.PinToTaskBar=Aggiungi alla barra delle applicazioni
+it.ComponentWillBeDownloaded=verrà scaricato
+it.ComponentAlreadyDownloaded=già scaricato
 
 
 ;Japanese
@@ -630,7 +665,7 @@ ja.langcode=ja
 ja.comp_mpciconlib=アイコン ライブラリー
 ja.comp_mpcresources=翻訳
 ja.comp_mpcbeshellext=シェル拡張のインストール
-ja.comp_intel_msdk=H.264 MVC 3D デコーダー (追加ダウンロード)
+ja.comp_intel_msdk=H.264 MVC 3D デコーダー
 ja.msg_DeleteSettings=MPC-BE の設定を削除しますか?%n%nMPC-BE を再度インストールする場合は、設定を削除する必要はありません。
 ja.msg_NoD3DX9DLL_found=最新の DirectX ランタイムはインストールされていません!%n%nオペレーティング システムに関係なく最新の DirectX ランタイム June 2010 をダウンロードしてインストールしてください。
 ja.msg_SetupIsRunningWarning=MPC-BE のインストーラーは既に実行されています!
@@ -657,6 +692,8 @@ ja.AssociationMPCPlayMusicFilesS=音楽ファイル
 ja.AssociationMPCPlayVideoFilesF=動画の再生
 ja.AssociationMPCPlayVideoFilesS=動画ファイル
 ja.PinToTaskBar=タスクバーにピン留めする
+ja.ComponentWillBeDownloaded=ダウンロードされます
+ja.ComponentAlreadyDownloaded=既にダウンロード済み
 
 
 ;Korean
@@ -665,7 +702,7 @@ kr.langcode=kr
 kr.comp_mpciconlib=아이콘 라이브러리
 kr.comp_mpcresources=번역
 kr.comp_mpcbeshellext=쉘확장 설치
-kr.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+kr.comp_intel_msdk=H.264 MVC 3D Decoder
 kr.msg_DeleteSettings=MPC-BE 의 설정도 삭제하시겠습니까?%n%nMPC-BE 를 다시 설치할 계획이라면 설정들을 삭제할 필요가 없습니다.
 kr.msg_NoD3DX9DLL_found=최신 DirectX 런타임이 설치되어있지않습니다!%n%n사용하는 운영체제에 맞는 최신 DirectX 런타임 June 2010 을 다운로드해서 설치하세요.
 kr.msg_SetupIsRunningWarning=MPC-BE 설치프로그램이 이미 실행중입니다!
@@ -692,6 +729,8 @@ kr.AssociationMPCPlayMusicFilesS=음악 파일
 kr.AssociationMPCPlayVideoFilesF=비디오 재생
 kr.AssociationMPCPlayVideoFilesS=비디오 파일
 kr.PinToTaskBar=Pin to TaskBar
+kr.ComponentWillBeDownloaded=will be downloaded
+kr.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Dutch
@@ -700,7 +739,7 @@ nl.langcode=nl
 nl.comp_mpciconlib=Iconen voor mediabestanden
 nl.comp_mpcresources=Localisaties
 nl.comp_mpcbeshellext=Shellextensie installeren
-nl.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloaden)
+nl.comp_intel_msdk=H.264 MVC 3D Decoder
 nl.msg_DeleteSettings=Wilt u ook de instellingen van MPC-BE verwijderen?%n%nAls u MPC-BE opnieuw gaat installeren is dit niet nodig.
 nl.msg_NoD3DX9DLL_found=De nieuwste DirectX-runtime is niet geinstalleerd!%n%nGraag de nieuwste DirectX-runtime (Juni 2010) downloaden en installeren ongeacht uw Windowsversie.
 nl.msg_SetupIsRunningWarning=MPC-BE installatie is al gestart!
@@ -727,6 +766,8 @@ nl.AssociationMPCPlayMusicFilesS=Muziekbestanden
 nl.AssociationMPCPlayVideoFilesF=Video afspelen
 nl.AssociationMPCPlayVideoFilesS=Videobestanden
 nl.PinToTaskBar=Aan de taakbalk vastmaken
+nl.ComponentWillBeDownloaded=will be downloaded
+nl.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Polish
@@ -735,7 +776,7 @@ pl.langcode=pl
 pl.comp_mpciconlib=Ikony plików multimedialnych
 pl.comp_mpcresources=Tłumaczenia
 pl.comp_mpcbeshellext=Install the shell extension
-pl.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+pl.comp_intel_msdk=H.264 MVC 3D Decoder
 pl.msg_DeleteSettings=Czy chcesz usunąć ustawienia MPC-BE?%n%nJeśli planujesz ponownie zainstalować MPC-BE, wtedy nie trzeba ich usuwać.
 pl.msg_NoD3DX9DLL_found=Najnowszy DirectX runtime nie został zainstalowany!%n%nProszę pobrać i zainstalować najnowszy DirectX runtime June 2010 niezależnie od systemu operacyjnego.
 pl.msg_SetupIsRunningWarning=Instalator MPC-BE jest już uruchomiony!
@@ -762,6 +803,8 @@ pl.AssociationMPCPlayMusicFilesS=Music Files
 pl.AssociationMPCPlayVideoFilesF=Play Video
 pl.AssociationMPCPlayVideoFilesS=Video Files
 pl.PinToTaskBar=Pin to TaskBar
+pl.ComponentWillBeDownloaded=will be downloaded
+pl.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Romanian
@@ -769,8 +812,10 @@ ro.langid=00001048
 ro.langcode=ro
 ro.comp_mpciconlib=Bibliotecă de pictograme
 ro.comp_mpcresources=Traduceri
-ro.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+ro.comp_mpcbeshellext=Install the shell extension
+ro.comp_intel_msdk=H.264 MVC 3D Decoder
 ro.msg_DeleteSettings=Doriţi de asemenea să ştergeţi setările MPC-BE?%n%nDacă doriţi a reinstala MPC-BE, atunci nu este necesar să le ştergeţi.
+ro.msg_NoD3DX9DLL_found=The latest DirectX runtime is not installed!%n%nPlease download and install the latest DirectX runtime June 2010 regardless of your operating system.
 ro.msg_SetupIsRunningWarning=Instalatorul MPC-BE rulează deja!
 ro.msg_simd_sse2=Această versiune de MPC-BE necesită un procesor cu suport pentru extensii SSE2.%n%nProcesorul dumneavoastră nu are aceste capacităţi.
 ro.tsk_AllUsers=Pentru toţi utilizatorii
@@ -795,6 +840,8 @@ ro.AssociationMPCPlayMusicFilesS=Music Files
 ro.AssociationMPCPlayVideoFilesF=Play Video
 ro.AssociationMPCPlayVideoFilesS=Video Files
 ro.PinToTaskBar=Pin to TaskBar
+ro.ComponentWillBeDownloaded=will be downloaded
+ro.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Russian
@@ -803,7 +850,7 @@ ru.langcode=ru
 ru.comp_mpciconlib=Библиотека значков
 ru.comp_mpcresources=Локализации
 ru.comp_mpcbeshellext=Установить расширение оболочки
-ru.comp_intel_msdk=Декодер H.264 MVC 3D (будет скачан)
+ru.comp_intel_msdk=Декодер H.264 MVC 3D
 ru.msg_DeleteSettings=Удалить также настроенные параметры MPC-BE?%n%nЕсли запланирована переустановка MPC-BE, эти параметры не нужно удалять.
 ru.msg_NoD3DX9DLL_found=Не установлена последняя версия системы DirectX!%n%nЗагрузите и установите последнюю версию DirectX June 2010 независимо от версии установленной операционной системы.
 ru.msg_SetupIsRunningWarning=Программа установки MPC-BE уже запущена!
@@ -830,6 +877,8 @@ ru.AssociationMPCPlayMusicFilesS=Музыкальные файлы
 ru.AssociationMPCPlayVideoFilesF=Воспроизведение видео
 ru.AssociationMPCPlayVideoFilesS=Видео файлы
 ru.PinToTaskBar=Закрепить в панели задач
+ru.ComponentWillBeDownloaded=будет скачан
+ru.ComponentAlreadyDownloaded=уже скачан
 
 
 ;Chinese Simplified
@@ -838,7 +887,7 @@ sc.langcode=sc
 sc.comp_mpciconlib=图标库
 sc.comp_mpcresources=翻译
 sc.comp_mpcbeshellext=安装 shell extension
-sc.comp_intel_msdk=H.264 MVC 3D 解码器（另外下载）
+sc.comp_intel_msdk=H.264 MVC 3D 解码器
 sc.msg_DeleteSettings=是否同时删除 MPC-BE 设置?%n%n如果您打算再次安装 MPC-BE 则无需删除。
 sc.msg_NoD3DX9DLL_found=还没安装最新版本的 DirectX 运行库!%n%n不论您所使用的作业系统请下载及更新至最新版本的 DirectX 运行库（2010 年 6 月）。
 sc.msg_SetupIsRunningWarning=MPC-BE 安装程序已在运行中！
@@ -865,6 +914,8 @@ sc.AssociationMPCPlayMusicFilesS=音乐文件
 sc.AssociationMPCPlayVideoFilesF=播放视频
 sc.AssociationMPCPlayVideoFilesS=视频文件
 sc.PinToTaskBar=锁定到任务栏
+sc.ComponentWillBeDownloaded=will be downloaded
+sc.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Swedish
@@ -872,7 +923,7 @@ sv.langid=00001051
 sv.langcode=sv
 sv.comp_mpciconlib=Ikonbibliotek
 sv.comp_mpcbeshellext=Install the shell extension
-sv.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+sv.comp_intel_msdk=H.264 MVC 3D Decoder
 sv.comp_mpcresources=Översättningar
 sv.msg_DeleteSettings=Vill du också ta bort inställningarna för MPC-BE?%n%nOm du planerar att installera MPC-BE igen så behöver du inte ta bort dem.
 sv.msg_NoD3DX9DLL_found=Senaste DirectX har inte installerats!%n%nHämta ner och installera senaste DirectX June 2010 oavsett ditt operativsystem.
@@ -900,6 +951,8 @@ sv.AssociationMPCPlayMusicFilesS=Music Files
 sv.AssociationMPCPlayVideoFilesF=Play Video
 sv.AssociationMPCPlayVideoFilesS=Video Files
 sv.PinToTaskBar=Pin to TaskBar
+sv.ComponentWillBeDownloaded=will be downloaded
+sv.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Slovakian
@@ -908,7 +961,7 @@ sk.langcode=sk
 sk.comp_mpciconlib=Knižnica ikon
 sk.comp_mpcresources=Preklady
 sk.comp_mpcbeshellext=Install the shell extension
-sk.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+sk.comp_intel_msdk=H.264 MVC 3D Decoder
 sk.msg_DeleteSettings=Chcete vymazať aj nastavenia programu MPC-BE?%n%nAk plánujete opätovnú inštaláciu programu MPC-BE, tak nie je potrebné ich vymazávať.
 sk.msg_NoD3DX9DLL_found=Najnovšie rozhranie DirectX nie je nainštalované!%n%nProsím stiahnite a nainštalujte si ho June 2010 bez ohľadu na verziu operačného systému.
 sk.msg_SetupIsRunningWarning=Inštalácia programu MPC-BE je už spustená!
@@ -935,6 +988,8 @@ sk.AssociationMPCPlayMusicFilesS=Music Files
 sk.AssociationMPCPlayVideoFilesF=Play Video
 sk.AssociationMPCPlayVideoFilesS=Video Files
 sk.PinToTaskBar=Pin to TaskBar
+sk.ComponentWillBeDownloaded=will be downloaded
+sk.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Chinese Traditional
@@ -943,7 +998,7 @@ tc.langcode=tc
 tc.comp_mpciconlib=圖示庫
 tc.comp_mpcresources=翻譯
 tc.comp_mpcbeshellext=安裝 shell extension
-tc.comp_intel_msdk=H.264 MVC 3D 解碼器（額外下載）
+tc.comp_intel_msdk=H.264 MVC 3D 解碼器
 tc.msg_DeleteSettings=您是否也要刪除 MPC-BE 設定？%n%n如果您打算再次安裝 MPC-BE 則無需刪除。
 tc.msg_NoD3DX9DLL_found=未安裝最新版本的 DirectX Runtime！%n%n不論您使用的作業系統為何，請下載並更新至最新版本的 DirectX Runtime （2010 年 6 月）。
 tc.msg_SetupIsRunningWarning=已在執行 MPC-BE 安裝程式！
@@ -970,6 +1025,8 @@ tc.AssociationMPCPlayMusicFilesS=音樂檔案
 tc.AssociationMPCPlayVideoFilesF=播放視訊
 tc.AssociationMPCPlayVideoFilesS=視訊檔案
 tc.PinToTaskBar=釘選到工作列
+tc.ComponentWillBeDownloaded=will be downloaded
+tc.ComponentAlreadyDownloaded=already downloaded
 
 
 ;Turkish
@@ -978,7 +1035,7 @@ tr.langcode=tr
 tr.comp_mpciconlib=Simge Kütüphanesi
 tr.comp_mpcresources=Çeviriler
 tr.comp_mpcbeshellext=Sağ tık menü eklentisini yükle
-tr.comp_intel_msdk=H.264 MVC 3D Çözücüsü (ekstra indirme)
+tr.comp_intel_msdk=H.264 MVC 3D Çözücüsü
 tr.msg_DeleteSettings=MPC-BE ayarlarını silmek istiyor musunuz?%n%nMPC-BE 'yi tekrar yüklemeyi planlıyorsanız bu ayarları silmemeniz önerilir.
 tr.msg_NoD3DX9DLL_found=En son DirectX paketi yüklü değil!%n%nLütfen en son DirectX Haziran 2010 paketini indirip kurunuz. İşletim sistemi sürümünüz, bu aşamada önemli değildir.
 tr.msg_SetupIsRunningWarning=MPC-BE kurulumu zaten çalışıyor.
@@ -1001,10 +1058,12 @@ tr.AssociationMPCPlayCDAudioS=Ses CD
 tr.AssociationMPCPlayDVDMovieArrivalF=DVD Video oynat
 tr.AssociationMPCPlayDVDMovieS=DVD Video
 tr.AssociationMPCPlayMusicFilesF=Müzik Oynat
-tr.AssociationMPCPlayMusicFilesS=Music Dosyaları
+tr.AssociationMPCPlayMusicFilesS=Müzik Dosyaları
 tr.AssociationMPCPlayVideoFilesF=Video Oynat
 tr.AssociationMPCPlayVideoFilesS=Video Dosyaları
 tr.PinToTaskBar=Görev Çubuğuna sabitle
+tr.ComponentWillBeDownloaded=indirilecek
+tr.ComponentAlreadyDownloaded=daha önce indirildi
 
 
 ;Ukrainian
@@ -1013,7 +1072,7 @@ ua.langcode=ua
 ua.comp_mpciconlib=Бібліотека іконок
 ua.comp_mpcresources=Локалізації
 ua.comp_mpcbeshellext=Install the shell extension
-ua.comp_intel_msdk=H.264 MVC 3D Decoder (extra downloading)
+ua.comp_intel_msdk=H.264 MVC 3D Decoder
 ua.msg_DeleteSettings=Чи хочете ви видалити налаштування MPC-BE?%n%nЯкщо ви плануєте просто повторно встановити MPC-BE, то вам не потрібно їх видаляти.
 ua.msg_NoD3DX9DLL_found=Останню версію DirectX не встановлено!%n%nБудь ласка, завантажте і встановіть останню версію DirectX June 2010 відповідно до операційної системи, яку ви використовуєте.
 ua.msg_SetupIsRunningWarning=Встановлення MPC-BE вже запущено!
@@ -1040,5 +1099,7 @@ ua.AssociationMPCPlayMusicFilesS=Music Files
 ua.AssociationMPCPlayVideoFilesF=Play Video
 ua.AssociationMPCPlayVideoFilesS=Video Files
 ua.PinToTaskBar=Pin to TaskBar
+ua.ComponentWillBeDownloaded=will be downloaded
+ua.ComponentAlreadyDownloaded=already downloaded
 
 #endif

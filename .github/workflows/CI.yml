@@ -15,7 +15,7 @@ jobs:
         &'C:\Program Files\7-Zip\7z.exe' x *.7z -o'D:\MSYS' 
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
